@@ -916,7 +916,10 @@
                 "description": {
                     "description": "A free-text account of the subject.",
                     "pattern": "\\S",
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ]
                 },
                 "display_label": {
                     "description": "Label that can be shown when the metadata record is displayed as an item.",
@@ -1048,15 +1051,16 @@
                     "description": "DOI resolver URL or source URL.",
                     "format": "uri",
                     "pattern": "^https?://[^\\s/]+",
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ]
                 }
             },
             "required": [
-                "source_url",
                 "review_status",
                 "local_folder",
                 "pid",
-                "description",
                 "display_label"
             ],
             "title": "Paper",
@@ -1140,7 +1144,10 @@
                 "description": {
                     "description": "A free-text account of the subject.",
                     "pattern": "\\S",
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ]
                 },
                 "display_label": {
                     "description": "Label that can be shown when the metadata record is displayed as an item.",
@@ -1272,14 +1279,15 @@
                     "description": "DOI resolver URL or source URL.",
                     "format": "uri",
                     "pattern": "^https?://[^\\s/]+",
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ]
                 }
             },
             "required": [
-                "source_url",
                 "review_status",
                 "local_folder",
-                "description",
                 "display_label"
             ],
             "title": "Paper",
@@ -2934,7 +2942,10 @@
         "description": {
             "description": "A free-text account of the subject.",
             "pattern": "\\S",
-            "type": "string"
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "display_label": {
             "description": "Label that can be shown when the metadata record is displayed as an item.",
@@ -3066,15 +3077,16 @@
             "description": "DOI resolver URL or source URL.",
             "format": "uri",
             "pattern": "^https?://[^\\s/]+",
-            "type": "string"
+            "type": [
+                "string",
+                "null"
+            ]
         }
     },
     "required": [
-        "source_url",
         "review_status",
         "local_folder",
         "pid",
-        "description",
         "display_label"
     ],
     "title": "shacl-py-paper",

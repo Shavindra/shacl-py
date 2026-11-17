@@ -29,9 +29,11 @@ if selected:
     else:
         record = matches[0]
         st.header(record.data["display_label"])
-        st.write(record.data["description"])
+        if record.data.get("description"):
+            st.write(record.data["description"])
         st.caption(record.data["review_status"])
-        st.link_button("DOI / source", record.data["source_url"])
+        if record.data.get("source_url"):
+            st.link_button("DOI / source", record.data["source_url"])
         with st.expander("Metadata"):
             st.json(record.data)
             st.text(str(record.metadata.relative_to(root)))
@@ -51,7 +53,8 @@ else:
         shown += 1
         with st.container(border=True):
             st.subheader(data["display_label"])
-            st.write(data["description"])
+            if data.get("description"):
+                st.write(data["description"])
             st.caption(data["review_status"])
             if st.button("Open project", key=data["pid"]):
                 st.query_params["project"] = data["pid"]

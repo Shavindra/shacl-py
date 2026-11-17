@@ -70,8 +70,7 @@ python -m pip install --upgrade "git+https://github.com/Shavindra/shacl-py.git"
 ## Use
 
 ```sh
-shacl-py init research/papers/my-paper
-# Edit the generated metadata.yaml, including its placeholder source URL.
+shacl-py generate research/papers
 shacl-py validate research
 shacl-py serve research --port 8501
 ```
@@ -126,13 +125,25 @@ Activate the shacl-py environment, then point it at your research repository:
 
 ```sh
 cd /absolute/path/to/your/research-repository
-shacl-py init research/papers/my-paper
-# Edit research/papers/my-paper/metadata.yaml with the actual paper details.
+shacl-py generate research/papers
 shacl-py validate .
 shacl-py serve .
 ```
 
-Use `init` once for each paper. It refuses to overwrite existing metadata.
+Run `generate` on the directory containing your paper folders. Each immediate
+non-hidden, non-symlink directory gets a metadata.yaml with a stable ID, a title
+from its folder name and an initial review status of unreviewed. If README.md
+exists, the generator uses its first H1 heading, first prose line and an explicit
+`DOI:` or `Source:` line when available. Description and source are optional.
+The generator also reads an optional paper.json (a Concepts record with pid,
+display_label and description) or metalad.json (one paper-specific MetaLad
+record with a flat extracted_metadata object). Recognised JSON fields override
+README defaults, with paper.json taking precedence. Supported source fields are
+source_url, url and doi. Dataset-wide JSONL exports require paper matching first.
+Edit the generated YAML to override values or add supported schema fields.
+Running generate again preserves existing records exactly. For a single new
+paper folder use `shacl-py init PAPER_PATH`.
+
 Create notebooks/, data/raw/ and data/output/ inside each paper folder as needed.
 Papers can be ordinary folders; they do not need to be DataLad subdatasets.
 For an existing compatible metadata.yaml, skip `init`.

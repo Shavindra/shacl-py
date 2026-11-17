@@ -126,3 +126,46 @@ def test_homepage_navigation_search_and_readonly(root, monkeypatch):
         p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
     }
     assert before == after
+
+
+def test_generate_preserves_overrides_and_adds_new_papers(tmp_path):
+    first = tmp_path / "paper-one"
+    first.mkdir()
+    (first / "README.md").write_text(
+        "# First paper\n\nObserved shapes.\nDOI: 10.1234/demo\n"
+    )
+    assert main(["generate", str(tmp_path)]) == 0
+    metadata = first / "metadata.yaml"
+    data = yaml.safe_load(metadata.read_text())
+    assert data["display_label"] == "First paper"
+    assert data["source_url"] == "https://doi.org/10.1234/demo"
+    data.update(review_status="useful", editorial_notes=["My notes"])
+    custom = yaml.safe_dump(data)
+    metadata.write_text(custom)
+    (tmp_path / "paper-two").mkdir()
+    assert main(["generate", str(tmp_path)]) == 0
+    assert metadata.read_text() == custom
+    records, errors = load_records(tmp_path)
+    assert not errors and len(records) == 2
+
+
+def test_paper_json_overrides_extracted_metadata(tmp_path):
+    paper = tmp_path / "example"
+    paper.mkdir()
+    (paper / "metalad.json").write_text(
+        json.dumps(
+            {"extracted_metadata": {"title": "Extracted", "doi": "10.1234/demo"}}
+        )
+    )
+    (paper / "paper.json").write_text(
+        json.dumps({"display_label": "Curated", "pid": "urn:example:paper"})
+    )
+    assert main(["generate", str(tmp_path)]) == 0
+    records, errors = load_records(tmp_path)
+    assert not errors
+    data = records[0].data
+    assert (data["display_label"], data["pid"], data["source_url"]) == (
+        "Curated",
+        "urn:example:paper",
+        "https://doi.org/10.1234/demo",
+    )

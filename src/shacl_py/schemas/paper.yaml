@@ -29,13 +29,13 @@ classes:
         required: true
         pattern: '\S'
       description:
-        required: true
+        required: false
         pattern: '\S'
 slots:
   source_url:
     slot_uri: dcterms:source
     range: uri
-    required: true
+    required: false
     pattern: '^https?://[^\s/]+'
     description: DOI resolver URL or source URL.
   review_status:
