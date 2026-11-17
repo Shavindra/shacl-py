@@ -1,0 +1,55 @@
+id: https://github.com/Shavindra/shacl-py/schema/paper/v1
+name: shacl-py-paper
+version: 1.0.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  local: https://github.com/Shavindra/shacl-py/schema/paper/v1/
+  dlthings: https://concepts.datalad.org/s/things/v2/
+  dcterms: http://purl.org/dc/terms/
+  skos: http://www.w3.org/2004/02/skos/core#
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  xsd: http://www.w3.org/2001/XMLSchema#
+default_prefix: local
+imports:
+  - things-v2
+classes:
+  Paper:
+    is_a: Thing
+    tree_root: true
+    slots:
+      - source_url
+      - review_status
+      - local_folder
+    slot_usage:
+      pid:
+        required: true
+        pattern: '^\S+:\S+$'
+      display_label:
+        required: true
+        pattern: '\S'
+      description:
+        required: true
+        pattern: '\S'
+slots:
+  source_url:
+    slot_uri: dcterms:source
+    range: uri
+    required: true
+    pattern: '^https?://[^\s/]+'
+    description: DOI resolver URL or source URL.
+  review_status:
+    range: ReviewStatus
+    required: true
+  local_folder:
+    range: string
+    required: true
+    pattern: '\S'
+    description: Folder path relative to the metadata file, within the supplied root.
+enums:
+  ReviewStatus:
+    permissible_values:
+      unreviewed:
+      reviewing:
+      useful:
+      excluded:

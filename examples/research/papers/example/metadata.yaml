@@ -1,0 +1,6 @@
+pid: urn:uuid:0b378a63-13dd-4d40-8271-0e52e928bfe7
+display_label: Example paper project
+description: Demonstration record for organising a local paper folder.
+source_url: https://concepts.datalad.org/
+review_status: unreviewed
+local_folder: .

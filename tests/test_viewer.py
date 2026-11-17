@@ -1,0 +1,128 @@
+import json
+import shutil
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+import yaml
+from streamlit.testing.v1 import AppTest
+
+from shacl_py.cli import main
+from shacl_py.records import SCHEMAS, discover, list_files, load_records
+
+EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+
+
+@pytest.fixture
+def root(tmp_path):
+    shutil.copytree(EXAMPLES, tmp_path, dirs_exist_ok=True)
+    return tmp_path
+
+
+def test_discovery_and_schema(root):
+    records, errors = load_records(root)
+    assert not errors
+    assert len(records) == 1
+    assert records[0].data["display_label"] == "Example paper project"
+    ignored = root / ".git" / "metadata.yaml"
+    ignored.parent.mkdir()
+    ignored.write_text("bad")
+    assert len(discover(root)) == 1
+    schema = json.loads((SCHEMAS / "paper.schema.json").read_text())
+    assert "Paper" in schema["$defs"]
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("review_status", "invalid"),
+        ("display_label", ""),
+        ("pid", "not an identifier"),
+        ("source_url", "javascript:alert(1)"),
+        ("local_folder", "/tmp"),
+        ("local_folder", "../../../../.."),
+        ("local_folder", "missing"),
+        ("description", 42),
+    ],
+)
+def test_invalid_fields(root, field, value):
+    path = discover(root)[0]
+    data = yaml.safe_load(path.read_text())
+    data[field] = value
+    path.write_text(yaml.safe_dump(data))
+    records, errors = load_records(root)
+    assert not records
+    assert errors and str(path) in errors[0]
+
+
+@pytest.mark.parametrize("content", ["[bad", "null", "- list", "unknown: value"])
+def test_malformed_metadata(root, content):
+    discover(root)[0].write_text(content)
+    assert load_records(root)[1]
+
+
+def test_duplicates_and_symlinks(root):
+    source = discover(root)[0]
+    other = root / "another"
+    other.mkdir()
+    shutil.copy(source, other / "metadata.yaml")
+    assert "duplicate pid" in load_records(root)[1][0]
+    (other / "metadata.yaml").unlink()
+    (other / "metadata.yaml").symlink_to(source)
+    assert "regular local file" in load_records(root)[1][0]
+
+
+def test_annex_unavailable_and_no_directory_traversal(root):
+    paper = load_records(root)[0][0]
+    missing = paper.folder / "data/raw/missing.csv"
+    missing.symlink_to("../../../.git/annex/objects/missing")
+    (paper.folder / "data/raw/loop").symlink_to(paper.folder, target_is_directory=True)
+    rows = list_files(paper.folder, "data/raw")
+    assert (
+        next(row for row in rows if row["Filename"] == "missing.csv")["Availability"]
+        == "Unavailable"
+    )
+    assert len(rows) == 2
+
+
+def test_cli_init_validate_and_no_overwrite(tmp_path, capsys):
+    paper = tmp_path / "paper"
+    assert main(["init", str(paper)]) == 0
+    original = (paper / "metadata.yaml").read_bytes()
+    assert main(["init", str(paper)]) == 1
+    assert (paper / "metadata.yaml").read_bytes() == original
+    assert main(["validate", str(tmp_path)]) == 0
+    assert main(["validate", str(tmp_path / "missing")]) == 1
+    assert "not a directory" in capsys.readouterr().err
+
+
+def test_serve_arguments(root):
+    with patch("shacl_py.cli.subprocess.call", return_value=0) as call:
+        assert main(["serve", str(root), "--port", "8510"]) == 0
+    args, kwargs = call.call_args
+    assert "--server.address=127.0.0.1" in args[0]
+    assert "--server.port=8510" in args[0]
+    assert kwargs["env"]["SHACL_PY_ROOT"] == str(root)
+
+
+def test_homepage_navigation_search_and_readonly(root, monkeypatch):
+    monkeypatch.setenv("SHACL_PY_ROOT", str(root))
+    before = {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
+    app = AppTest.from_file(str(SCHEMAS.parent / "app.py")).run()
+    assert not app.exception
+    assert app.subheader[0].value == "Example paper project"
+    app.text_input[0].set_value("no matches").run()
+    assert app.info[0].value == "No matching projects."
+    app.text_input[0].set_value("").run()
+    app.button[0].click().run()
+    assert not app.exception
+    assert app.header[0].value == "Example paper project"
+    assert len(app.dataframe) == 3
+    app.button[0].click().run()
+    assert not app.exception
+    after = {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
+    assert before == after
