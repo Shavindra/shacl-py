@@ -12,8 +12,9 @@ A separate Python implementation, requiring **Python 3.14 or later**.
 - Python **3.14 or later**, including pip and venv, **or Conda**.
 - Internet access for the initial dependency installation.
 
-DataLad and git-annex are optional for the viewer. Keep using your existing
-installation for dataset management. No Node.js or database is required.
+For research data management, we recommend **DataLad with git-annex**. Both
+are required for the DataLad/annex workflow described below, but are not required
+to run the viewer on ordinary folders. No Node.js or database is required.
 
 ## Install
 
@@ -92,6 +93,32 @@ appear as unavailable; it never runs `datalad get`. Unlocked annex pointer files
 are listed as locally available files without inspecting their contents.
 Metadata creation and editing remain in files/CLI. Serving writes nothing to the
 research repository. Symlink directories are not traversed.
+
+## Recommended data management
+
+Use **DataLad + git-annex** to manage research datasets, record changes and
+retrieve file content. Use **shacl-py** to browse paper metadata and local file
+availability. DataLad Concepts defines the metadata structure; it does not manage
+your data. Neither Concepts nor this viewer replaces DataLad or git-annex.
+
+Install Git, git-annex and DataLad using the
+[official DataLad installation guide](https://handbook.datalad.org/en/latest/intro/installation.html).
+Keep an existing working DataLad environment; it can be separate from the
+Python 3.14+ viewer environment. `setup.sh` installs only the viewer and its
+Python dependencies, not DataLad or git-annex.
+
+From your data-management environment, check the prerequisites with:
+
+```sh
+git --version
+git annex version
+datalad --version
+```
+
+Continue using DataLad CLI commands for dataset creation, saving changes and
+retrieving missing content. The viewer never downloads data automatically.
+DataLad Catalog is not required for this viewer; existing Catalog metadata must
+be converted to the supported metadata.yaml format before it can be displayed.
 
 ## Use with an existing DataLad dataset
 
