@@ -7,63 +7,65 @@ A separate Python implementation, requiring **Python 3.14 or later**.
 
 ## Prerequisites
 
-- macOS/Linux terminal (or WSL on Windows), with Bash for setup.sh.
-- Git to clone this repository.
-- Python **3.14 or later**, including pip and venv, **or Conda**.
-- Internet access for the initial dependency installation.
+- Python **3.14 or later** with pip, or Conda.
+- Git for pip's GitHub installation.
+- Internet access during installation.
 
 For research data management, we recommend **DataLad with git-annex**. Both
-are required for the DataLad/annex workflow described below, but are not required
-to run the viewer on ordinary folders. No Node.js or database is required.
+are required for that workflow, but not for viewing ordinary folders.
+No Node.js or database is required.
 
 ## Install
 
-First clone the application (keep it separate from your research dataset):
+Use an **already active Conda or Python virtual environment** with Python 3.14+.
+No repository checkout or new environment is required.
 
 ```sh
-git clone https://github.com/Shavindra/shacl-py.git
-cd shacl-py
-```
-
-Quick setup (checks Python, creates .venv, installs and verifies the example):
-
-```sh
-bash setup.sh
-source .venv/bin/activate
-shacl-py serve examples
-```
-
-Or run `bash setup.sh --conda`, then `conda activate shacl-py`.
-The script does not install system prerequisites. The Conda route creates a new
-`shacl-py` environment; if it already exists, activate it and run
-`python -m pip install -r requirements.txt` instead.
-
-Manual setup using pip with Python 3.14 or later:
-
-```sh
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-Or using Conda:
-
-```sh
-conda env create -f environment.yml
-conda activate shacl-py
-```
-
-Check the installation and try the included example:
-
-```sh
+python --version
+python -m pip install "git+https://github.com/Shavindra/shacl-py.git"
 shacl-py --help
-shacl-py validate examples
-shacl-py serve examples
 ```
 
-Open http://127.0.0.1:8501. Stop the server with Ctrl+C. In a new terminal,
-reactivate the environment with `source /path/to/shacl-py/.venv/bin/activate`
-or `conda activate shacl-py` before running the commands.
+For Conda, activate your existing environment first if needed:
+
+```sh
+conda activate YOUR_EXISTING_ENVIRONMENT
+python -m pip install "git+https://github.com/Shavindra/shacl-py.git"
+```
+
+Conda manages the environment; pip installs shacl-py. This project has not
+published a Conda or PyPI release, so use the GitHub URL above.
+
+### Mac setup script
+
+With your environment already activated, download and run the script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Shavindra/shacl-py/main/setup.sh -o /tmp/shacl-py-setup.sh
+bash /tmp/shacl-py-setup.sh
+```
+
+The script checks the active environment, Python 3.14+, pip and Git, then
+installs or updates shacl-py there. It does not create or switch environments,
+upgrade Python, or install system tools. It stops if the prerequisites are
+missing. Package dependencies may be installed or updated in that environment.
+On macOS, Git is available through Apple's Command Line Tools
+(`xcode-select --install`) if you do not already have it.
+
+### requirements.txt
+
+Add this line to your own requirements.txt:
+
+```text
+shacl-py @ git+https://github.com/Shavindra/shacl-py.git
+```
+
+Then run `python -m pip install -r requirements.txt` in your active environment.
+To update an existing installation:
+
+```sh
+python -m pip install --upgrade "git+https://github.com/Shavindra/shacl-py.git"
+```
 
 ## Use
 
@@ -72,8 +74,6 @@ shacl-py init research/papers/my-paper
 # Edit the generated metadata.yaml, including its placeholder source URL.
 shacl-py validate research
 shacl-py serve research --port 8501
-# Working example
-shacl-py serve examples
 ```
 
 Open http://127.0.0.1:8501. Each paper appears directly on the homepage.
@@ -104,8 +104,8 @@ your data. Neither Concepts nor this viewer replaces DataLad or git-annex.
 Install Git, git-annex and DataLad using the
 [official DataLad installation guide](https://handbook.datalad.org/en/latest/intro/installation.html).
 Keep an existing working DataLad environment; it can be separate from the
-Python 3.14+ viewer environment. `setup.sh` installs only the viewer and its
-Python dependencies, not DataLad or git-annex.
+Python 3.14+ viewer environment. Installing shacl-py installs only the viewer
+and its Python dependencies, not DataLad or git-annex.
 
 From your data-management environment, check the prerequisites with:
 
@@ -155,5 +155,8 @@ DataLad dataset, and `datalad shacl-py` is not implemented yet. Installing this
 package does not add a DataLad command. See [extension integration](docs/local-setup.md#adding-a-datalad-extension)
 for the implementation required to support that command.
 
-Development: `python -m pip install -e '.[dev]'`, then `ruff check .`,
+For contributors working from a source checkout, requirements.txt and
+environment.yml remain available. The bundled examples are in that checkout.
+
+Development from a checkout: `python -m pip install -e '.[dev]'`, then `ruff check .`,
 `ruff format --check .`, `pytest`, and `python -m build`.

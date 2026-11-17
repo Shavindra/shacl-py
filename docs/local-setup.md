@@ -1,7 +1,10 @@
 # Local setup and DataLad integration
 
 Follow the pip or Conda steps in the [README](../README.md). Both install the
-application from the local checkout. Python 3.14 or later is required.
+Python package directly from GitHub without a manual repository clone. Conda
+manages your existing environment and pip installs the package; no Conda release
+is published by this project. Python 3.14 or later is required. The Mac setup
+script installs into the active environment without creating or switching one.
 The viewer can use a different environment from your existing DataLad installation.
 Do not replace an existing research environment just to run this viewer.
 

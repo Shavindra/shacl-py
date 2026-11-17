@@ -1,50 +1,48 @@
 #!/usr/bin/env bash
-# Run from any directory; installs into this checkout's .venv.
+# Install into the currently active Conda or Python virtual environment.
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
-if [[ "${1:-}" == "--help" ]]; then
-    echo 'Usage: bash setup.sh [--conda]'
-    echo 'Default: requires Python 3.14+ with venv and pip; creates .venv.'
-    echo 'Conda: requires conda; creates the environment from environment.yml.'
-    exit 0
-fi
-if [[ "${1:-}" == "--conda" && "$#" == 1 ]]; then
-    command -v conda >/dev/null || { echo 'Install Conda first.' >&2; exit 1; }
-    conda env create -f environment.yml
-    echo 'Activate with: conda activate shacl-py'
-    echo 'Then run: shacl-py serve examples'
+if [[ "${1:-}" == "--help" && "$#" == 1 ]]; then
+    echo 'Usage: bash setup.sh'
+    echo 'Activate a Conda or Python virtual environment with Python 3.14+ first.'
+    echo 'Requires pip, Git and internet access. Creates no environment.'
     exit 0
 fi
 if [[ "$#" != 0 ]]; then
-    echo 'Usage: bash setup.sh [--conda]' >&2
+    echo 'Usage: bash setup.sh' >&2
     exit 1
 fi
 
-python_bin=''
-for candidate in python3.14 python3 python; do
-    if command -v "$candidate" >/dev/null && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 14))' 2>/dev/null; then
-        python_bin="$candidate"
-        break
-    fi
-done
-if [[ -z "$python_bin" ]]; then
-    echo 'Install Python 3.14 or later with pip and venv, or use bash setup.sh --conda.' >&2
+# Use the active environment interpreter, never a separately located Python.
+if command -v python >/dev/null; then
+    python_bin=python
+elif command -v python3 >/dev/null; then
+    python_bin=python3
+else
+    echo 'Activate an environment containing Python 3.14 or later first.' >&2
     exit 1
 fi
-if [[ -e .venv ]]; then
-    if [[ ! -x .venv/bin/python ]] || ! .venv/bin/python -c 'import sys; sys.exit(sys.version_info < (3, 14))'; then
-        echo 'Existing .venv is incompatible. Move it aside before running setup again.' >&2
-        exit 1
-    fi
-else
-    "$python_bin" -m venv .venv
-fi
-if ! .venv/bin/python -m pip --version >/dev/null 2>&1; then
-    .venv/bin/python -m ensurepip --upgrade
-fi
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/shacl-py --help
-.venv/bin/shacl-py validate examples
-echo "Activate with: source '$PWD/.venv/bin/activate'"
-echo 'Then run: shacl-py serve examples'
+"$python_bin" - <<'PY'
+import os
+import sys
+from pathlib import Path
+
+prefix = Path(sys.prefix).resolve()
+conda = os.environ.get('CONDA_PREFIX')
+virtual = os.environ.get('VIRTUAL_ENV')
+active = any(value and Path(value).resolve() == prefix for value in (conda, virtual))
+if not active:
+    sys.exit('No matching active Conda/virtual environment. Activate one first; nothing was installed.')
+if sys.version_info < (3, 14):
+    sys.exit('The active environment needs Python 3.14 or later. Nothing was installed.')
+print(f'Installing into {prefix} using Python {sys.version.split()[0]}', flush=True)
+PY
+command -v git >/dev/null || { echo 'Git is required. On macOS, install the Command Line Tools with xcode-select --install.' >&2; exit 1; }
+git --version >/dev/null
+"$python_bin" -m pip --version >/dev/null || { echo 'Install pip in the active environment first.' >&2; exit 1; }
+"$python_bin" -m pip install --upgrade 'git+https://github.com/Shavindra/shacl-py.git'
+"$python_bin" - <<'PY'
+from shacl_py.cli import main
+raise SystemExit(main(['--help']))
+PY
+echo 'Setup complete. Run: shacl-py serve /absolute/path/to/research'
