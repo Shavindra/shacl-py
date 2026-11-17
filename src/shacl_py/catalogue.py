@@ -21,7 +21,12 @@ def record_validator(name="paper"):
 
 
 def title(entity):
-    return entity.get("title") or entity.get("display_label") or entity["pid"]
+    return (
+        entity.get("title")
+        or entity.get("display_label")
+        or entity.get("source_url")
+        or entity["pid"]
+    )
 
 
 @dataclass
@@ -61,8 +66,9 @@ def validate_catalogue(graph, root):
         if pid in seen:
             raise ValueError(f"duplicate pid {pid}")
         seen.add(pid)
-        if not (entity.get("title") or entity.get("display_label") or "").strip():
-            raise ValueError(f"{pid}: supply a title or display_label")
+        for field in ("title", "display_label"):
+            if field in entity and not entity[field].strip():
+                raise ValueError(f"{pid}: {field} must contain text")
         try:
             base = local_path(root, entity.get("local_folder", "."), directory=True)
             for group in entity.get("file_groups", []):

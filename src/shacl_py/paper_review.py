@@ -1,7 +1,6 @@
 """Optional paper-review template. Its paths and review vocabulary are local choices."""
 
 import os
-import re
 from dataclasses import dataclass
 
 from shacl_py.catalogue import record_validator
@@ -21,10 +20,11 @@ from shacl_py.prompts import (
     set_dataset_location,
     source_url,
 )
-from shacl_py.sources import initial_fields, stored_metadata
-from shacl_py.study import person_names, validate_study
+from shacl_py.sources import METADATA_FILES, initial_fields, stored_metadata
+from shacl_py.study import person_names, publication_info, read_study
 
 STATUSES = ("unreviewed", "reviewing", "useful", "excluded")
+PAPER_SOURCES = METADATA_FILES - {"project.json"}
 
 
 @dataclass(frozen=True)
@@ -102,30 +102,19 @@ def import_paper(graph, root, folder, layout, stored=None):
         return existing
     if stored is None:
         stored = stored_metadata(
-            folder, single=True, graph_type="ScholarlyArticle"
+            folder,
+            single=True,
+            graph_type="ScholarlyArticle",
+            descriptors=PAPER_SOURCES,
         ).get(folder)
-    fields = initial_fields(folder, stored, graph_type="ScholarlyArticle")
-    fields.update(original.data)
-    sidecar = MetadataFile.read(folder / ".studyminimeta.yaml")
-    data = sidecar.data
-    if data:
-        data.setdefault("person", {})
-        validate_study(data, sidecar.path)
-    candidates = data.get("publication", [])
-    known_url = fields.get("source_url")
-    paper_info = (
-        candidates[0]
-        if len(candidates) == 1
-        else next(
-            (
-                p
-                for p in candidates
-                if p.get("doi") and source_url(p["doi"]) == known_url
-            ),
-            {},
-        )
+    fields = initial_fields(
+        folder, stored, graph_type="ScholarlyArticle", descriptors=("paper.json",)
     )
-    name = paper_info.get("title") or fields["display_label"]
+    fields.update(original.data)
+    data = read_study(folder / ".studyminimeta.yaml")
+    known_url = fields.get("source_url")
+    paper_info = publication_info(data, known_url)
+    name = paper_info.get("title") or fields.get("display_label")
     url = source_url(paper_info.get("doi") or known_url)
     paper = next(
         (
@@ -145,10 +134,7 @@ def import_paper(graph, root, folder, layout, stored=None):
     people = data.get("person", {})
     if authors := person_names(people, paper_info.get("author", [])):
         paper.setdefault("author_names", authors)
-    description = fields.get("description")
-    if description and not re.match(
-        r"(paper id\b|.*\.studyminimeta\.yaml)", description, re.IGNORECASE
-    ):
+    if description := fields.get("description"):
         paper.setdefault("description", description)
     review_for(graph, paper, fields.get("review_status", STATUSES[0]))
     dataset_info = data.get("dataset", {})
@@ -197,6 +183,9 @@ def edit_paper(graph, root, token, layout):
             )
         ):
             paper = import_paper(graph, root, base, layout)
+            for field in ("title", "source_url"):
+                if field in seed:
+                    paper.setdefault(field, seed[field])
         if paper and folder != paper.get("local_folder"):
             paper["local_folder"] = folder
     if paper is None:
@@ -260,7 +249,9 @@ def configure_review(graph, root, collection, interactive, layout):
         )
     if collection:
         base = local_path(root, collection, directory=True)
-        stored = stored_metadata(base, graph_type="ScholarlyArticle")
+        stored = stored_metadata(
+            base, graph_type="ScholarlyArticle", descriptors=PAPER_SOURCES
+        )
         for folder in sorted(base.iterdir()):
             if (
                 folder.name not in IGNORED

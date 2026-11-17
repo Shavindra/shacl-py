@@ -149,10 +149,8 @@ def test_setup_nested_project_writes_study_at_dataset_root(tmp_path):
     assert not (project / ".studyminimeta.yaml").exists()
     assert (project / "metadata.yaml").exists()
     assert (
-        yaml.safe_load((tmp_path / ".studyminimeta.yaml").read_text())["dataset"][
-            "name"
-        ]
-        == tmp_path.name
+        "name"
+        not in yaml.safe_load((tmp_path / ".studyminimeta.yaml").read_text())["dataset"]
     )
 
 
@@ -296,7 +294,9 @@ def test_declared_groups_handle_annex_without_following_directories(coastal):
 def test_real_studyminimeta_converter_accepts_generated_file(tmp_path):
     from datalad_metalad.extractors.studyminimeta.ldcreator import LDCreator
 
-    assert main(["setup", str(tmp_path), "--no-input"]) == 0
+    assert (
+        main(["setup", str(tmp_path), "--title", "Recorded study", "--no-input"]) == 0
+    )
     path = tmp_path / ".studyminimeta.yaml"
     result = LDCreator("dataset-id", "commit", path.name).create_ld_from_spec(
         yaml.safe_load(path.read_text())

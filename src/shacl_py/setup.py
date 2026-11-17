@@ -2,14 +2,13 @@
 
 from shacl_py.catalogue import (
     record_validator,
-    title,
     validate_catalogue,
     validate_structure,
 )
 from shacl_py.files import local_path
 from shacl_py.metadata_io import MetadataFile, save_metadata
 from shacl_py.prompts import add_group, edit_dataset, edit_groups, list_options, prompt
-from shacl_py.sources import initial_fields, stored_metadata
+from shacl_py.sources import METADATA_FILES, initial_fields, stored_metadata
 from shacl_py.study import dataset_root, validate_study
 
 
@@ -32,14 +31,23 @@ def setup_project(args, review_layout=None):
             raise ValueError(f"{meta.path}: {problem.json_path}: {problem.message}")
     initial = "catalogue" not in meta.data
     if initial:
-        hint = initial_fields(root, stored_metadata(root, single=True).get(root))
+        stored = stored_metadata(
+            root,
+            single=True,
+            descriptors=METADATA_FILES - {"paper.json"},
+        )
+        hint = initial_fields(root, stored.get(root), descriptors=("project.json",))
         hint.update(legacy)
         dataset_info = study.data.get("dataset", {}) if host == root else {}
         study_info = study.data.get("study", {}) if host == root else {}
         name = (
-            study_info.get("name") or dataset_info.get("name") or hint["display_label"]
+            study_info.get("name")
+            or dataset_info.get("name")
+            or hint.get("display_label")
         )
-        project = {"pid": hint["pid"], "title": name}
+        project = {"pid": hint["pid"]}
+        if name:
+            project["title"] = name
         description = (
             study_info.get("purpose")
             or dataset_info.get("description")
@@ -59,7 +67,7 @@ def setup_project(args, review_layout=None):
         except ValueError as error:
             raise ValueError(f"{meta.path}: {error}") from error
     project = graph["project"]
-    old_title = title(project)
+    old_title = project.get("title") or project.get("display_label", "")
     old_description = project.get("description", "")
     interactive = not args.no_input
     new_title = (
@@ -118,10 +126,10 @@ def setup_project(args, review_layout=None):
 
     # StudyMiniMeta describes the containing dataset. A nested project's details
     # cannot stand in for its enclosing DataLad dataset.
-    host_title = title(project) if host == root else host.name
+    host_title = new_title if host == root else None
     for section in ("study", "dataset"):
         values = study.data.setdefault(section, {})
-        if "name" not in values or (host == root and values["name"] == old_title):
+        if host_title and ("name" not in values or values["name"] == old_title):
             values["name"] = host_title
     if host == root and description:
         for section, field in (("dataset", "description"), ("study", "purpose")):

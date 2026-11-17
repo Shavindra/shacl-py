@@ -20,20 +20,24 @@ shacl-py --help
 On macOS the optional installer checks the prerequisites and uses the active
 environment. See [Mac and Conda setup](docs/local-setup.md).
 
-## Set up a project and view it
+## View existing metadata
 
-From your research project directory, run:
+From the project directory:
 
 ~~~sh
-shacl-py setup
 shacl-py serve .
 ~~~
 
-Setup prompts for project details, datasets and the files or folders to show.
-It validates and saves the linked Concepts records in `metadata.yaml` and the
-StudyMiniMeta description in `.studyminimeta.yaml`. Existing values supply the
-defaults. The viewer opens at **http://127.0.0.1:8501**. Use `--port` to choose
-another port.
+The viewer reads metadata files or an existing MetaLad store and opens at
+**http://127.0.0.1:8501**. Use `shacl-py serve . --metalad` to select the
+store explicitly, or `shacl-py serve .studyminimeta.yaml` to open that file.
+Publication titles and descriptions come from the supplied records.
+
+## Optional metadata setup
+
+Run `shacl-py setup` to create or edit a linked project catalogue. This helper
+asks for project details, datasets and folders, then validates and saves
+`metadata.yaml` and `.studyminimeta.yaml`.
 
 ### Example: reviewing papers and their data
 

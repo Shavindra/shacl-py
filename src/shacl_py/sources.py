@@ -2,22 +2,50 @@
 
 import json
 import re
-import subprocess
-import sys
-import sysconfig
 from pathlib import Path
 from uuid import uuid4
 
-from shacl_py.records import FILE_PATTERN_SLOTS
+from shacl_py.files import FILE_PATTERN_SLOTS, read_metadata
+
+METADATA_FILES = frozenset(
+    {
+        "metadata.yaml",
+        ".studyminimeta.yaml",
+        "metalad.json",
+        "project.json",
+        "paper.json",
+    }
+)
+
+
+def source_url(value):
+    if not value:
+        return None
+    value = value.strip()
+    if re.fullmatch(r"10\.\d{4,9}/\S+", value, re.IGNORECASE):
+        value = f"https://doi.org/{value}"
+    if not re.fullmatch(r"https?://[^\s/]+(?:[/?#]\S*)?", value):
+        raise ValueError(f"expected a DOI or HTTP(S) URL, got {value!r}")
+    return value
 
 
 def apply_fields(data, record, allow_pid=False, *, graph_type="Dataset"):
-    for node in record.get("@graph", []):
-        if not isinstance(node, dict):
-            continue
-        for entity in node.get("@list", [node]):
-            if isinstance(entity, dict) and entity.get("@type") == graph_type:
-                apply_fields(data, entity)
+    types = record.get("@type")
+    if types is not None and graph_type not in (
+        types if isinstance(types, list) else [types]
+    ):
+        return
+    candidates = [
+        entity
+        for node in record.get("@graph", [])
+        if isinstance(node, dict)
+        for entity in node.get("@list", [node])
+        if isinstance(entity, dict) and entity.get("@type") == graph_type
+    ]
+    if "@graph" in record:
+        if len(candidates) == 1:
+            apply_fields(data, candidates[0], graph_type=graph_type)
+        return
     for slot in FILE_PATTERN_SLOTS:
         if slot in record:
             data[slot] = record[slot]
@@ -45,57 +73,30 @@ def apply_fields(data, record, allow_pid=False, *, graph_type="Dataset"):
             break
 
 
-def initial_fields(folder, stored=None, *, graph_type="Dataset"):
-    title = (
-        folder.resolve().name.replace("_", " ").replace("-", " ").strip() or folder.name
-    )
-    data = {
-        "pid": f"urn:uuid:{uuid4()}",
-        "display_label": title,
-        "review_status": "unreviewed",
-        "local_folder": ".",
-    }
-    readme = folder / "README.md"
-    if readme.is_file() and not readme.is_symlink():
-        with readme.open("rb") as stream:
-            lines = stream.read(65536).decode("utf-8", errors="replace").splitlines()
-        for line in lines:
-            if line.startswith("# ") and line[2:].strip():
-                data["display_label"] = line[2:].strip()
-                break
-        for line in lines:
-            if (
-                line.strip()
-                and line[0].isalnum()
-                and not line.startswith(("http", "DOI:"))
-            ):
-                data["description"] = line.strip()
-                break
-        for line in lines:
-            source = re.fullmatch(
-                r"(?:DOI|Source):\s*(https?://\S+|10\.\d{4,9}/\S+)",
-                line.strip(),
-                re.IGNORECASE,
-            )
-            if source:
-                url = source.group(1)
-                data["source_url"] = (
-                    "https://doi.org/" + url if url.startswith("10.") else url
-                )
-                break
+def initial_fields(
+    folder,
+    stored=None,
+    *,
+    graph_type="Dataset",
+    descriptors=("paper.json", "project.json"),
+):
+    data = {"pid": f"urn:uuid:{uuid4()}", "local_folder": "."}
     # Later sources take precedence when creating a project record.
-    for name in ("metalad.json", "paper.json", "project.json"):
+    for name in ("metalad.json", *descriptors):
         path = folder / name
         if path.is_symlink() or not path.is_file():
             continue
-        if path.stat().st_size > 1_000_000:
-            raise ValueError(f"{path}: exceeds 1 MB")
         try:
-            record = json.loads(path.read_text(encoding="utf-8"))
+            record = json.loads(read_metadata(path))
         except ValueError as error:
             raise ValueError(f"{path}: {error}") from error
         if name == "metalad.json" and isinstance(record, dict):
-            record = record.get("extracted_metadata")
+            if (
+                record.get("type") == "file"
+                and Path(record.get("path", "")).name not in METADATA_FILES
+            ):
+                continue
+            record = record.get("extracted_metadata", record)
         if not isinstance(record, dict):
             raise TypeError(f"{path}: expected a single project metadata object")
         apply_fields(
@@ -108,57 +109,57 @@ def initial_fields(folder, stored=None, *, graph_type="Dataset"):
     return data
 
 
-def stored_metadata(collection, *, single=False, graph_type="Dataset"):
-    collection = collection.resolve()
+def stored_records(root):
+    """Yield existing dataset and metadata-file records beneath the requested root."""
+    root = root.resolve()
     dataset = next(
-        (
-            p
-            for p in (collection, *collection.parents)
-            if (p / ".datalad/config").is_file()
-        ),
+        (p for p in (root, *root.parents) if (p / ".datalad/config").is_file()),
         None,
     )
     if dataset is None:
-        return {}
-    result = subprocess.run(
-        [
-            str(Path(sysconfig.get_path("scripts")) / "datalad"),
-            "-f",
-            "tailored",
-            "meta-dump",
-            "-d",
-            str(dataset),
-            "-r",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode and "NoMetadataStoreFound" in result.stderr:
-        print("No MetaLad store found. Using local project metadata.", file=sys.stderr)
-        return {}
-    if result.returncode:
-        raise ValueError(f"MetaLad could not read {dataset}: {result.stderr.strip()}")
+        return
+    from datalad.api import meta_dump
+    from datalad_metalad.exceptions import NoMetadataStoreFound
+
+    try:
+        results = meta_dump(
+            dataset=str(dataset),
+            recursive=True,
+            return_type="generator",
+            result_renderer="disabled",
+        )
+        for result in results:
+            record = result["metadata"]
+            folder = dataset / record.get("dataset_path", "")
+            if record.get("type") == "file":
+                path = folder / record["path"]
+                if path.name not in METADATA_FILES:
+                    continue
+                folder = path.parent
+            folder = folder.resolve()
+            if folder.is_relative_to(root):
+                yield folder, record
+    except NoMetadataStoreFound:
+        return
+    except RuntimeError as error:
+        raise ValueError(f"MetaLad could not read {dataset}: {error}") from error
+
+
+def stored_metadata(
+    collection, *, single=False, graph_type="Dataset", descriptors=METADATA_FILES
+):
+    collection = collection.resolve()
     by_folder = {}
-    for line in result.stdout.splitlines():
-        if not line.strip():
+    for folder, record in stored_records(collection):
+        if (
+            record.get("type") == "file"
+            and Path(record["path"]).name not in descriptors
+        ):
             continue
-        record = json.loads(line)
-        base = dataset / record.get("dataset_path", "")
-        if record.get("type") == "file":
-            source = base / record["path"]
-            if source.name not in {
-                "project.json",
-                "paper.json",
-                "README.md",
-                "metadata.yaml",
-            }:
-                continue
-            base = source.parent
-        folder = base.resolve()
-        payload = record.get("extracted_metadata")
         matches = folder == collection if single else folder.parent == collection
+        payload = record.get("extracted_metadata")
         if matches and isinstance(payload, dict):
-            fields = by_folder.setdefault(folder, {})
-            apply_fields(fields, payload, graph_type=graph_type)
+            apply_fields(
+                by_folder.setdefault(folder, {}), payload, graph_type=graph_type
+            )
     return by_folder

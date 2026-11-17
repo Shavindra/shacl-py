@@ -4,6 +4,7 @@ import os
 import stat
 from pathlib import Path, PureWindowsPath
 
+FILE_PATTERN_SLOTS = ("data_file_patterns", "dataset_file_patterns")
 IGNORED = {".git", ".datalad", ".venv", "venv", "__pycache__", ".pytest_cache"}
 
 

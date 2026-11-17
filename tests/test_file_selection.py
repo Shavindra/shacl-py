@@ -13,7 +13,7 @@ def make_files(folder, paths):
 
 
 def tab_paths(root):
-    records, errors = load_records(root)
+    records, errors = load_records(root / "metadata.yaml")
     assert not errors and len(records) == 1
     return [
         {row["Relative path"] for row in rows} for rows in project_files(records[0])
@@ -34,6 +34,7 @@ def test_default_tabs_for_an_existing_record(tmp_path):
             ".git/objects/private.csv",
         ],
     )
+    (tmp_path / ".studyminimeta.yaml").write_text("person: {}\n")
     assert main(["init", str(tmp_path)]) == 0
     assert tab_paths(tmp_path) == [
         {"data/raw/first.xlsx", "data/raw/second.XLSX"},
@@ -115,5 +116,5 @@ def test_init_imports_rules_and_validate_checks_hand_edits(tmp_path):
     assert tab_paths(tmp_path) == [set(), {"guide.rst"}]
     record["data_file_patterns"] = "**/*.csv"
     path.write_text(yaml.safe_dump(record))
-    records, errors = load_records(tmp_path)
+    records, errors = load_records(path)
     assert not records and str(path) in errors[0] and "data_file_patterns" in errors[0]

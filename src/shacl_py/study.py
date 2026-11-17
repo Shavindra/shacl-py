@@ -2,11 +2,35 @@
 
 from datalad_metalad.extractors.studyminimeta.ldcreator import LDCreator
 
+from shacl_py.metadata_io import MetadataFile
+from shacl_py.sources import source_url
+
 
 def dataset_root(folder):
     return next(
         (p for p in (folder, *folder.parents) if (p / ".datalad/config").is_file()),
         folder,
+    )
+
+
+def read_study(path):
+    data = MetadataFile.read(path).data
+    if data:
+        validate_study({"person": {}, **data}, path)
+    return data
+
+
+def publication_info(data, url=None):
+    publications = data.get("publication", [])
+    if len(publications) == 1:
+        return publications[0]
+    return next(
+        (
+            p
+            for p in publications
+            if url and p.get("doi") and source_url(p["doi"]) == url
+        ),
+        {},
     )
 
 

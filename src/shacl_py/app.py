@@ -2,12 +2,15 @@
 
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 import streamlit as st
 
 from shacl_py.catalogue import Catalogue, title
 from shacl_py.files import grouped_files
+from shacl_py.native import MetadataSource, declared_title
 from shacl_py.records import load_records, project_files
+from shacl_py.sources import source_url
 
 st.set_page_config(
     page_title="shacl-py", page_icon=":material/folder_open:", layout="wide"
@@ -23,7 +26,7 @@ st.html("""
 @media(max-width: 600px) {.stMainBlockContainer {padding-top: 3rem;}}
 </style>
 """)
-root = Path(os.environ.get("SHACL_PY_ROOT", ".")).resolve()
+root = Path(os.environ.get("SHACL_PY_ROOT", "."))
 
 
 def go(**params):
@@ -275,11 +278,56 @@ def legacy_project(record):
         metadata_panel(entity)
 
 
+def source_page(record, has_others):
+    if has_others:
+        back("All records")
+    st.title(record.label, anchor=False)
+    if record.label != record.reference:
+        st.caption(record.reference)
+    for kind, fields in record.entries:
+        label = declared_title(fields)
+        st.subheader(kind, anchor=False)
+        st.write(label or "Title unavailable")
+        if (
+            summary := fields.get("description")
+            or fields.get("purpose")
+            or fields.get("abstract")
+        ):
+            st.write(summary)
+        link = (
+            fields.get("doi")
+            or fields.get("source_url")
+            or fields.get("sameAs")
+            or fields.get("url")
+        )
+        if isinstance(link, str) and link:
+            try:
+                href = source_url(link)
+            except ValueError:
+                st.write(link)
+            else:
+                href = quote(href, safe=":/?#[]@!$&'()*+,;=%")
+                st.markdown(f"<{href}>")
+    with st.expander("Source metadata"):
+        st.json(record.content)
+
+
 def home(records):
-    st.title("Projects", anchor=False)
-    query = st.text_input("Search projects")
+    has_sources = not records or any(isinstance(r, MetadataSource) for r in records)
+    st.title("Metadata" if has_sources else "Projects", anchor=False)
+    query = st.text_input("Search metadata" if has_sources else "Search projects")
     shown = 0
     for record in records:
+        if isinstance(record, MetadataSource):
+            if record.matches(query):
+                shown += 1
+                with st.container(border=True):
+                    st.subheader(record.label, anchor=False)
+                    if record.label != record.reference:
+                        st.caption(record.reference)
+                    if st.button("Open metadata", key=f"source-{record.reference}"):
+                        go(source=record.reference)
+            continue
         entity = record.data
         status = entity.get("review_status", "")
         if not matches(entity, query, status):
@@ -293,18 +341,47 @@ def home(records):
             if st.button("Open project", key=f"open-{entity['pid']}"):
                 go(project=entity["pid"])
     if not shown:
-        st.info("No matching projects." if query else "No projects found.")
+        if has_sources:
+            st.info("No matching metadata." if query else "No metadata found.")
+        else:
+            st.info("No matching projects.")
 
 
 try:
-    records, errors = load_records(root)
+    records, errors = load_records(
+        root, metalad=os.environ.get("SHACL_PY_METALAD") == "1"
+    )
     for error in errors:
         st.error(error)
     selected = st.query_params.get("project")
-    if not selected and len(records) == 1 and isinstance(records[0], Catalogue):
+    selected_source = st.query_params.get("source")
+    if selected_source:
+        source = next(
+            (
+                r
+                for r in records
+                if isinstance(r, MetadataSource) and r.reference == selected_source
+            ),
+            None,
+        )
+        if source is None:
+            back("All records")
+            st.warning("Metadata source not found.")
+        else:
+            source_page(source, len(records) > 1)
+    elif not selected and len(records) == 1 and isinstance(records[0], MetadataSource):
+        source_page(records[0], False)
+    elif not selected and len(records) == 1 and isinstance(records[0], Catalogue):
         linked_project(records[0], False)
     elif selected:
-        record = next((r for r in records if r.data["pid"] == selected), None)
+        record = next(
+            (
+                r
+                for r in records
+                if not isinstance(r, MetadataSource) and r.data["pid"] == selected
+            ),
+            None,
+        )
         if isinstance(record, Catalogue):
             linked_project(record, len(records) > 1)
         elif record:

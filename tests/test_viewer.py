@@ -141,8 +141,8 @@ def test_generate_preserves_overrides_and_adds_new_papers(tmp_path):
     assert main(["generate", str(tmp_path)]) == 0
     metadata = first / "metadata.yaml"
     data = yaml.safe_load(metadata.read_text())
-    assert data["display_label"] == "First paper"
-    assert data["source_url"] == "https://doi.org/10.1234/demo"
+    assert data["display_label"] == data["pid"]
+    assert "description" not in data and "source_url" not in data
     data.update(review_status="useful", editorial_notes=["My notes"])
     custom = yaml.safe_dump(data)
     metadata.write_text(custom)
@@ -165,7 +165,7 @@ def test_paper_json_overrides_extracted_metadata(tmp_path):
         json.dumps({"display_label": "Curated", "pid": "urn:example:paper"})
     )
     assert main(["generate", str(tmp_path)]) == 0
-    records, errors = load_records(tmp_path)
+    records, errors = load_records(paper / "metadata.yaml")
     assert not errors
     data = records[0].data
     assert (data["display_label"], data["pid"], data["source_url"]) == (
@@ -192,11 +192,17 @@ def test_generate_queries_metalad_for_dataset(tmp_path):
             "data_file_patterns": ["signals/**/*.dat"],
         },
     }
-    with patch("shacl_py.cli.subprocess.run") as query:
-        query.return_value.returncode = 0
-        query.return_value.stdout = json.dumps(entry)
+    readme_entry = {
+        **entry,
+        "path": "papers/paper-a/README.md",
+        "extracted_metadata": {"title": "Review notes"},
+    }
+    with patch(
+        "datalad.api.meta_dump",
+        return_value=[{"metadata": entry}, {"metadata": readme_entry}],
+    ) as query:
         assert main(["generate", str(papers)]) == 0
-        assert query.call_args.args[0][-4:] == ["meta-dump", "-d", str(tmp_path), "-r"]
+        assert query.call_args.kwargs["dataset"] == str(tmp_path)
     records, errors = load_records(papers)
     assert not errors and records[0].data["display_label"] == "Stored title"
     assert records[0].data["data_file_patterns"] == ["signals/**/*.dat"]

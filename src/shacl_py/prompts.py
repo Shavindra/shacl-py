@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from shacl_py.catalogue import title
 from shacl_py.files import local_path
+from shacl_py.sources import source_url
 
 DOC_FILES = (
     "README.md",
@@ -31,17 +32,6 @@ def choose(label, choices, default):
         if value in choices:
             return value
         print(f"Choose one of {', '.join(choices)}.")
-
-
-def source_url(value):
-    if not value:
-        return None
-    value = value.strip()
-    if re.fullmatch(r"10\.\d{4,9}/\S+", value, re.IGNORECASE):
-        value = f"https://doi.org/{value}"
-    if not re.fullmatch(r"https?://[^\s/]+(?:[/?#]\S*)?", value):
-        raise ValueError(f"expected a DOI or HTTP(S) URL, got {value!r}")
-    return value
 
 
 def add_group(entity, label, paths, section="files"):
@@ -118,14 +108,17 @@ def list_options(items):
 
 
 def new_entity(name, url=None, pid=None):
-    entity = {"pid": pid or f"urn:uuid:{uuid4()}", "title": name}
+    entity = {"pid": pid or f"urn:uuid:{uuid4()}"}
+    if name:
+        entity["title"] = name
     if url:
         entity["source_url"] = url
     return entity
 
 
 def edit_details(entity):
-    entity["title"] = prompt("Title", title(entity))
+    if name := prompt("Title", entity.get("title")):
+        entity["title"] = name
     url = prompt("DOI or source URL (optional)", entity.get("source_url"))
     if url:
         entity["source_url"] = source_url(url)
@@ -136,7 +129,7 @@ def edit_details(entity):
 
 def from_token(token):
     if token.startswith(("http://", "https://")) or re.match(r"10\.\d{4,9}/", token):
-        return new_entity(token, source_url(token))
+        return new_entity(None, source_url(token))
     return new_entity(token)
 
 

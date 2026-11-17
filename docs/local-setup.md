@@ -22,7 +22,21 @@ curl -fsSL https://raw.githubusercontent.com/Shavindra/shacl-py/main/setup.sh -o
 bash /tmp/shacl-py-setup.sh
 ~~~
 
-## Linked metadata
+## View the source metadata
+
+`shacl-py serve ROOT` opens the local viewer. A linked project catalogue in
+`metadata.yaml` takes precedence over adjacent descriptors. The viewer also discovers
+`.studyminimeta.yaml`, `paper.json`, `project.json` and `metalad.json` in
+folders without a catalogue entry. It consults the enclosing DataLad store
+when the root contains no recognised metadata files.
+
+Pass a particular file to view that source directly. To select the store even
+when a catalogue exists, run `shacl-py serve ROOT --metalad`. The viewer reads
+stored dataset records and records for recognised metadata files using
+`meta-dump`. It shows the supplied fields and the original source metadata.
+Use `--port` to change the port.
+
+## Optional metadata setup
 
 `shacl-py setup [PROJECT]` prepares both metadata files. You can override the
 project title and description, specify repeated literal `--data-folder` paths
@@ -44,10 +58,11 @@ grows. Empty answers accept the displayed defaults.
   preserves existing people, keywords and publications, and checks the result
   with MetaLad's StudyMiniMeta converter. A paper folder remains an ordinary
   directory. A record for a reviewed or derived dataset requires no Git submodule.
-- Initial project details can come from existing StudyMiniMeta, stored MetaLad
-  metadata (`datalad meta-dump`), local project.json or paper.json, metalad.json
-  exports or README.md. Enter a DOI or URL to record a reference. Setup uses
-  locally available descriptions.
+- Project details can come from StudyMiniMeta, MetaLad, `project.json` or
+  explicit setup input. For a paper, the template reads a matching
+  `publication[].title` in the paper folder's `.studyminimeta.yaml`, a declared
+  publication record or the title you enter. A README is a documentation file.
+  If the title is missing, a linked record can be displayed by source URL or ID.
 - Existing flat metadata at the project root is retained alongside the new
   `catalogue` section. The paper-review helper can import a collection's
   immediate folders, reuse their flat IDs and read their local

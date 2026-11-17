@@ -19,11 +19,25 @@ from shacl_py.records import (
     record_validator,
     validate_file_patterns,
 )
-from shacl_py.sources import initial_fields, stored_metadata
+from shacl_py.sources import initial_fields, source_url, stored_metadata
 
 
 def generate_record(folder, stored=None, rules=None):
+    from shacl_py.study import publication_info, read_study
+
     data = initial_fields(folder, stored)
+    study = read_study(folder / ".studyminimeta.yaml")
+    publication = publication_info(study, data.get("source_url"))
+    label = (
+        publication.get("title")
+        or data.get("display_label")
+        or study.get("study", {}).get("name")
+        or study.get("dataset", {}).get("name")
+    )
+    data["display_label"] = label or data["pid"]
+    data["review_status"] = "unreviewed"
+    if publication.get("doi"):
+        data["source_url"] = source_url(publication["doi"])
     target = folder / "metadata.yaml"
     data.update(rules or {})
     try:
@@ -128,10 +142,16 @@ def main(argv=None, *, review_layout=None):
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
-    validate.add_argument("path", type=Path)
+    validate.add_argument("path", type=Path, help="Project directory or metadata file")
     serve = commands.add_parser("serve", help="Start the read-only local viewer")
-    serve.add_argument("path", type=Path)
+    serve.add_argument("path", type=Path, help="Project directory or metadata file")
     serve.add_argument("--port", type=int, default=8501)
+    for command in (serve, validate):
+        command.add_argument(
+            "--metalad",
+            action="store_true",
+            help="Read the existing MetaLad store directly",
+        )
     args = parser.parse_args(argv)
     try:
         if args.command == "setup":
@@ -188,8 +208,8 @@ def main(argv=None, *, review_layout=None):
                 except (TypeError, ValueError, yaml.YAMLError, RoundTripError) as error:
                     raise ValueError(f"{target}: {error}") from error
             return 0
-        root = args.path.resolve()
-        records, errors = load_records(root)
+        root = args.path.absolute()
+        records, errors = load_records(root, metalad=args.metalad)
         if errors:
             print("\n".join(errors), file=sys.stderr)
             return 1
@@ -206,12 +226,13 @@ def main(argv=None, *, review_layout=None):
             for path in sorted(sidecars):
                 if os.path.lexists(path):
                     validate_study(MetadataFile.read(path).data, path)
-            print(f"Validated {len(records)} project record(s).")
+            print(f"Checked {len(records)} metadata record(s).")
             return 0
         if not 1 <= args.port <= 65535:
             parser.error("--port must be between 1 and 65535")
         env = os.environ.copy()
         env["SHACL_PY_ROOT"] = str(root)
+        env["SHACL_PY_METALAD"] = "1" if args.metalad else "0"
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         return subprocess.call(
             [
