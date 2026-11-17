@@ -5,9 +5,39 @@ Minimal Python UI / viewer for metadata described with the DataLad Concepts Tool
 Inspired by [shacl-vue](https://github.com/psychoinformatics-de/shacl-vue), developed by the Psychoinformatics team. Uses schemas from the [DataLad Concepts Toolkit](https://concepts.datalad.org/).
 A separate Python implementation, requiring **Python 3.14 or later**.
 
+## Prerequisites
+
+- macOS/Linux terminal (or WSL on Windows), with Bash for setup.sh.
+- Git to clone this repository.
+- Python **3.14 or later**, including pip and venv, **or Conda**.
+- Internet access for the initial dependency installation.
+
+DataLad and git-annex are optional for the viewer. Keep using your existing
+installation for dataset management. No Node.js or database is required.
+
 ## Install
 
-From a checkout, using pip:
+First clone the application (keep it separate from your research dataset):
+
+```sh
+git clone https://github.com/Shavindra/shacl-py.git
+cd shacl-py
+```
+
+Quick setup (checks Python, creates .venv, installs and verifies the example):
+
+```sh
+bash setup.sh
+source .venv/bin/activate
+shacl-py serve examples
+```
+
+Or run `bash setup.sh --conda`, then `conda activate shacl-py`.
+The script does not install system prerequisites. The Conda route creates a new
+`shacl-py` environment; if it already exists, activate it and run
+`python -m pip install -r requirements.txt` instead.
+
+Manual setup using pip with Python 3.14 or later:
 
 ```sh
 python3.14 -m venv .venv
@@ -21,6 +51,18 @@ Or using Conda:
 conda env create -f environment.yml
 conda activate shacl-py
 ```
+
+Check the installation and try the included example:
+
+```sh
+shacl-py --help
+shacl-py validate examples
+shacl-py serve examples
+```
+
+Open http://127.0.0.1:8501. Stop the server with Ctrl+C. In a new terminal,
+reactivate the environment with `source /path/to/shacl-py/.venv/bin/activate`
+or `conda activate shacl-py` before running the commands.
 
 ## Use
 
@@ -50,6 +92,41 @@ appear as unavailable; it never runs `datalad get`. Unlocked annex pointer files
 are listed as locally available files without inspecting their contents.
 Metadata creation and editing remain in files/CLI. Serving writes nothing to the
 research repository. Symlink directories are not traversed.
+
+## Use with an existing DataLad dataset
+
+Activate the shacl-py environment, then point it at your research repository:
+
+```sh
+cd /absolute/path/to/your/research-repository
+shacl-py init research/papers/my-paper
+# Edit research/papers/my-paper/metadata.yaml with the actual paper details.
+shacl-py validate .
+shacl-py serve .
+```
+
+Use `init` once for each paper. It refuses to overwrite existing metadata.
+Create notebooks/, data/raw/ and data/output/ inside each paper folder as needed.
+Papers can be ordinary folders; they do not need to be DataLad subdatasets.
+For an existing compatible metadata.yaml, skip `init`.
+
+Keep metadata.yaml in Git rather than annex storage. From the dataset root,
+using your existing Git installation:
+
+```sh
+git -c annex.largefiles=nothing add research/papers/my-paper/metadata.yaml
+git commit --only -m "docs: add paper metadata" -- research/papers/my-paper/metadata.yaml
+```
+
+This saves only the named metadata file. Continue managing datasets with your
+existing DataLad installation; shacl-py does not require DataLad in its own environment.
+
+## DataLad extension status
+
+This version is standalone. No extension registration is needed to view a
+DataLad dataset, and `datalad shacl-py` is not implemented yet. Installing this
+package does not add a DataLad command. See [extension integration](docs/local-setup.md#adding-a-datalad-extension)
+for the implementation required to support that command.
 
 Development: `python -m pip install -e '.[dev]'`, then `ruff check .`,
 `ruff format --check .`, `pytest`, and `python -m build`.
