@@ -54,13 +54,12 @@ On macOS, Git is available through Apple's Command Line Tools
 
 ### requirements.txt
 
-Add this line to your own requirements.txt:
+Install the bundled requirements directly into the active environment:
 
-```text
-shacl-py @ git+https://github.com/Shavindra/shacl-py.git
+```sh
+python -m pip install -r https://raw.githubusercontent.com/Shavindra/shacl-py/main/requirements.txt
 ```
 
-Then run `python -m pip install -r requirements.txt` in your active environment.
 To update an existing installation:
 
 ```sh
@@ -69,95 +68,40 @@ python -m pip install --upgrade "git+https://github.com/Shavindra/shacl-py.git"
 
 ## Use
 
-```sh
-shacl-py generate research/papers
-shacl-py validate research
-shacl-py serve research --port 8501
-```
-
-Open http://127.0.0.1:8501. Each paper appears directly on the homepage.
-Metadata uses Concepts `pid`, `display_label` (title), and `description`, plus
-`source_url` (DOI resolver or source URL), `review_status`, and `local_folder`.
-The folder resolves relative to metadata.yaml and must stay within the served root.
-See [example metadata](examples/research/papers/example/metadata.yaml).
-
-The bundled LinkML Paper schema extends Concepts Things v2; generated JSON Schema
-validates records offline. Upstream schema provenance and licence are retained in
-[src/shacl_py/schemas](src/shacl_py/schemas). This is a local Paper profile, not a
-general SHACL/RDF browser or a replacement for every shacl-vue feature.
-
-Ordinary folders work; DataLad is optional. The viewer lists notebooks/, data/raw/
-and data/output/ without reading dataset contents. Missing annex symlink targets
-appear as unavailable; it never runs `datalad get`. Unlocked annex pointer files
-are listed as locally available files without inspecting their contents.
-Metadata creation and editing remain in files/CLI. Serving writes nothing to the
-research repository. Symlink directories are not traversed.
-
-## Recommended data management
-
-Use **DataLad + git-annex** to manage research datasets, record changes and
-retrieve file content. Use **shacl-py** to browse paper metadata and local file
-availability. DataLad Concepts defines the metadata structure; it does not manage
-your data. Neither Concepts nor this viewer replaces DataLad or git-annex.
-
-Install Git, git-annex and DataLad using the
-[official DataLad installation guide](https://handbook.datalad.org/en/latest/intro/installation.html).
-Keep an existing working DataLad environment; it can be separate from the
-Python 3.14+ viewer environment. Installing shacl-py installs only the viewer
-and its Python dependencies, not DataLad or git-annex.
-
-From your data-management environment, check the prerequisites with:
+Choose the directory containing your projects. Each immediate visible directory
+becomes one project, regardless of its name or internal layout.
 
 ```sh
-git --version
-git annex version
-datalad --version
+shacl-py generate /path/to/collection
+shacl-py validate /path/to/collection
+shacl-py serve /path/to/collection
 ```
 
-Continue using DataLad CLI commands for dataset creation, saving changes and
-retrieving missing content. The viewer never downloads data automatically.
-DataLad Catalog is not required for this viewer; existing Catalog metadata must
-be converted to the supported metadata.yaml format before it can be displayed.
+Open http://127.0.0.1:8501. For a single project at any location, run
+`shacl-py init /path/to/project` and serve that directory. The viewer searches
+for metadata.yaml recursively and lists files with their project-relative paths.
 
-## Use with an existing DataLad dataset
+## Metadata and data management
 
-Activate the shacl-py environment, then point it at your research repository:
+In a DataLad dataset, generation queries the stored MetaLad metadata with
+`datalad meta-dump -r`. It maps dataset records by project path and file
+records by project descriptor (project.json, README.md or metadata.yaml).
+The legacy paper.json descriptor is also supported. It reads flat title,
+display_label, description, source_url, url and doi fields. Metadata extraction
+into the MetaLad store is a separate operation.
 
-```sh
-cd /absolute/path/to/your/research-repository
-shacl-py generate research/papers
-shacl-py validate .
-shacl-py serve .
-```
+For missing values, generation uses local project.json (or legacy paper.json),
+a local metalad.json export, README.md and the folder name. Each new record
+gets a persistent ID and an initial review status. You can edit metadata.yaml
+and add supported Concepts fields. Subsequent generation preserves existing
+records. Ordinary folders work without a DataLad dataset.
 
-Run `generate` on the directory containing your paper folders. Each immediate
-non-hidden, non-symlink directory gets a metadata.yaml with a stable ID, a title
-from its folder name and an initial review status of unreviewed. If README.md
-exists, the generator uses its first H1 heading, first prose line and an explicit
-`DOI:` or `Source:` line when available. Description and source are optional.
-The generator also reads an optional paper.json (a Concepts record with pid,
-display_label and description) or metalad.json (one paper-specific MetaLad
-record with a flat extracted_metadata object). Recognised JSON fields override
-README defaults, with paper.json taking precedence. Supported source fields are
-source_url, url and doi. Dataset-wide JSONL exports require paper matching first.
-Edit the generated YAML to override values or add supported schema fields.
-Running generate again preserves existing records exactly. For a single new
-paper folder use `shacl-py init PAPER_PATH`.
-
-Create notebooks/, data/raw/ and data/output/ inside each paper folder as needed.
-Papers can be ordinary folders; they do not need to be DataLad subdatasets.
-For an existing compatible metadata.yaml, skip `init`.
-
-Keep metadata.yaml in Git rather than annex storage. From the dataset root,
-using your existing Git installation:
-
-```sh
-git -c annex.largefiles=nothing add research/papers/my-paper/metadata.yaml
-git commit --only -m "docs: add paper metadata" -- research/papers/my-paper/metadata.yaml
-```
-
-This saves only the named metadata file. Continue managing datasets with your
-existing DataLad installation; shacl-py does not require DataLad in its own environment.
+Use DataLad and git-annex to manage research data, record changes and retrieve
+file content. Keep metadata.yaml in Git. The viewer lists local availability
+without fetching content. Unlocked annex pointers appear as available files.
+The Concepts schema and its licence are bundled for offline validation.
+See the [DataLad installation guide](https://handbook.datalad.org/en/latest/intro/installation.html)
+for system prerequisites, including git-annex.
 
 ## DataLad extension status
 

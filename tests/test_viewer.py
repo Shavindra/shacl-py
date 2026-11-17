@@ -119,7 +119,7 @@ def test_homepage_navigation_search_and_readonly(root, monkeypatch):
     app.button[0].click().run()
     assert not app.exception
     assert app.header[0].value == "Example paper project"
-    assert len(app.dataframe) == 3
+    assert len(app.dataframe) == 1
     app.button[0].click().run()
     assert not app.exception
     after = {
@@ -169,3 +169,25 @@ def test_paper_json_overrides_extracted_metadata(tmp_path):
         "urn:example:paper",
         "https://doi.org/10.1234/demo",
     )
+
+
+def test_generate_queries_metalad_for_dataset(tmp_path):
+    config = tmp_path / ".datalad/config"
+    config.parent.mkdir()
+    config.touch()
+    papers = tmp_path / "papers"
+    folder = papers / "paper-a"
+    folder.mkdir(parents=True)
+    (folder / "README.md").write_text("# Fallback")
+    entry = {
+        "type": "file",
+        "path": "papers/paper-a/project.json",
+        "extracted_metadata": {"title": "Stored title", "doi": "10.1234/test"},
+    }
+    with patch("shacl_py.cli.subprocess.run") as query:
+        query.return_value.returncode = 0
+        query.return_value.stdout = json.dumps(entry)
+        assert main(["generate", str(papers)]) == 0
+        assert query.call_args.args[0][-4:] == ["meta-dump", "-d", str(tmp_path), "-r"]
+    records, errors = load_records(papers)
+    assert not errors and records[0].data["display_label"] == "Stored title"

@@ -1,1 +1,2 @@
--e .
+# Install the viewer and its MetaLad dependency into the active environment.
+shacl-py @ git+https://github.com/Shavindra/shacl-py.git

@@ -37,13 +37,13 @@ if selected:
         with st.expander("Metadata"):
             st.json(record.data)
             st.text(str(record.metadata.relative_to(root)))
-        for section in ("notebooks", "data/raw", "data/output"):
-            st.subheader(section + "/")
-            rows = list_files(record.folder, section)
-            if rows:
-                st.dataframe(rows, hide_index=True, use_container_width=True)
-            else:
-                st.caption("No local entries.")
+        st.subheader("Files")
+        rows = list_files(record.folder, ".")
+        if rows:
+            st.dataframe(rows, hide_index=True, width="stretch")
+        else:
+            st.caption("No local entries.")
+
 else:
     shown = 0
     for record in records:
