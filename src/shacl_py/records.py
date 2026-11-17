@@ -1,18 +1,29 @@
 """Offline schema validation and filesystem-only discovery."""
 
 import glob
-import json
 import os
 import re
 from dataclasses import dataclass
-from functools import cache
 from pathlib import Path, PurePosixPath
 
 import yaml
-from jsonschema.validators import validator_for
 
-SCHEMAS = Path(__file__).parent / "schemas"
-IGNORED = {".git", ".datalad", ".venv", "venv", "__pycache__", ".pytest_cache"}
+from shacl_py.catalogue import SCHEMAS, Catalogue, record_validator, validate_catalogue
+from shacl_py.files import IGNORED, _file_row, _paths_below, in_git_tree, read_metadata
+
+__all__ = [
+    "FILE_PATTERN_SLOTS",
+    "SCHEMAS",
+    "Paper",
+    "discover",
+    "list_files",
+    "load_records",
+    "project_files",
+    "read_metadata",
+    "record_validator",
+    "validate_file_patterns",
+]
+
 DATA_PATTERNS = tuple(
     f"**/*.{suffix}"
     for suffix in (
@@ -72,12 +83,6 @@ def discover(root: Path) -> list[Path]:
     return sorted(found)
 
 
-@cache
-def record_validator():
-    schema = json.loads((SCHEMAS / "paper.schema.json").read_text())
-    return validator_for(schema)(schema)
-
-
 def validate_file_patterns(rules: dict):
     validator = record_validator()
     for slot, value in rules.items():
@@ -85,21 +90,29 @@ def validate_file_patterns(rules: dict):
             raise ValueError(f"{slot}: {error.message}")
 
 
-def read_metadata(path: Path) -> str:
-    if path.is_symlink() or not path.is_file():
-        raise ValueError("metadata must be a regular local file")
-    if path.stat().st_size > 1_000_000:
-        raise ValueError("metadata exceeds 1 MB")
-    return path.read_text(encoding="utf-8")
-
-
-def load_records(root: Path) -> tuple[list[Paper], list[str]]:
+def load_records(root: Path) -> tuple[list[Paper | Catalogue], list[str]]:
     root = root.resolve()
     validator = record_validator()
     records, errors, ids = [], [], set()
     for path in discover(root):
         try:
             data = yaml.safe_load(read_metadata(path))
+            if isinstance(data, dict) and "catalogue" in data:
+                graph = data["catalogue"]
+                validate_catalogue(graph, path.parent)
+                legacy = {
+                    key: value for key, value in data.items() if key != "catalogue"
+                }
+                if legacy:
+                    problem = next(validator.iter_errors(legacy), None)
+                    if problem:
+                        raise ValueError(f"legacy record: {problem.message}")
+                pid = graph["project"]["pid"]
+                if pid in ids:
+                    raise ValueError(f"duplicate pid {pid}")
+                ids.add(pid)
+                records.append(Catalogue(path, graph))
+                continue
             problems = list(validator.iter_errors(data))
             if problems:
                 for error in problems:
@@ -120,7 +133,19 @@ def load_records(root: Path) -> tuple[list[Paper], list[str]]:
             records.append(Paper(path, folder, data))
         except (OSError, ValueError, yaml.YAMLError) as error:
             errors.append(f"{path}: {error}")
-    return records, errors
+    # Imported per-paper records stay on disk. Their linked entry is displayed once.
+    imported = {
+        (item["pid"], (record.folder / item["local_folder"]).resolve())
+        for record in records
+        if isinstance(record, Catalogue)
+        for item in record.graph.get("publications", [])
+        if "local_folder" in item
+    }
+    return [
+        r
+        for r in records
+        if isinstance(r, Catalogue) or (r.data["pid"], r.folder) not in imported
+    ], errors
 
 
 def _compile_patterns(patterns):
@@ -131,29 +156,6 @@ def _compile_patterns(patterns):
         )
         for p in patterns
     ]
-
-
-def _paths_below(base: Path, *, skip_hidden_dirs: bool):
-    if base.is_symlink() or not base.is_dir():
-        return
-    for directory, dirs, files in os.walk(base, followlinks=False):
-        dirs[:] = sorted(
-            d
-            for d in dirs
-            if d not in IGNORED
-            and not (skip_hidden_dirs and d.startswith("."))
-            and not Path(directory, d).is_symlink()
-        )
-        for name in sorted(files):
-            yield Path(directory, name)
-
-
-def _file_row(path, relative):
-    return {
-        "Filename": path.name,
-        "Relative path": relative,
-        "Availability": "Available" if path.is_file() else "Unavailable",
-    }
 
 
 def list_files(folder: Path, section: str) -> list[dict]:
@@ -170,13 +172,14 @@ def project_files(record: Paper) -> tuple[list[dict], list[dict]]:
     dataset = record.data.get("dataset_file_patterns")
     data_rules = _compile_patterns(DATA_PATTERNS if data is None else data)
     dataset_rules = _compile_patterns(DATASET_PATTERNS if dataset is None else dataset)
+    check_pointers = in_git_tree(record.folder)
     data_rows, dataset_rows = [], []
     for path in _paths_below(record.folder, skip_hidden_dirs=True):
         if path.name.casefold() in {".git", ".gitkeep", ".keep", ".ds_store"}:
             continue
         relative = path.relative_to(record.folder).as_posix()
         if any(rule.fullmatch(relative) for rule in dataset_rules):
-            dataset_rows.append(_file_row(path, relative))
+            dataset_rows.append(_file_row(path, relative, check_pointers))
         elif any(rule.fullmatch(relative) for rule in data_rules):
-            data_rows.append(_file_row(path, relative))
+            data_rows.append(_file_row(path, relative, check_pointers))
     return data_rows, dataset_rows

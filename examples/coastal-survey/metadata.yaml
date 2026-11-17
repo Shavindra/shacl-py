@@ -1,0 +1,45 @@
+catalogue:
+  project:
+    pid: urn:example:coastal-survey
+    title: Coastal survey
+    description: A worked example of reviewing publications and reusing their datasets.
+  publications:
+    - pid: urn:example:field-paper
+      title: Shoreline field survey
+      description: Station measurements at two coastal sites.
+      local_folder: papers/field-survey
+      dataset_links:
+        - {dataset: 'urn:example:readings', role: describes}
+      file_groups:
+        - {label: Review notes, paths: [README.md]}
+        - {label: Notebooks, paths: [notebooks]}
+        - {label: Raw data, paths: [data/raw]}
+        - {label: Analysis outputs, paths: [data/output]}
+    - pid: urn:example:follow-up
+      title: Comparing coastal stations
+      description: A second example publication reusing the survey readings.
+      dataset_links:
+        - {dataset: 'urn:example:readings', role: reuses}
+    - pid: urn:example:protocol
+      title: Field sampling protocol
+  datasets:
+    - pid: urn:example:readings
+      title: Station readings
+      description: Synthetic readings in metres.
+      local_folder: papers/field-survey/data/raw
+      file_groups:
+        - {label: Data files, paths: [readings.csv]}
+    - pid: urn:example:means
+      title: Mean reading per station
+      source_datasets: ['urn:example:readings']
+      notebook_path: papers/field-survey/notebooks/summary.ipynb
+      local_folder: papers/field-survey/data/output
+      file_groups:
+        - {label: Results, paths: [station-means.csv]}
+  reviews:
+    - publication: urn:example:field-paper
+      status: useful
+      notes: The source data support a comparison of station means.
+      outputs: ['urn:example:means']
+    - {publication: 'urn:example:follow-up', status: reviewing}
+    - {publication: 'urn:example:protocol', status: unreviewed}

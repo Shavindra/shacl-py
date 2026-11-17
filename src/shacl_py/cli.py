@@ -1,16 +1,12 @@
 """Command line entry points."""
 
 import argparse
-import json
 import os
-import re
 import subprocess
 import sys
-import sysconfig
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import uuid4
 
 import yaml
 from ruamel.yaml import YAML
@@ -23,91 +19,11 @@ from shacl_py.records import (
     record_validator,
     validate_file_patterns,
 )
-
-
-def apply_fields(data, record, allow_pid=False):
-    for slot in FILE_PATTERN_SLOTS:
-        if slot in record:
-            data[slot] = record[slot]
-    keys = {
-        "display_label": ("display_label", "title"),
-        "description": ("description",),
-        "source_url": ("source_url", "url", "doi"),
-    }
-    if allow_pid:
-        keys["pid"] = ("pid",)
-    for field, aliases in keys.items():
-        for key in aliases:
-            value = record.get(key)
-            if not isinstance(value, str) or not value.strip():
-                continue
-            value = value.strip()
-            if field == "source_url":
-                if re.fullmatch(r"10\.\d{4,9}/\S+", value):
-                    value = "https://doi.org/" + value
-                if not re.match(r"https?://[^\s/]+", value):
-                    continue
-            if field == "pid" and not re.fullmatch(r"\S+:\S+", value):
-                continue
-            data[field] = value
-            break
+from shacl_py.sources import initial_fields, stored_metadata
 
 
 def generate_record(folder, stored=None, rules=None):
-    title = (
-        folder.resolve().name.replace("_", " ").replace("-", " ").strip() or folder.name
-    )
-    data = {
-        "pid": f"urn:uuid:{uuid4()}",
-        "display_label": title,
-        "review_status": "unreviewed",
-        "local_folder": ".",
-    }
-    readme = folder / "README.md"
-    if readme.is_file() and not readme.is_symlink():
-        with readme.open("rb") as stream:
-            lines = stream.read(65536).decode("utf-8", errors="replace").splitlines()
-        for line in lines:
-            if line.startswith("# ") and line[2:].strip():
-                data["display_label"] = line[2:].strip()
-                break
-        for line in lines:
-            if (
-                line.strip()
-                and line[0].isalnum()
-                and not line.startswith(("http", "DOI:"))
-            ):
-                data["description"] = line.strip()
-                break
-        for line in lines:
-            source = re.fullmatch(
-                r"(?:DOI|Source):\s*(https?://\S+|10\.\d{4,9}/\S+)",
-                line.strip(),
-                re.IGNORECASE,
-            )
-            if source:
-                url = source.group(1)
-                data["source_url"] = (
-                    "https://doi.org/" + url if url.startswith("10.") else url
-                )
-                break
-    # Later sources take precedence when creating a project record.
-    for name in ("metalad.json", "paper.json", "project.json"):
-        path = folder / name
-        if path.is_symlink() or not path.is_file():
-            continue
-        if path.stat().st_size > 1_000_000:
-            raise ValueError(f"{path}: exceeds 1 MB")
-        try:
-            record = json.loads(path.read_text(encoding="utf-8"))
-        except ValueError as error:
-            raise ValueError(f"{path}: {error}") from error
-        if name == "metalad.json" and isinstance(record, dict):
-            record = record.get("extracted_metadata")
-        if not isinstance(record, dict):
-            raise TypeError(f"{path}: expected a single project metadata object")
-        apply_fields(data, record, allow_pid=name in {"project.json", "paper.json"})
-    apply_fields(data, stored or {})
+    data = initial_fields(folder, stored)
     target = folder / "metadata.yaml"
     data.update(rules or {})
     try:
@@ -127,6 +43,8 @@ def update_file_patterns(path, rules):
     before = yaml.safe_load(original)
     if not isinstance(before, dict):
         raise TypeError("expected a project metadata mapping")
+    if "catalogue" in before:
+        raise ValueError("use shacl-py setup to change linked catalogue file groups")
     expected = before | rules
     if expected == before:
         return False
@@ -153,63 +71,7 @@ def update_file_patterns(path, rules):
     return True
 
 
-def stored_metadata(collection, *, single=False):
-    collection = collection.resolve()
-    dataset = next(
-        (
-            p
-            for p in (collection, *collection.parents)
-            if (p / ".datalad/config").is_file()
-        ),
-        None,
-    )
-    if dataset is None:
-        return {}
-    result = subprocess.run(
-        [
-            str(Path(sysconfig.get_path("scripts")) / "datalad"),
-            "-f",
-            "tailored",
-            "meta-dump",
-            "-d",
-            str(dataset),
-            "-r",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode and "NoMetadataStoreFound" in result.stderr:
-        print("No MetaLad store found. Using local project metadata.", file=sys.stderr)
-        return {}
-    if result.returncode:
-        raise ValueError(f"MetaLad could not read {dataset}: {result.stderr.strip()}")
-    by_folder = {}
-    for line in result.stdout.splitlines():
-        if not line.strip():
-            continue
-        record = json.loads(line)
-        base = dataset / record.get("dataset_path", "")
-        if record.get("type") == "file":
-            source = base / record["path"]
-            if source.name not in {
-                "project.json",
-                "paper.json",
-                "README.md",
-                "metadata.yaml",
-            }:
-                continue
-            base = source.parent
-        folder = base.resolve()
-        payload = record.get("extracted_metadata")
-        matches = folder == collection if single else folder.parent == collection
-        if matches and isinstance(payload, dict):
-            fields = by_folder.setdefault(folder, {})
-            apply_fields(fields, payload)
-    return by_folder
-
-
-def main(argv=None):
+def main(argv=None, *, review_layout=None):
     parser = argparse.ArgumentParser(prog="shacl-py")
     commands = parser.add_subparsers(dest="command", required=True)
     init = commands.add_parser(
@@ -240,6 +102,29 @@ def main(argv=None):
             metavar="PATTERN",
             help="Project-relative glob for Dataset files (repeatable)",
         )
+    setup = commands.add_parser(
+        "setup", help="Set up and validate linked project metadata"
+    )
+    setup.add_argument("path", nargs="?", type=Path, default=Path("."))
+    setup.add_argument(
+        "--template", choices=("project", "paper-review"), default="project"
+    )
+    setup.add_argument("--title", help="Project title")
+    setup.add_argument("--description", help="Project description")
+    setup.add_argument(
+        "--data-folder",
+        action="append",
+        metavar="DIR",
+        help="Select a project data folder, including all file types (repeatable)",
+    )
+    setup.add_argument(
+        "--papers-folder",
+        metavar="DIR",
+        help="Import the immediate paper directories in this project-relative folder",
+    )
+    setup.add_argument(
+        "--no-input", action="store_true", help="Use available metadata without prompts"
+    )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -249,6 +134,11 @@ def main(argv=None):
     serve.add_argument("--port", type=int, default=8501)
     args = parser.parse_args(argv)
     try:
+        if args.command == "setup":
+            from shacl_py.setup import setup_project
+
+            setup_project(args, review_layout)
+            return 0
         if args.command in {"init", "generate"}:
             rules = {
                 slot: getattr(args, slot)
@@ -304,6 +194,18 @@ def main(argv=None):
             print("\n".join(errors), file=sys.stderr)
             return 1
         if args.command == "validate":
+            from shacl_py.catalogue import Catalogue
+            from shacl_py.metadata_io import MetadataFile
+            from shacl_py.study import dataset_root, validate_study
+
+            sidecars = {
+                dataset_root(r.folder) / ".studyminimeta.yaml"
+                for r in records
+                if isinstance(r, Catalogue)
+            }
+            for path in sorted(sidecars):
+                if os.path.lexists(path):
+                    validate_study(MetadataFile.read(path).data, path)
             print(f"Validated {len(records)} project record(s).")
             return 0
         if not 1 <= args.port <= 65535:
@@ -321,6 +223,7 @@ def main(argv=None):
                 "--server.address=127.0.0.1",
                 f"--server.port={args.port}",
                 "--server.headless=true",
+                "--client.toolbarMode=minimal",
                 "--browser.gatherUsageStats=false",
                 "--server.fileWatcherType=none",
                 "--theme.base=light",
@@ -332,6 +235,9 @@ def main(argv=None):
             env=env,
             cwd=Path(__file__).parent,
         )
-    except (OSError, TypeError, ValueError) as error:
+    except EOFError, KeyboardInterrupt:
+        print("Cancelled.", file=sys.stderr)
+        return 1
+    except (OSError, TypeError, ValueError, yaml.YAMLError, RoundTripError) as error:
         print(str(error), file=sys.stderr)
         return 1

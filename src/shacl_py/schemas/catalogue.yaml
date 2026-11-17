@@ -1,0 +1,81 @@
+id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
+name: shacl-py-catalogue
+version: 1.0.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
+  dcterms: http://purl.org/dc/terms/
+  prov: http://www.w3.org/ns/prov#
+default_prefix: local
+imports:
+  - things-social-v1
+  - things-publications-v1
+  - things-data-v1
+classes:
+  Catalogue:
+    tree_root: true
+    attributes:
+      project: {range: LocalProject, inlined: true, required: true}
+      publications: {range: LocalPublication, multivalued: true, inlined_as_list: true}
+      datasets: {range: LocalDataset, multivalued: true, inlined_as_list: true}
+      reviews: {range: Review, multivalued: true, inlined_as_list: true}
+  LocalProject:
+    is_a: Project
+    slots: [source_url, local_folder, file_groups]
+  LocalPublication:
+    is_a: Publication
+    slots: [source_url, local_folder, file_groups, author_names]
+    attributes:
+      dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
+  LocalDataset:
+    is_a: Dataset
+    slots: [source_url, local_folder, file_groups, author_names]
+    attributes:
+      source_datasets:
+        range: LocalDataset
+        multivalued: true
+        slot_uri: prov:wasDerivedFrom
+      notebook_path:
+        range: string
+        description: Project-relative path to the notebook used to produce this dataset.
+  DatasetLink:
+    attributes:
+      dataset: {range: LocalDataset, required: true}
+      role: {range: DatasetRole, required: true}
+  Review:
+    description: A publication review in the context of the enclosing project.
+    attributes:
+      publication: {range: LocalPublication, required: true}
+      status: {range: string, required: true, pattern: '\S'}
+      notes: {range: string}
+      outputs: {range: LocalDataset, multivalued: true}
+  FileGroup:
+    attributes:
+      label: {range: string, required: true, pattern: '\S'}
+      paths:
+        range: string
+        multivalued: true
+        required: true
+        minimum_cardinality: 1
+        description: Literal files or directories relative to the record's local folder.
+      section: {range: FileSection}
+slots:
+  local_folder:
+    range: string
+    description: Local folder relative to the project metadata file.
+  source_url:
+    range: uri
+    slot_uri: dcterms:source
+    pattern: '^https?://[^\s/]+'
+  file_groups: {range: FileGroup, multivalued: true, inlined_as_list: true}
+  author_names: {range: string, multivalued: true}
+enums:
+  DatasetRole:
+    permissible_values:
+      related:
+      describes:
+      reuses:
+  FileSection:
+    permissible_values:
+      files:
+      documentation:

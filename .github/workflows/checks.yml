@@ -21,3 +21,16 @@ jobs:
           cd /tmp
           /tmp/shacl-wheel/bin/shacl-py --help
           /tmp/shacl-wheel/bin/shacl-py validate "$GITHUB_WORKSPACE/examples"
+          cp -R "$GITHUB_WORKSPACE/examples/coastal-survey" "$RUNNER_TEMP/example"
+          /tmp/shacl-wheel/bin/shacl-py setup "$RUNNER_TEMP/example" --template paper-review --no-input
+          /tmp/shacl-wheel/bin/shacl-py validate "$RUNNER_TEMP/example"
+      - name: Exercise the installed viewer on desktop and mobile
+        run: |
+          python -m pip install 'playwright>=1.55,<2'
+          python -m playwright install --with-deps --only-shell chromium
+          python tests/browser_smoke.py /tmp/shacl-wheel/bin/shacl-py "$RUNNER_TEMP/shacl-views"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viewer-screenshots
+          path: ${{ runner.temp }}/shacl-views
+          retention-days: 5

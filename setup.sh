@@ -45,4 +45,4 @@ git --version >/dev/null
 from shacl_py.cli import main
 raise SystemExit(main(['--help']))
 PY
-echo 'Setup complete. Run: shacl-py serve /absolute/path/to/research'
+echo 'Installed. From your project, run shacl-py setup and then shacl-py serve .'

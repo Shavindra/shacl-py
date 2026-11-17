@@ -1,0 +1,7 @@
+study:
+  name: Coastal survey
+  purpose: A worked example of reviewing publications and reusing their datasets.
+dataset:
+  name: Coastal survey
+  description: A worked example of reviewing publications and reusing their datasets.
+person: {}

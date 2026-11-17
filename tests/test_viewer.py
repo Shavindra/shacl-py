@@ -15,7 +15,7 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 
 @pytest.fixture
 def root(tmp_path):
-    shutil.copytree(EXAMPLES, tmp_path, dirs_exist_ok=True)
+    shutil.copytree(EXAMPLES / "research", tmp_path, dirs_exist_ok=True)
     return tmp_path
 
 
