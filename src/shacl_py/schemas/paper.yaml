@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/paper/v1
 name: shacl-py-paper
-version: 1.0.0
+version: 1.1.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/paper/v1/
@@ -21,6 +21,8 @@ classes:
       - source_url
       - review_status
       - local_folder
+      - data_file_patterns
+      - dataset_file_patterns
     slot_usage:
       pid:
         required: true
@@ -46,6 +48,19 @@ slots:
     required: true
     pattern: '\S'
     description: Folder path relative to the metadata file, within the supplied root.
+  data_file_patterns:
+    range: ProjectFilePattern
+    multivalued: true
+    description: Project-relative globs selecting data files for display.
+  dataset_file_patterns:
+    range: ProjectFilePattern
+    multivalued: true
+    description: Project-relative globs selecting files that describe the dataset.
+types:
+  ProjectFilePattern:
+    typeof: string
+    description: A relative POSIX file glob. Use ** for recursive matching.
+    pattern: '^(?!/|[A-Za-z]:|(?:.*/)?\.\.(?:/|$))(?=.*\S)[^\\\r\n]+$'
 enums:
   ReviewStatus:
     permissible_values:

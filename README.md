@@ -79,7 +79,44 @@ shacl-py serve /path/to/collection
 
 Open http://127.0.0.1:8501. For a single project at any location, run
 `shacl-py init /path/to/project` and serve that directory. The viewer searches
-for metadata.yaml recursively and lists files with their project-relative paths.
+for metadata.yaml recursively.
+
+### Choose which files appear
+
+**Data files** opens first. By default it shows spreadsheets, CSV/TSV tables
+(including gzip), Parquet, Arrow, Feather, HDF5, NumPy and TIFF files anywhere in
+the project. **Dataset** shows descriptive files such as README, metadata.yaml,
+.studyminimeta.yaml, dataset_description.json and licences, plus the project
+metadata. Existing records get these defaults as soon as you restart the viewer.
+
+To show only spreadsheets from a particular folder, save a project-relative
+pattern when generating metadata. Quote patterns so your shell passes them through.
+
+```sh
+shacl-py generate /path/to/collection --data-glob 'data/raw/**/*.xlsx'
+```
+
+For a single project with a different layout, you can set both tabs:
+
+```sh
+shacl-py generate /path/to/project --single \
+  --data-glob 'measurements/**' \
+  --dataset-glob 'README.md' --dataset-glob 'descriptors/**'
+```
+
+Each flag is repeatable and replaces the selection for its own tab. On existing
+records, generation with flags updates only those fields. The same flags work
+with `init` when creating one record. Run `serve` as usual.
+
+The patterns are stored in `metadata.yaml` as `data_file_patterns` and
+`dataset_file_patterns`. These optional fields belong to the viewer's LinkML
+profile of the [Concepts Thing](https://concepts.datalad.org/s/things/v2/Thing/).
+You can edit them or supply them in project.json or a MetaLad payload.
+An omitted field uses its defaults. An empty list selects no files for that
+tab. Paths start at `local_folder` and match case-insensitively. `*` matches
+within one path component and `**` spans directories. Dataset takes priority
+if both tabs match. Unmatched files, hidden directories and placeholders such
+as .gitkeep stay out of the lists.
 
 ## Metadata and data management
 
@@ -93,8 +130,8 @@ into the MetaLad store is a separate operation.
 For missing values, generation uses local project.json (or legacy paper.json),
 a local metalad.json export, README.md and the folder name. Each new record
 gets a persistent ID and an initial review status. You can edit metadata.yaml
-and add supported Concepts fields. Subsequent generation preserves existing
-records. Ordinary folders work without a DataLad dataset.
+and add supported Concepts fields. Generation without file-selection flags
+preserves existing records. Ordinary folders work without a DataLad dataset.
 
 Use DataLad and git-annex to manage research data, record changes and retrieve
 file content. Keep metadata.yaml in Git. The viewer lists local availability

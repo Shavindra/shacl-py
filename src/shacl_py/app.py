@@ -5,7 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from shacl_py.records import list_files, load_records
+from shacl_py.records import load_records, project_files
 
 st.set_page_config(page_title="shacl-py", layout="wide")
 st.title("shacl-py")
@@ -34,15 +34,21 @@ if selected:
         st.caption(record.data["review_status"])
         if record.data.get("source_url"):
             st.link_button("DOI / source", record.data["source_url"])
-        with st.expander("Metadata"):
-            st.json(record.data)
-            st.text(str(record.metadata.relative_to(root)))
-        st.subheader("Files")
-        rows = list_files(record.folder, ".")
-        if rows:
-            st.dataframe(rows, hide_index=True, width="stretch")
-        else:
-            st.caption("No local entries.")
+        data_files, dataset_files = project_files(record)
+        data_tab, dataset_tab = st.tabs(["Data files", "Dataset"])
+        with data_tab:
+            if data_files:
+                st.dataframe(data_files, hide_index=True, width="stretch")
+            else:
+                st.caption("No matching data files.")
+        with dataset_tab:
+            if dataset_files:
+                st.dataframe(dataset_files, hide_index=True, width="stretch")
+            else:
+                st.caption("No matching dataset files.")
+            with st.expander("Metadata"):
+                st.json(record.data)
+                st.text(str(record.metadata.relative_to(root)))
 
 else:
     shown = 0

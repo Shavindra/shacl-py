@@ -8,7 +8,7 @@ import yaml
 from streamlit.testing.v1 import AppTest
 
 from shacl_py.cli import main
-from shacl_py.records import SCHEMAS, discover, list_files, load_records
+from shacl_py.records import SCHEMAS, discover, load_records, project_files
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 
@@ -77,7 +77,7 @@ def test_annex_unavailable_and_no_directory_traversal(root):
     missing = paper.folder / "data/raw/missing.csv"
     missing.symlink_to("../../../.git/annex/objects/missing")
     (paper.folder / "data/raw/loop").symlink_to(paper.folder, target_is_directory=True)
-    rows = list_files(paper.folder, "data/raw")
+    rows, _ = project_files(paper)
     assert (
         next(row for row in rows if row["Filename"] == "missing.csv")["Availability"]
         == "Unavailable"
@@ -119,7 +119,11 @@ def test_homepage_navigation_search_and_readonly(root, monkeypatch):
     app.button[0].click().run()
     assert not app.exception
     assert app.header[0].value == "Example paper project"
-    assert len(app.dataframe) == 1
+    assert [tab.label for tab in app.tabs] == ["Data files", "Dataset"]
+    assert app.tabs[0].dataframe[0].value["Relative path"].tolist() == [
+        "data/raw/example.csv"
+    ]
+    assert "metadata.yaml" in app.tabs[1].dataframe[0].value["Relative path"].tolist()
     app.button[0].click().run()
     assert not app.exception
     after = {
@@ -182,7 +186,11 @@ def test_generate_queries_metalad_for_dataset(tmp_path):
     entry = {
         "type": "file",
         "path": "papers/paper-a/project.json",
-        "extracted_metadata": {"title": "Stored title", "doi": "10.1234/test"},
+        "extracted_metadata": {
+            "title": "Stored title",
+            "doi": "10.1234/test",
+            "data_file_patterns": ["signals/**/*.dat"],
+        },
     }
     with patch("shacl_py.cli.subprocess.run") as query:
         query.return_value.returncode = 0
@@ -191,3 +199,4 @@ def test_generate_queries_metalad_for_dataset(tmp_path):
         assert query.call_args.args[0][-4:] == ["meta-dump", "-d", str(tmp_path), "-r"]
     records, errors = load_records(papers)
     assert not errors and records[0].data["display_label"] == "Stored title"
+    assert records[0].data["data_file_patterns"] == ["signals/**/*.dat"]

@@ -913,6 +913,28 @@
                         "null"
                     ]
                 },
+                "data_file_patterns": {
+                    "description": "Project-relative globs selecting data files for display.",
+                    "items": {
+                        "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
+                        "type": "string"
+                    },
+                    "type": [
+                        "array",
+                        "null"
+                    ]
+                },
+                "dataset_file_patterns": {
+                    "description": "Project-relative globs selecting files that describe the dataset.",
+                    "items": {
+                        "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
+                        "type": "string"
+                    },
+                    "type": [
+                        "array",
+                        "null"
+                    ]
+                },
                 "description": {
                     "description": "A free-text account of the subject.",
                     "pattern": "\\S",
@@ -1134,6 +1156,28 @@
                 "close_mappings": {
                     "description": "A list of terms from different schemas or terminology systems that have close meaning.",
                     "items": {
+                        "type": "string"
+                    },
+                    "type": [
+                        "array",
+                        "null"
+                    ]
+                },
+                "data_file_patterns": {
+                    "description": "Project-relative globs selecting data files for display.",
+                    "items": {
+                        "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
+                        "type": "string"
+                    },
+                    "type": [
+                        "array",
+                        "null"
+                    ]
+                },
+                "dataset_file_patterns": {
+                    "description": "Project-relative globs selecting files that describe the dataset.",
+                    "items": {
+                        "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
                         "type": "string"
                     },
                     "type": [
@@ -2939,6 +2983,28 @@
                 "null"
             ]
         },
+        "data_file_patterns": {
+            "description": "Project-relative globs selecting data files for display.",
+            "items": {
+                "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
+                "type": "string"
+            },
+            "type": [
+                "array",
+                "null"
+            ]
+        },
+        "dataset_file_patterns": {
+            "description": "Project-relative globs selecting files that describe the dataset.",
+            "items": {
+                "pattern": "^(?!/|[A-Za-z]:|(?:.*/)?\\.\\.(?:/|$))(?=.*\\S)[^\\\\\\r\\n]+$",
+                "type": "string"
+            },
+            "type": [
+                "array",
+                "null"
+            ]
+        },
         "description": {
             "description": "A free-text account of the subject.",
             "pattern": "\\S",
@@ -3091,6 +3157,6 @@
     ],
     "title": "shacl-py-paper",
     "type": "object",
-    "version": "1.0.0"
+    "version": "1.1.0"
 }
 

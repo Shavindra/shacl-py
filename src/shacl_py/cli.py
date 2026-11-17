@@ -7,15 +7,28 @@ import re
 import subprocess
 import sys
 import sysconfig
+from io import StringIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError as RoundTripError
 
-from shacl_py.records import load_records
+from shacl_py.records import (
+    FILE_PATTERN_SLOTS,
+    load_records,
+    read_metadata,
+    record_validator,
+    validate_file_patterns,
+)
 
 
 def apply_fields(data, record, allow_pid=False):
+    for slot in FILE_PATTERN_SLOTS:
+        if slot in record:
+            data[slot] = record[slot]
     keys = {
         "display_label": ("display_label", "title"),
         "description": ("description",),
@@ -40,7 +53,7 @@ def apply_fields(data, record, allow_pid=False):
             break
 
 
-def generate_record(folder, stored=None):
+def generate_record(folder, stored=None, rules=None):
     title = (
         folder.resolve().name.replace("_", " ").replace("-", " ").strip() or folder.name
     )
@@ -96,9 +109,48 @@ def generate_record(folder, stored=None):
         apply_fields(data, record, allow_pid=name in {"project.json", "paper.json"})
     apply_fields(data, stored or {})
     target = folder / "metadata.yaml"
+    data.update(rules or {})
+    try:
+        validate_file_patterns(
+            {slot: data[slot] for slot in FILE_PATTERN_SLOTS if slot in data}
+        )
+    except ValueError as error:
+        raise ValueError(f"{target}: {error}") from error
     with target.open("x", encoding="utf-8") as stream:
         yaml.safe_dump(data, stream, sort_keys=False, allow_unicode=True)
     print(f"Created {target}")
+
+
+def update_file_patterns(path, rules):
+    """Change only explicitly supplied slots, preserving hand-edited YAML."""
+    original = read_metadata(path)
+    before = yaml.safe_load(original)
+    if not isinstance(before, dict):
+        raise TypeError("expected a project metadata mapping")
+    expected = before | rules
+    if expected == before:
+        return False
+    problem = next(record_validator().iter_errors(expected), None)
+    if problem:
+        raise ValueError(problem.message)
+
+    editor = YAML(typ="rt")
+    editor.preserve_quotes = True
+    document = editor.load(original)
+    document.update(rules)
+    output = StringIO()
+    editor.dump(document, output)
+    updated = output.getvalue()
+    if yaml.safe_load(updated) != expected:
+        raise ValueError("YAML round trip changed other metadata")
+    with TemporaryDirectory(dir=path.parent, prefix=".shacl-py-") as staging:
+        temporary = Path(staging, "pending.yaml")
+        temporary.write_text(updated, encoding="utf-8")
+        temporary.chmod(path.stat().st_mode)
+        if read_metadata(path) != original:
+            raise ValueError("metadata changed during generation; retry")
+        temporary.replace(path)
+    return True
 
 
 def stored_metadata(collection, *, single=False):
@@ -165,11 +217,29 @@ def main(argv=None):
     )
     init.add_argument("path", type=Path)
     generate = commands.add_parser(
-        "generate", help="Generate missing records for immediate project folders"
+        "generate", help="Generate project records or update their file-selection rules"
     )
     generate.add_argument(
         "path", type=Path, help="Folder containing one directory per project"
     )
+    generate.add_argument(
+        "--single", action="store_true", help="Use PATH as a single project"
+    )
+    for command in (generate, init):
+        command.add_argument(
+            "--data-glob",
+            action="append",
+            dest="data_file_patterns",
+            metavar="PATTERN",
+            help="Project-relative glob for Data files (repeatable)",
+        )
+        command.add_argument(
+            "--dataset-glob",
+            action="append",
+            dest="dataset_file_patterns",
+            metavar="PATTERN",
+            help="Project-relative glob for Dataset files (repeatable)",
+        )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -179,29 +249,54 @@ def main(argv=None):
     serve.add_argument("--port", type=int, default=8501)
     args = parser.parse_args(argv)
     try:
+        if args.command in {"init", "generate"}:
+            rules = {
+                slot: getattr(args, slot)
+                for slot in FILE_PATTERN_SLOTS
+                if getattr(args, slot) is not None
+            }
+            validate_file_patterns(rules)
         if args.command == "init":
             args.path.mkdir(parents=True, exist_ok=True)
             generate_record(
                 args.path,
                 stored_metadata(args.path, single=True).get(args.path.resolve()),
+                rules,
             )
             return 0
         if args.command == "generate":
-            stored = stored_metadata(args.path)
-            for folder in sorted(args.path.iterdir()):
-                if (
-                    folder.name.startswith(".")
-                    or folder.is_symlink()
-                    or not folder.is_dir()
-                ):
-                    continue
+            if not args.path.is_dir():
+                raise ValueError(f"{args.path}: not a directory")
+            folders = (
+                [args.path]
+                if args.single
+                else sorted(
+                    folder
+                    for folder in args.path.iterdir()
+                    if not folder.name.startswith(".")
+                    and not folder.is_symlink()
+                    and folder.is_dir()
+                )
+            )
+            stored = None
+            for folder in folders:
+                target = folder / "metadata.yaml"
                 try:
-                    if os.path.lexists(folder / "metadata.yaml"):
-                        print(f"Kept {folder / 'metadata.yaml'}")
+                    if os.path.lexists(target):
+                        changed = rules and update_file_patterns(target, rules)
+                        print(
+                            f"{'Updated file rules in' if changed else 'Kept'} {target}"
+                        )
                         continue
-                    generate_record(folder, stored.get(folder.resolve()))
+                    if stored is None:
+                        stored = stored_metadata(args.path, single=args.single)
+                    generate_record(folder, stored.get(folder.resolve()), rules)
                 except FileExistsError:
-                    print(f"Kept {folder / 'metadata.yaml'}")
+                    raise ValueError(
+                        f"{target} appeared during generation; retry"
+                    ) from None
+                except (TypeError, ValueError, yaml.YAMLError, RoundTripError) as error:
+                    raise ValueError(f"{target}: {error}") from error
             return 0
         root = args.path.resolve()
         records, errors = load_records(root)
