@@ -19,7 +19,6 @@
 6. Keep the Streamlit viewer read-only and bound to localhost. Open a single
    linked project on its overview, support search, and let readers navigate
    between publications, datasets and provenance.
-7. Exercise setup, both metadata formats, validation, read-only navigation,
-   shared and derived datasets, unavailable content, packaging and the example.
-   Run Ruff, tests and a wheel installation check before a direct conventional
-   commit to main.
+7. Test the installed viewer with a metadata file, a MetaLad store and the
+   example project. Check setup, validation, localhost serving and the display
+   of unavailable files. Run Ruff and verify the installed CLI opens its help.
