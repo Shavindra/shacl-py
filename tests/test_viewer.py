@@ -51,13 +51,11 @@ def test_view_metadata_file(tmp_path, monkeypatch):
     page = open_viewer(tmp_path, monkeypatch)
     follow(page, "Field survey")
     assert page.title[0].value == "Field survey"
-    follow(page, "Datasets")
+    follow(page, "Datasets (1)")
     assert "In this metadata source" in html(page)
-    follow(page, "Station readings")
-    follow(page, "Files")
     follow(page, "data/")
-    follow(page, "data/measurements")
-    assert page.title[0].value == "measurements" and "Available" in html(page)
+    follow(page, "measurements")
+    assert page.title[-1].value == "measurements" and "Available" in html(page)
     assert not list(tmp_path.rglob("metadata.yaml"))
 
 
@@ -101,7 +99,7 @@ def test_view_metalad_store_read_only(tmp_path, monkeypatch):
     assert page.title[0].value == "Stored observations"
     follow(page, "Files")
     follow(page, "observations.tsv")
-    assert page.title[0].value == "observations.tsv" and "metres" in html(page)
+    assert page.title[-1].value == "observations.tsv" and "metres" in html(page)
     assert contents() == before
 
 
@@ -154,18 +152,14 @@ def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     raw = tmp_path / "papers/field-survey/data/raw"
     (raw / "missing.csv").symlink_to(tmp_path / ".git/annex/objects/missing")
     page = open_viewer(tmp_path, monkeypatch)
-    assert page.title[0].value == "Metadata"
-    follow(page, "Coastal survey")
-    follow(page, "Publications")
-    assert "unreviewed" not in html(page)
     follow(page, "Shoreline field survey")
-    follow(page, "Datasets")
-    follow(page, "Station readings")
-    follow(page, "Files")
+    follow(page, "Datasets (2)")
+    assert "Station readings" in html(page)
     follow(page, "readings.csv")
-    assert "Available" in html(page)
-    follow(page, "← Files · Station readings")
+    assert page.title[-1].value == "readings.csv" and "Available" in html(page)
     follow(page, "Shoreline field survey")
-    follow(page, "Files")
-    follow(page, "data/raw/missing.csv")
+    follow(page, "Notes")
+    assert any("comparison of station means" in node.value for node in page.markdown)
+    follow(page, "Other files")
+    follow(page, "missing.csv")
     assert "Unavailable" in html(page) and not page.button

@@ -25,10 +25,11 @@ st.set_page_config(
 )
 st.html("""
 <style>
-.stMainBlockContainer {max-width: 64rem; padding: 2rem clamp(1rem, 4vw, 3rem) 4rem;}
+.stMainBlockContainer {max-width: 94rem; padding: 2rem clamp(1rem, 4vw, 3rem) 4rem;}
 .stMain h1 {font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.16; letter-spacing: -.025em; overflow-wrap: anywhere;}
 .stMain h2 {font-size: 1.25rem;}
 .stMain a.catalogue-link {color: inherit; text-decoration-thickness: 1px; text-underline-offset: .2em; overflow-wrap: anywhere;}
+[aria-current="page"] {font-weight: 700; border-bottom: 2px solid currentColor;}
 .record-list {list-style: none; padding: 0; margin: 0;}
 .record-list li {border-bottom: 1px solid #90909066; padding: .7rem 0; line-height: 1.45;}
 .record-list a {font-weight: 600;}
@@ -110,10 +111,12 @@ def files_table(rows, route):
     cells = []
     for row in rows:
         path = row["Relative path"]
-        name = anchor(path, {**route, "file": path})
-        cells.append(f"<tr><td>{name}</td><td>{escape(row['Availability'])}</td></tr>")
+        name = anchor(Path(path).name, {**route, "file": path})
+        cells.append(
+            f"<tr><td>{name}</td><td>{escape(str(Path(path).parent))}</td><td>{escape(row['Availability'])}</td></tr>"
+        )
     st.html(
-        '<table class="local-files"><thead><tr><th scope="col">File path</th>'
+        '<table class="local-files"><thead><tr><th scope="col">File</th><th scope="col">Path</th>'
         '<th scope="col">Availability</th></tr></thead><tbody>'
         + "".join(cells)
         + "</tbody></table>"
@@ -158,15 +161,27 @@ def file_page(item, row, route, stored):
                 st.caption("Showing the first 8 KiB.")
 
 
-def browse_files(item, route, stored):
+def browse_files(item, route, stored, excluded=None):
     directory = params.get("folder", ".")
     folder_mode = params.get("listing") == "folder"
-    route = {**route, "view": "files"}
+    route = dict(route)
     if folder_mode:
         route["listing"] = "folder"
     if directory != ".":
         route["folder"] = directory
     folders, groups = file_selection(item, directory, folder_mode=folder_mode)
+    if excluded:
+        groups = [
+            (
+                label,
+                [
+                    row
+                    for row in rows
+                    if item.folder / row["Relative path"] not in excluded
+                ],
+            )
+            for label, rows in groups
+        ]
     if "file" in params:
         row = next(
             (
@@ -206,8 +221,13 @@ def browse_files(item, route, stored):
         st.html('<ul class="record-list">' + "".join(rows) + "</ul>")
     for label, rows in groups:
         if rows:
-            st.subheader(label, anchor=False)
-            files_table(rows, route)
+            st.subheader(f"{label} ({len(rows)})", anchor=False)
+            query = st.text_input(
+                "Filter files", key=f"filter:{item.ref}:{item.key}:{label}"
+            ).casefold()
+            files_table(
+                [row for row in rows if query in row["Relative path"].casefold()], route
+            )
     if not folders and not any(rows for _, rows in groups):
         st.caption(
             "This folder is empty."
@@ -216,137 +236,137 @@ def browse_files(item, route, stored):
         )
 
 
+def labels(item):
+    values = item.fields.get("labels") or item.fields.get("keywords") or []
+    if isinstance(values, str):
+        return [values]
+    return [v for v in values if isinstance(v, str)] if isinstance(values, list) else []
+
+
 def detail_page(item, items, stored):
+    related = neighbours(item, items)
+    datasets = [other for other in related if other.is_dataset]
     route = item.route
-    parent = next(
-        (
-            i
-            for i in items
-            if i.ref == params.get("parent_record")
-            and i.key == params.get("parent_entry")
-        ),
-        None,
-    )
-    if parent:
-        route = {**route, "parent_record": parent.ref, "parent_entry": parent.key}
-    file_only = (
-        isinstance(item.source, MetadataSource)
-        and item.source.file_records
-        and not item.source.entries
-    )
-    view = params.get("view", "files" if file_only else "metadata")
-    if view == "files" and "file" in params:
-        browse_files(item, route, stored)
-        return
-    crumbs = [anchor("All metadata", {"index": "1"})]
-    if parent and parent is not item:
-        parent_view = (
-            "datasets"
-            if item.is_dataset
-            else (
-                "publications"
-                if item.is_publication and parent.is_project
-                else "metadata"
-            )
-        )
-        crumbs.append(anchor(parent.label, {**parent.route, "view": parent_view}))
-    st.html(' <span aria-hidden="true"> / </span> '.join(crumbs))
-    st.caption(item.kind)
+    view = params.get("view", "files" if item.is_dataset else "datasets")
     st.title(str(item.label), anchor=False)
-    summary = (
-        item.fields.get("description")
-        or item.fields.get("abstract")
-        or item.fields.get("purpose")
-    )
-    if isinstance(summary, str) and summary:
-        st.write(summary)
-    for field in ("source_url", "doi", "url", "sameAs"):
-        if isinstance(value := item.fields.get(field), str):
+    fields = item.fields
+    header = {
+        k: fields[k]
+        for k in (
+            "author",
+            "authors",
+            "journal",
+            "year",
+            "pid",
+            "@id",
+            "keywords",
+            "labels",
+            "local_folder",
+        )
+        if fields.get(k)
+    }
+    metadata(header)
+    for field in ("doi", "source_url", "url", "sameAs"):
+        if isinstance(value := fields.get(field), str):
             try:
                 url = source_url(value)
             except ValueError:
                 continue
             if url:
-                st.link_button("DOI / source", url)
+                st.link_button(value, url)
                 break
-    related = neighbours(item, items)
-    tabs = {"metadata": "Metadata"}
-    publications = [
-        (other, why) for other, why in related.items() if other.is_publication
-    ]
-    if publications or item.is_project:
-        tabs["publications"] = "Publications"
-    tabs.update(datasets="Datasets", files="Files")
+    tabs = {
+        "datasets": f"Datasets ({len(datasets)})",
+        "abstract": "Abstract",
+        "notes": "Notes",
+        "files": "Files" if item.is_dataset else "Other files",
+        "source": "Raw metadata",
+    }
     st.html(
         '<nav class="record-tabs" aria-label="Record sections">'
         + "".join(
-            anchor(
-                label,
-                {**route, "view": key},
-                current=key == view or (key == "metadata" and view == "source"),
-            )
+            anchor(label, {**route, "view": key}, current=key == view)
             for key, label in tabs.items()
         )
         + "</nav>"
     )
-    if view == "files":
-        browse_files(item, route, stored)
-    elif view == "datasets":
-        datasets = [(other, why) for other, why in related.items() if other.is_dataset]
-        if datasets:
-            listing(datasets, item)
-        else:
-            st.caption("No related datasets are described in this metadata.")
-    elif view == "publications" and "publications" in tabs:
-        if publications:
-            listing(publications, item)
-        else:
-            st.caption("No publications are described in this metadata.")
-    elif view == "source":
-        st.subheader(item.ref, anchor=False)
-        st.json(source_content(item.source), expanded=2)
+    if view == "datasets":
+        if not datasets:
+            st.caption("No related datasets.")
+            return
+        left, right = st.columns([1, 2])
+        with left:
+            query = st.text_input("Filter datasets").strip().casefold()
+            shown = [d for d in datasets if query in searchable(d.fields)]
+            if not shown:
+                st.caption("No matching datasets.")
+                return
+
+            def dataset_route(d):
+                return {
+                    **route,
+                    "view": "datasets",
+                    "dataset_record": d.ref,
+                    "dataset": d.key,
+                }
+
+            selected = next(
+                (
+                    d
+                    for d in shown
+                    if d.ref == params.get("dataset_record")
+                    and d.key == params.get("dataset")
+                ),
+                shown[0],
+            )
+            for d in shown:
+                st.html(anchor(d.label, dataset_route(d), current=d is selected))
+        with right:
+            st.subheader(str(selected.label))
+            metadata(
+                {
+                    **{
+                        k: selected.fields[k]
+                        for k in ("pid", "@id", "local_folder")
+                        if k in selected.fields
+                    },
+                    "Relationship": related[selected],
+                }
+            )
+            with st.expander("All dataset fields"):
+                metadata(selected.fields)
+            browse_files(selected, dataset_route(selected), stored)
+    elif view == "files":
+        excluded = set()
+        if item.is_publication:
+            for dataset in datasets:
+                _, groups = file_selection(dataset, ".", folder_mode=False)
+                for _, rows in groups:
+                    excluded.update(
+                        dataset.folder / row["Relative path"] for row in rows
+                    )
+        browse_files(item, {**route, "view": "files"}, stored, excluded)
+    elif view == "abstract":
+        st.write(
+            fields.get("abstract")
+            or fields.get("description")
+            or "No abstract supplied."
+        )
+    elif view == "notes":
+        notes = [fields["notes"]] if fields.get("notes") else []
+        graph = getattr(item.source, "graph", {})
+        notes.extend(
+            r["notes"]
+            for r in graph.get("reviews", [])
+            if r.get("publication") == item.key and r.get("notes")
+        )
+        for note in notes:
+            st.write(note)
+        if not notes:
+            st.caption("No notes supplied.")
     else:
         record_metadata(item, related, route)
-
-
-def home(items):
-    st.title("Metadata", anchor=False)
-    query = (
-        st.text_input(
-            "Search metadata", placeholder="Title, author, keyword or identifier"
-        )
-        .strip()
-        .casefold()
-    )
-    shown = [
-        (item, item.ref)
-        for item in items
-        if not query or query in searchable([item.kind, item.ref, item.fields])
-    ]
-    listing(shown)
-    if query:
-        matched = {item.ref for item, _ in shown}
-        sources = {}
-        for item in items:
-            sources.setdefault(item.ref, item)
-        for item in sources.values():
-            if isinstance(item.source, MetadataSource):
-                for path, records in item.source.file_records.items():
-                    if query in path.casefold() or query in searchable(records):
-                        link(
-                            f"{path} · {item.ref}",
-                            {**item.route, "view": "files", "file": path},
-                        )
-                        matched.add(item.ref)
-            if item.ref not in matched and query in searchable(
-                source_content(item.source)
-            ):
-                link(f"Source metadata · {item.ref}", {**item.route, "view": "source"})
-                matched.add(item.ref)
-        if matched:
-            return
-    if not shown:
-        st.info("No matching records." if query else "No metadata found.")
+        st.json(source_content(item.source), expanded=2)
 
 
 def main():
@@ -366,15 +386,44 @@ def main():
         ),
         None,
     )
-    if "record" in params and item is None:
-        link("All metadata", {"index": "1"})
-        st.warning("Metadata record not found.")
-    elif item is None and "index" not in params:
-        item = items[0] if len(items) == 1 else None
-    if item is not None:
+    with st.sidebar:
+        papers = [entry for entry in items if entry.is_publication]
+        scope = papers or items
+        if papers and st.toggle("Show all metadata records"):
+            scope = items
+        query = (
+            st.text_input("Search papers" if scope is papers else "Search metadata")
+            .strip()
+            .casefold()
+        )
+        options = sorted({tag for entry in scope for tag in labels(entry)})
+        tags = st.multiselect("Filter by label", options) if options else []
+        shown = [
+            entry
+            for entry in scope
+            if query in searchable([entry.label, entry.fields, entry.ref])
+            and all(tag in labels(entry) for tag in tags)
+        ]
+        if item is None and shown and "record" not in params:
+            item = next((entry for entry in shown if entry.is_publication), shown[0])
+        for entry in shown:
+            st.html(anchor(entry.label, entry.route, current=entry is item))
+            if entry.is_publication:
+                count = sum(d.is_dataset for d in neighbours(entry, items))
+                st.caption(
+                    " · ".join(
+                        [
+                            f"{count} dataset" if count == 1 else f"{count} datasets",
+                            *labels(entry),
+                        ]
+                    )
+                )
+        if not shown:
+            st.caption("No matching records.")
+    if item:
         detail_page(item, items, file_metadata(records))
-    elif "record" not in params:
-        home(items)
+    else:
+        st.info("Select a record." if items else "No metadata found.")
 
 
 try:
