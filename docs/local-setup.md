@@ -24,17 +24,22 @@ bash /tmp/shacl-py-setup.sh
 
 ## View the source metadata
 
-`shacl-py serve ROOT` opens the local viewer. A linked project catalogue in
-`metadata.yaml` takes precedence over adjacent descriptors. The viewer also discovers
-`.studyminimeta.yaml`, `paper.json`, `project.json` and `metalad.json` in
-folders without a catalogue entry. It consults the enclosing DataLad store
-when the root contains no recognised metadata files.
+`shacl-py serve ROOT` lists records from `metadata.yaml`, `.studyminimeta.yaml`,
+`paper.json`, `project.json`, `metalad.json`, `metalad.jsonl` and the
+enclosing DataLad metadata store. Adjacent sources retain their own fields.
+A single record opens directly. Use **All metadata** to return to the index.
 
-Pass a particular file to view that source directly. To select the store even
-when a catalogue exists, run `shacl-py serve ROOT --metalad`. The viewer reads
-stored dataset records and records for recognised metadata files using
-`meta-dump`. It shows the supplied fields and the original source metadata.
-Use `--port` to change the port.
+- **Metadata** shows the selected record, its related records and a link to
+  the full source document, including extractor fields.
+- **Datasets** lists declared links and identifies datasets described in
+  the same source or folder. A linked project also lists its publications.
+- **Files** shows the configured file groups or lets you browse the local
+  folder one level at a time. A MetaLad source lists its recorded files,
+  including unavailable ones. Select a file to see its metadata. For an
+  available regular file, **Preview text** reads up to 8 KiB on request.
+
+To select one source, pass a metadata file or use `shacl-py serve ROOT
+--metalad` for the store alone. Use `--port` to change the port.
 
 ## Optional metadata setup
 
@@ -47,7 +52,8 @@ grows. Empty answers accept the displayed defaults.
   Dataset profiles inherit versioned Concepts types. Stable IDs connect records
   within the project. `reviews` holds project-specific status, notes and outputs.
   Each publication's `dataset_links` distinguishes `describes`, `reuses` and a
-  general `related` link for imported data. A derived dataset can identify
+  general `related` link for imported data. An `output` link identifies a local
+  analysis output associated with work on a publication. A derived dataset can identify
   `source_datasets` and a project-relative `notebook_path`.
 - `file_groups` names literal files or whole directories. Paths are relative to
   the entity's `local_folder`, which is relative to the project metadata.
@@ -94,17 +100,16 @@ complete worked example.
 
 ## Earlier flat records
 
-`init` and `generate` still work with the original one-record format. Linked
-projects use `setup`. To adjust one flat record's two tabs, use:
+`init` and `generate` can create a flat record. **Files** browses its local
+folder. To select files by glob instead, set one or both lists explicitly:
 
 ~~~sh
 shacl-py generate /path/to/project --single --data-glob 'measurements/**' --dataset-glob 'descriptors/**'
 ~~~
 
-Each flag replaces just its own tab's list and may be repeated. The flat
-defaults include tabular and image data under **Data files**, and metadata,
-READMEs and licences under **Dataset**. The optional glob lists in
-`metadata.yaml` are `data_file_patterns` and `dataset_file_patterns`.
+These flags set `data_file_patterns` and `dataset_file_patterns`. The viewer
+shows the matches under **Data files** and **Documentation and metadata**.
+Use `setup` to register a dataset and link it to other records.
 
 ## Adding a DataLad extension
 

@@ -5,13 +5,14 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
-from shacl_py.files import FILE_PATTERN_SLOTS, read_metadata
+from shacl_py.files import FILE_PATTERN_SLOTS, read_metadata, scoped_path
 
 METADATA_FILES = frozenset(
     {
         "metadata.yaml",
         ".studyminimeta.yaml",
         "metalad.json",
+        "metalad.jsonl",
         "project.json",
         "paper.json",
     }
@@ -110,7 +111,7 @@ def initial_fields(
 
 
 def stored_records(root):
-    """Yield existing dataset and metadata-file records beneath the requested root."""
+    """Yield dataset and file records with their owning dataset directory."""
     root = root.resolve()
     dataset = next(
         (p for p in (root, *root.parents) if (p / ".datalad/config").is_file()),
@@ -130,14 +131,14 @@ def stored_records(root):
         )
         for result in results:
             record = result["metadata"]
-            folder = dataset / record.get("dataset_path", "")
+            folder = scoped_path(dataset, record.get("dataset_path") or ".")
+            if folder.is_symlink():
+                continue
             if record.get("type") == "file":
-                path = folder / record["path"]
-                if path.name not in METADATA_FILES:
-                    continue
-                folder = path.parent
-            folder = folder.resolve()
-            if folder.is_relative_to(root):
+                subject = scoped_path(folder, record.get("path"))
+            else:
+                subject = folder
+            if subject.is_relative_to(root):
                 yield folder, record
     except NoMetadataStoreFound:
         return
@@ -151,11 +152,11 @@ def stored_metadata(
     collection = collection.resolve()
     by_folder = {}
     for folder, record in stored_records(collection):
-        if (
-            record.get("type") == "file"
-            and Path(record["path"]).name not in descriptors
-        ):
-            continue
+        if record.get("type") == "file":
+            path = folder / record["path"]
+            if path.name not in descriptors:
+                continue
+            folder = path.parent
         matches = folder == collection if single else folder.parent == collection
         payload = record.get("extracted_metadata")
         if matches and isinstance(payload, dict):

@@ -33,6 +33,7 @@ def title(entity):
 class Catalogue:
     metadata: Path
     graph: dict
+    document: dict
 
     @property
     def folder(self):

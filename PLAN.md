@@ -16,9 +16,9 @@
    groups review notes, notebooks, raw data and analysis outputs per paper.
    Shared files belong to the project. Dataset pages have separate data and
    documentation sections. List paths and availability without retrieving data.
-6. Keep the Streamlit viewer read-only and bound to localhost. Open a single
-   linked project on its overview, support search, and let readers navigate
-   between publications, datasets and provenance.
+6. Keep the Streamlit viewer read-only and bound to localhost. Index metadata from
+   files and MetaLad together. Let readers follow publications to datasets and
+   files, inspect the original fields and see local availability.
 7. Test the installed viewer with a metadata file, a MetaLad store and the
    example project. Check setup, validation, localhost serving and the display
    of unavailable files. Run Ruff and verify the installed CLI opens its help.

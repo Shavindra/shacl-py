@@ -28,10 +28,16 @@ From the project directory:
 shacl-py serve .
 ~~~
 
-The viewer reads metadata files or an existing MetaLad store and opens at
-**http://127.0.0.1:8501**. Use `shacl-py serve . --metalad` to select the
-store explicitly, or `shacl-py serve .studyminimeta.yaml` to open that file.
-Publication titles and descriptions come from the supplied records.
+Open **http://127.0.0.1:8501**. Search your metadata by title, author,
+keyword or identifier and select a record. **Metadata** shows its fields
+and original source. **Datasets** opens related datasets. **Files** opens
+selected folders, notebooks and data files. Select a file to see its local
+availability and any metadata recorded for it.
+
+The viewer reads existing metadata files and MetaLad records together.
+Use `shacl-py serve . --metalad` for the store alone, or
+`shacl-py serve .studyminimeta.yaml` for one file. You can browse directly
+after installation.
 
 ## Optional metadata setup
 

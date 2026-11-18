@@ -35,7 +35,6 @@ def generate_record(folder, stored=None, rules=None):
         or study.get("dataset", {}).get("name")
     )
     data["display_label"] = label or data["pid"]
-    data["review_status"] = "unreviewed"
     if publication.get("doi"):
         data["source_url"] = source_url(publication["doi"])
     target = folder / "metadata.yaml"
@@ -210,7 +209,7 @@ def main(argv=None, *, review_layout=None):
             return 0
         root = args.path.absolute()
         records, errors = load_records(root, metalad=args.metalad)
-        if errors:
+        if errors and (args.command == "validate" or not records):
             print("\n".join(errors), file=sys.stderr)
             return 1
         if args.command == "validate":

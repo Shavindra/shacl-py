@@ -59,16 +59,6 @@ def suggested_groups(entity, base, suggestions):
             add_group(entity, label, [name])
 
 
-def review_for(graph, paper, default="unreviewed"):
-    reviews = graph.setdefault("reviews", [])
-    for review in reviews:
-        if review["publication"] == paper["pid"]:
-            return review
-    review = {"publication": paper["pid"], "status": default}
-    reviews.append(review)
-    return review
-
-
 def append_link(paper, dataset, role):
     links = paper.setdefault("dataset_links", [])
     link = {"dataset": dataset["pid"], "role": role}
@@ -136,7 +126,10 @@ def import_paper(graph, root, folder, layout, stored=None):
         paper.setdefault("author_names", authors)
     if description := fields.get("description"):
         paper.setdefault("description", description)
-    review_for(graph, paper, fields.get("review_status", STATUSES[0]))
+    if status := fields.get("review_status"):
+        reviews = graph.setdefault("reviews", [])
+        if not any(r["publication"] == paper["pid"] for r in reviews):
+            reviews.append({"publication": paper["pid"], "status": status})
     dataset_info = data.get("dataset", {})
     if dataset_info.get("name"):
         location = dataset_info.get("location")
@@ -195,13 +188,22 @@ def edit_paper(graph, root, token, layout):
         publications.append(paper)
     edit_details(paper)
     base = local_path(root, paper.get("local_folder", "."), directory=True)
-    review = review_for(graph, paper)
-    review["status"] = prompt(
-        f"Review status ({', '.join(STATUSES)})", review["status"]
+    review = next(
+        (r for r in graph.get("reviews", []) if r["publication"] == paper["pid"]), None
     )
-    notes = prompt("Review notes (optional)", review.get("notes"))
-    if notes:
-        review["notes"] = notes
+    current = review or {}
+    status = prompt(
+        f"Review status ({', '.join(STATUSES)}, optional)", current.get("status")
+    )
+    notes = prompt("Review notes (optional)", current.get("notes"))
+    if status or notes:
+        if review is None:
+            review = {"publication": paper["pid"]}
+            graph.setdefault("reviews", []).append(review)
+        if status:
+            review["status"] = status
+        if notes:
+            review["notes"] = notes
     if folder:
         suggested_groups(paper, base, layout.paper_files)
     print("Paper files")
@@ -227,9 +229,7 @@ def edit_paper(graph, root, token, layout):
                 graph, root, token, default_path=default_path, derived=derived
             )
             if derived:
-                outputs = review.setdefault("outputs", [])
-                if dataset["pid"] not in outputs:
-                    outputs.append(dataset["pid"])
+                append_link(paper, dataset, "output")
             else:
                 role = choose(
                     "Relationship (describes/reuses)",

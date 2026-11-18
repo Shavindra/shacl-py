@@ -1395,7 +1395,8 @@
       "enum": [
         "related",
         "describes",
-        "reuses"
+        "reuses",
+        "output"
       ],
       "title": "DatasetRole",
       "type": "string"
@@ -5323,8 +5324,7 @@
         }
       },
       "required": [
-        "publication",
-        "status"
+        "publication"
       ],
       "title": "Review",
       "type": "object"
@@ -6361,5 +6361,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }

@@ -1,7 +1,10 @@
+import re
 import shutil
+from html import escape, unescape
 from importlib.resources import files
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import parse_qsl
 
 import yaml
 from datalad.api import create, meta_add
@@ -19,6 +22,22 @@ def open_viewer(root, monkeypatch):
     return page
 
 
+def html(page):
+    return "\n".join(node.proto.body for node in page.get("html"))
+
+
+def follow(page, label):
+    match = re.search(
+        r'<a [^>]*href="([^"]+)"[^>]*>' + re.escape(escape(label)) + r"</a>", html(page)
+    )
+    assert match, f"Missing link: {label}"
+    page.query_params.clear()
+    page.query_params.update(parse_qsl(unescape(match[1]).removeprefix("?")))
+    page.run()
+    assert not page.exception and not page.error
+    return page
+
+
 def test_view_metadata_file(tmp_path, monkeypatch):
     paper = tmp_path / "collection"
     paper.mkdir()
@@ -26,10 +45,19 @@ def test_view_metadata_file(tmp_path, monkeypatch):
     (paper / ".studyminimeta.yaml").write_text(
         "dataset: {name: Station readings}\npublication: [{title: Field survey}]\nperson: {}\n"
     )
+    data = paper / "data"
+    data.mkdir()
+    (data / "measurements").write_text("value\n42\n")
     page = open_viewer(tmp_path, monkeypatch)
-    assert {"Station readings", "Field survey"} <= {
-        text.value for text in page.markdown
-    }
+    follow(page, "Field survey")
+    assert page.title[0].value == "Field survey"
+    follow(page, "Datasets")
+    assert "In this metadata source" in html(page)
+    follow(page, "Station readings")
+    follow(page, "Files")
+    follow(page, "data/")
+    follow(page, "data/measurements")
+    assert page.title[0].value == "measurements" and "Available" in html(page)
     assert not list(tmp_path.rglob("metadata.yaml"))
 
 
@@ -39,18 +67,27 @@ def test_view_metalad_store_read_only(tmp_path, monkeypatch):
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
     root = tmp_path / "observations"
     dataset = create(path=str(root), annex=False, result_renderer="disabled")
+    (root / "observations.tsv").write_text("depth\n5\n")
+    dataset.save(result_renderer="disabled")
+    record = {
+        "type": "dataset",
+        "dataset_id": dataset.id,
+        "dataset_version": dataset.repo.get_hexsha(),
+        "extractor_name": "example",
+        "extractor_version": "1",
+        "extraction_parameter": {},
+        "extraction_time": 1700000000.0,
+        "agent_name": "Viewer test",
+        "agent_email": "test@example.org",
+        "extracted_metadata": {"@type": "Dataset", "name": "Stored observations"},
+    }
+    meta_add(record, dataset=dataset, result_renderer="disabled")
     meta_add(
         {
-            "type": "dataset",
-            "dataset_id": dataset.id,
-            "dataset_version": dataset.repo.get_hexsha(),
-            "extractor_name": "example",
-            "extractor_version": "1",
-            "extraction_parameter": {},
-            "extraction_time": 1700000000.0,
-            "agent_name": "Viewer test",
-            "agent_email": "test@example.org",
-            "extracted_metadata": {"@type": "Dataset", "name": "Stored observations"},
+            **record,
+            "type": "file",
+            "path": "observations.tsv",
+            "extracted_metadata": {"units": "metres"},
         },
         dataset=dataset,
         result_renderer="disabled",
@@ -60,7 +97,11 @@ def test_view_metalad_store_read_only(tmp_path, monkeypatch):
         return {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
 
     before = contents()
-    assert open_viewer(root, monkeypatch).title[0].value == "Stored observations"
+    page = open_viewer(root, monkeypatch)
+    assert page.title[0].value == "Stored observations"
+    follow(page, "Files")
+    follow(page, "observations.tsv")
+    assert page.title[0].value == "observations.tsv" and "metres" in html(page)
     assert contents() == before
 
 
@@ -85,7 +126,7 @@ def test_setup_uses_supplied_metadata(tmp_path):
         == 0
     )
     graph = yaml.safe_load((tmp_path / "metadata.yaml").read_text())["catalogue"]
-    assert "title" not in graph["publications"][0]
+    assert "title" not in graph["publications"][0] and "reviews" not in graph
     assert (
         yaml.safe_load((tmp_path / ".studyminimeta.yaml").read_text())["study"]["name"]
         == "Survey"
@@ -113,15 +154,18 @@ def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     raw = tmp_path / "papers/field-survey/data/raw"
     (raw / "missing.csv").symlink_to(tmp_path / ".git/annex/objects/missing")
     page = open_viewer(tmp_path, monkeypatch)
-    assert page.title[0].value == "Coastal survey"
-    page.tabs[0].button[0].click().run()
-    assert not page.exception
-    listing = next(
-        frame.value
-        for frame in page.tabs[0].dataframe
-        if "readings.csv" in frame.value["Filename"].values
-    )
-    assert listing.set_index("Filename")["Availability"].to_dict() == {
-        "readings.csv": "Available",
-        "missing.csv": "Unavailable",
-    }
+    assert page.title[0].value == "Metadata"
+    follow(page, "Coastal survey")
+    follow(page, "Publications")
+    assert "unreviewed" not in html(page)
+    follow(page, "Shoreline field survey")
+    follow(page, "Datasets")
+    follow(page, "Station readings")
+    follow(page, "Files")
+    follow(page, "readings.csv")
+    assert "Available" in html(page)
+    follow(page, "← Files · Station readings")
+    follow(page, "Shoreline field survey")
+    follow(page, "Files")
+    follow(page, "data/raw/missing.csv")
+    assert "Unavailable" in html(page) and not page.button

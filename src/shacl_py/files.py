@@ -79,8 +79,10 @@ def _file_row(path, relative, check_pointers=False):
     }
 
 
-def local_path(base: Path, value: str, *, directory=False) -> Path:
+def scoped_path(base: Path, value: str) -> Path:
     """Resolve a literal path, without traversing symlink directories or Git internals."""
+    if not isinstance(value, str):
+        raise TypeError(f"expected a relative path, got {value!r}")
     path = Path(value)
     if (
         not value.strip()
@@ -97,6 +99,11 @@ def local_path(base: Path, value: str, *, directory=False) -> Path:
         if current.is_symlink():
             raise ValueError(f"{value}: cannot traverse a symlink directory")
         current = current / part
+    return current
+
+
+def local_path(base: Path, value: str, *, directory=False) -> Path:
+    current = scoped_path(base, value)
     if directory:
         if current.is_symlink() or not current.is_dir():
             raise ValueError(f"{value}: expected a local directory")
@@ -105,6 +112,24 @@ def local_path(base: Path, value: str, *, directory=False) -> Path:
     elif not (current.is_file() or current.is_dir() or current.is_symlink()):
         raise ValueError(f"{value}: file or folder does not exist")
     return current
+
+
+def folder_listing(base, relative):
+    if any(part.startswith(".") for part in Path(relative).parts):
+        raise ValueError("Select a visible folder within this record.")
+    directory = local_path(base, relative, directory=True)
+    folders, rows = [], []
+    check_pointers = in_git_tree(base)
+    for path in sorted(directory.iterdir(), key=lambda p: p.name.casefold()):
+        if path.name in IGNORED or path.name.startswith("."):
+            continue
+        name = path.relative_to(base).as_posix()
+        if path.is_dir():
+            if not path.is_symlink():
+                folders.append(name)
+        elif path.is_file() or path.is_symlink():
+            rows.append(_file_row(path, name, check_pointers))
+    return folders, rows
 
 
 def grouped_files(root, entity):

@@ -17,7 +17,7 @@ from shacl_py.files import (
     in_git_tree,
     read_metadata,
 )
-from shacl_py.native import MetadataSource, read_source, read_store
+from shacl_py.native import MetadataSource, entities, read_sources, read_store
 from shacl_py.sources import METADATA_FILES
 
 __all__ = [
@@ -100,7 +100,8 @@ def validate_file_patterns(rules: dict):
 def load_records(
     root: Path, *, metalad=False
 ) -> tuple[list[Paper | Catalogue | MetadataSource], list[str]]:
-    if root.is_file() or (root.is_symlink() and not root.is_dir()):
+    single_file = root.is_file() or (root.is_symlink() and not root.is_dir())
+    if single_file:
         if metalad:
             raise ValueError("--metalad requires a dataset directory")
         path = root.parent.resolve() / root.name
@@ -112,30 +113,18 @@ def load_records(
         if not root.is_dir():
             raise ValueError(f"{root}: not a directory")
         paths = [] if metalad else discover(root, METADATA_FILES)
-    if not paths:
+    records, errors = [], []
+    if not single_file:
         try:
-            sources = read_store(root)
-        except (OSError, ValueError, RuntimeError) as error:
-            return [], [f"{root}: could not read MetaLad metadata: {error}"]
-        if metalad and not sources:
-            return [], [f"{root}: no stored MetaLad metadata found"]
-        return sources, []
+            records.extend(read_store(root))
+        except (OSError, TypeError, ValueError, RuntimeError) as error:
+            errors.append(f"{root}: could not read MetaLad metadata: {error}")
+        if metalad and not records and not errors:
+            errors.append(f"{root}: no stored MetaLad metadata found")
     validator = record_validator()
-    records, errors, ids = [], [], set()
-    descriptor_dirs = {p.parent for p in paths if p.name != "metadata.yaml"}
-    catalogue_dirs = set()
     for path in (p for p in paths if p.name == "metadata.yaml"):
         try:
             data = yaml.safe_load(read_metadata(path))
-            if (
-                path.parent in descriptor_dirs
-                and isinstance(data, dict)
-                and "catalogue" not in data
-                and "review_status" in data
-                and "local_folder" in data
-            ):
-                continue
-            catalogue_dirs.add(path.parent)
             if isinstance(data, dict) and "catalogue" in data:
                 graph = data["catalogue"]
                 validate_catalogue(graph, path.parent)
@@ -146,11 +135,7 @@ def load_records(
                     problem = next(validator.iter_errors(legacy), None)
                     if problem:
                         raise ValueError(f"legacy record: {problem.message}")
-                pid = graph["project"]["pid"]
-                if pid in ids:
-                    raise ValueError(f"duplicate pid {pid}")
-                ids.add(pid)
-                records.append(Catalogue(path, graph))
+                records.append(Catalogue(path, graph, data))
                 continue
             if (
                 isinstance(data, dict)
@@ -166,14 +151,12 @@ def load_records(
                         break
                 else:
                     raise ValueError("record does not match a bundled Concepts type")
-                if data["pid"] in ids:
-                    raise ValueError(f"duplicate pid {data['pid']}")
-                ids.add(data["pid"])
                 records.append(
                     MetadataSource(
                         path.relative_to(root).as_posix(),
+                        path.parent,
                         data,
-                        [(data.get("schema_type") or "Concepts record", data)],
+                        list(entities(data, "Concepts record")),
                     )
                 )
                 continue
@@ -191,32 +174,16 @@ def load_records(
                 raise ValueError("local_folder escapes the supplied root")
             if not folder.is_dir():
                 raise ValueError("local_folder does not exist or is not a directory")
-            if data["pid"] in ids:
-                raise ValueError(f"duplicate pid {data['pid']}")
-            ids.add(data["pid"])
             records.append(Paper(path, folder, data))
         except (OSError, ValueError, yaml.YAMLError) as error:
             errors.append(f"{path}: {error}")
-    # Imported per-paper records stay on disk. Their linked entry is displayed once.
-    imported = {
-        (item["pid"], (record.folder / item["local_folder"]).resolve())
-        for record in records
-        if isinstance(record, Catalogue)
-        for item in record.graph.get("publications", [])
-        if "local_folder" in item
-    }
-    represented = catalogue_dirs | {folder for _, folder in imported}
     for path in paths:
-        if path.name != "metadata.yaml" and path.parent not in represented:
+        if path.name != "metadata.yaml":
             try:
-                records.append(read_source(path, root))
+                records.extend(read_sources(path, root))
             except (OSError, ValueError, TypeError, yaml.YAMLError) as error:
                 errors.append(f"{path}: {error}")
-    return [
-        r
-        for r in records
-        if not isinstance(r, Paper) or (r.data["pid"], r.folder) not in imported
-    ], errors
+    return records, errors
 
 
 def _compile_patterns(patterns):
