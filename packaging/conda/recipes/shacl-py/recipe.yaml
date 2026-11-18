@@ -21,6 +21,7 @@ requirements:
   - hatchling
   run:
   - python >=${{ python_min }}
+  - jinja2 >=3.1,<4
   - filelock <4,>=3.12
   - datalad-metalad <0.5,>=0.4.22
   - streamlit <2,>=1.55

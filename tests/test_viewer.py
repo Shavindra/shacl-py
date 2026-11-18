@@ -1,6 +1,5 @@
-import re
 import shutil
-from html import escape, unescape
+from html.parser import HTMLParser
 from importlib.resources import files
 from pathlib import Path
 from unittest.mock import patch
@@ -27,12 +26,36 @@ def html(page):
 
 
 def follow(page, label):
-    match = re.search(
-        r'<a [^>]*href="([^"]+)"[^>]*>' + re.escape(escape(label)) + r"</a>", html(page)
+    class Links(HTMLParser):
+        href = None
+
+        def __init__(self):
+            super().__init__()
+            self.links = {}
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "a":
+                self.href = dict(attrs).get("href")
+                self.label = ""
+
+        def handle_data(self, text):
+            if self.href:
+                self.label += text
+
+        def handle_endtag(self, tag):
+            if tag == "a" and self.href:
+                self.links[self.label.strip()] = self.href
+                self.href = None
+
+    parser = Links()
+    parser.feed(html(page))
+    href = next(
+        value
+        for key, value in parser.links.items()
+        if key == label or key.startswith(label + " ")
     )
-    assert match, f"Missing link: {label}"
     page.query_params.clear()
-    page.query_params.update(parse_qsl(unescape(match[1]).removeprefix("?")))
+    page.query_params.update(parse_qsl(href.removeprefix("?")))
     page.run()
     assert not page.exception and not page.error
     return page
@@ -49,9 +72,9 @@ def test_view_metadata_file(tmp_path, monkeypatch):
     data.mkdir()
     (data / "measurements").write_text("value\n42\n")
     page = open_viewer(tmp_path, monkeypatch)
-    follow(page, "Field survey")
-    assert page.title[0].value == "Field survey"
-    follow(page, "Datasets (1)")
+
+    assert "Field survey</h1>" in html(page)
+
     assert "In this metadata source" in html(page)
     follow(page, "data/")
     follow(page, "measurements")
@@ -96,7 +119,7 @@ def test_view_metalad_store_read_only(tmp_path, monkeypatch):
 
     before = contents()
     page = open_viewer(root, monkeypatch)
-    assert page.title[0].value == "Stored observations"
+    assert "Stored observations</h1>" in html(page)
     follow(page, "Files")
     follow(page, "observations.tsv")
     assert page.title[-1].value == "observations.tsv" and "metres" in html(page)
@@ -152,14 +175,14 @@ def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     raw = tmp_path / "papers/field-survey/data/raw"
     (raw / "missing.csv").symlink_to(tmp_path / ".git/annex/objects/missing")
     page = open_viewer(tmp_path, monkeypatch)
-    follow(page, "Shoreline field survey")
-    follow(page, "Datasets (2)")
+    follow(page, "Papers")
+    follow(page, "Datasets 2")
     assert "Station readings" in html(page)
     follow(page, "readings.csv")
     assert page.title[-1].value == "readings.csv" and "Available" in html(page)
-    follow(page, "Shoreline field survey")
+    follow(page, "Papers")
     follow(page, "Notes")
-    assert any("comparison of station means" in node.value for node in page.markdown)
+    assert "comparison of station means" in html(page)
     follow(page, "Other files")
     follow(page, "missing.csv")
     assert "Unavailable" in html(page) and not page.button

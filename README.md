@@ -28,11 +28,11 @@ From the project directory:
 shacl-py serve .
 ~~~
 
-Open **http://127.0.0.1:8501**. Search your metadata by title, author,
-keyword or identifier and select a record. **Metadata** shows its fields
-and original source. **Datasets** opens related datasets. **Files** opens
-selected folders, notebooks and data files. Select a file to see its local
-availability and any metadata recorded for it.
+Open **http://127.0.0.1:8501**. Choose a paper to see its linked datasets,
+abstract, notes, other files and raw metadata. Choose **Datasets** in the
+top bar to browse datasets across papers. Select a filename to inspect its
+availability and any file metadata. **Records** lists other metadata types
+when present.
 
 The viewer reads existing metadata files and MetaLad records together.
 Use `shacl-py serve . --metalad` for the store alone, or

@@ -1,0 +1,30 @@
+{% macro search(name, placeholder, args) -%}
+<form method="get" target="_self" role="search">{% for key,value in args.items() if key != name and key != 'file' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<input type="search" name="{{ name }}" aria-label="{{ placeholder }}" placeholder="{{ placeholder }}" value="{{ params.get(name,'') }}"{% if name=='q' %} accesskey="/"{% endif %}></form>
+{%- endmacro %}
+{% macro filters(options, route) -%}
+<div class="chips">{% for label in options %}<a class="chip {{ 'active' if label==active_filter }}" href="{{ url(route, tag=label) }}" target="_self">{{ label }}</a>{% endfor %}</div>
+{%- endmacro %}
+{% macro filetable(rows, folders) %}
+<div class="filebox"><div class="filebar"><b>Files <small>{{ rows|length }}</small></b>{{ search('find','Find file',params) }}</div>
+<div class="frow cols"><span>Name</span><span>Path</span><span>Size</span><span>Status</span></div>
+{% if params.get('folder','.') != '.' %}<a class="folder" href="{{ up }}" target="_self">↑ Parent folder</a>{% endif %}
+{% for folder in folders %}<a class="folder" href="{{ url(route,folder=folder) }}" target="_self">{{ folder.split('/')[-1] }}/</a>{% endfor %}
+{% for f in rows if params.get('find','')|lower in f.path|lower %}<div class="frow"><a href="{{ url(route,file=f.path) }}" target="_self">{{ f.name }}</a><span>{{ f.parent }}</span><span>{{ f.size }}</span><span class="status {{ 'remote' if not f.local }}">{{ 'Local' if f.local else 'Remote' }}</span></div>{% endfor %}
+</div>
+{% endmacro %}
+<div class="study">
+<header><strong><i></i>Study library</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}" href="{{ href }}" target="_self">{{ name }} <small>{{ count }}</small></a>{% endfor %}</nav>{{ search('q','Search papers, datasets, files',{}) }}</header>
+<div class="layout"><aside><div class="tools"><div class="cap">{{ 'All datasets' if global_ds else section }} <small>{{ shown|length }}</small></div>{{ search('filter','Filter by name, PID, format' if global_ds else 'Filter by title, author, PID',params) }}{{ filters(options, sidebar_route) }}</div>
+{% for row in shown %}<a class="row {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b class="{{ 'serif' if not global_ds }}">{{ row.item.label }}</b><span>{{ row.byline }}</span><span>{{ row.count }}{% for tag in row.tags %} <em>{{ tag }}</em>{% endfor %}</span></a>{% endfor %}</aside>
+<main>{% if item %}<section class="heading"><div class="mono muted">{{ pid }}{% if folder and not global_ds %}　/　{{ folder }}{% endif %}</div>
+<h1 class="{{ 'serif' if not global_ds }}">{{ item.label }}</h1>
+{% if global_ds %}<div class="facts"><div>Paper {% for paper in parents %}<a href="{{ url(paper.route,dataset=item.key,dataset_record=item.ref) }}" target="_self">{{ paper.label }}</a> {% endfor %}</div><div>Folder <code>{{ folder }}</code></div><div>Available <span>{{ availability }}</span></div><div>Format <span>{{ format }}</span></div></div>
+{% else %}<div>{{ authors }}{% if authors and venue %} · {% endif %}<i>{{ venue }}</i> {{ year }}</div><div class="inline">{% for tag in tags %}<em>{{ tag }}</em>{% endfor %}{% if doi %}<span>DOI <a href="{{ doi }}" target="_blank" rel="noreferrer">{{ doi_label }}</a></span>{% endif %}{% if keywords %}<span>Keywords　{{ keywords }}</span>{% endif %}</div>{% endif %}
+<nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav></section>
+{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b><small>{{ d.count }}</small><span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a><em>{{ role }}</em></div><div class="facts"><div>PID <code>{{ ds_pid }}</code></div><div>Folder <code>{{ ds_folder }}</code></div><div>Available <span>{{ availability }}</span></div><div>Format <span>{{ format }}</span></div></div>{{ filetable(rows,folders) }}{% else %}No matching datasets.{% endif %}</article></div>
+{% elif view=='files' %}<article>{{ filetable(rows,folders) }}</article>
+{% elif view=='abstract' %}<article class="abstract serif">{{ abstract }}</article>
+{% elif view=='notes' %}<article><div class="notes">{{ notes }}</div></article>
+{% elif view=='source' %}<article><pre>{{ raw }}</pre>{% if source!=raw %}<details><summary>Full source metadata</summary><pre>{{ source }}</pre></details>{% endif %}</article>
+{% elif view=='paper' %}<article>{% for paper in parents %}<a class="row" href="{{ url(paper.route,dataset=item.key,dataset_record=item.ref) }}" target="_self">{{ paper.label }}　›</a>{% else %}No linked papers.{% endfor %}</article>{% endif %}
+{% else %}<article>No matching records.</article>{% endif %}</main></div></div>
