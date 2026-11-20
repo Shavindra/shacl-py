@@ -76,7 +76,9 @@ shacl-py add-datasets --paper papers/field-survey \
   --dataset "Station means file" papers/field-survey/data/output/station-means.csv
 ~~~
 
-The command updates the catalogue. Repeating the same name and path reuses the dataset.
+For an external dataset, pass its HTTP(S) landing page in place of the path. Add individual file links with `--linked-file DATASET_URL FILENAME FILE_URL`. [External dataset example](docs/local-setup.md#link-an-external-dataset)
+
+Repeating the command reuses the dataset.
 
 ## Other commands
 

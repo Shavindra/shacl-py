@@ -1918,6 +1918,27 @@
       "title": "Identifier",
       "type": "object"
     },
+    "LinkedFile": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "name": {
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "url"
+      ],
+      "title": "LinkedFile",
+      "type": "object"
+    },
     "LocalDataset": {
       "additionalProperties": false,
       "description": "",
@@ -2033,6 +2054,12 @@
         "kind": {
           "description": "The nature of the subject.",
           "type": "string"
+        },
+        "linked_files": {
+          "items": {
+            "$ref": "#/$defs/LinkedFile"
+          },
+          "type": "array"
         },
         "local_folder": {
           "description": "Local folder relative to the project metadata file.",
@@ -2270,6 +2297,12 @@
         "kind": {
           "description": "The nature of the subject.",
           "type": "string"
+        },
+        "linked_files": {
+          "items": {
+            "$ref": "#/$defs/LinkedFile"
+          },
+          "type": "array"
         },
         "local_folder": {
           "description": "Local folder relative to the project metadata file.",

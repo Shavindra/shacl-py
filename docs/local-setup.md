@@ -174,3 +174,17 @@ Place the image beside the config file, use a relative path such as
 The header defaults to **shaclpy** and a solid white circle. The browser
 tab uses `page_title`, falling back to `app_name`.
 These keys follow the [shacl-vue configuration](https://shacl-vue.psychoinformatics.de/app-configuration.html).
+
+### Link an external dataset
+
+Use the archive landing page as the dataset location. Add a linked file for each
+filename you want to show in the viewer. Both links open at the provider. The
+viewer reads the catalogue offline and does not download the data.
+
+```bash
+shacl-py add-datasets --paper papers/survey \
+  --dataset "Survey images" https://example.org/survey \
+  --linked-file https://example.org/survey field-01.tif https://example.org/files/field-01.tif
+```
+
+Omit `--linked-file` for a dataset landing page alone. Repeat it for more files.

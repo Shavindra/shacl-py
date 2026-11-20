@@ -32,6 +32,7 @@ classes:
     is_a: Dataset
     slots: [source_url, local_folder, file_groups, author_names]
     attributes:
+      linked_files: {range: LinkedFile, multivalued: true, inlined_as_list: true}
       source_datasets:
         range: LocalDataset
         multivalued: true
@@ -39,6 +40,10 @@ classes:
       notebook_path:
         range: string
         description: Project-relative path to the notebook used to produce this dataset.
+  LinkedFile:
+    attributes:
+      name: {range: string, required: true, pattern: '\S'}
+      url: {range: uri, required: true, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$'}
   DatasetLink:
     attributes:
       dataset: {range: LocalDataset, required: true}

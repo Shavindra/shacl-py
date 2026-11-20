@@ -160,8 +160,16 @@ def main(argv=None, *, review_layout=None):
         nargs=2,
         action="append",
         required=True,
-        metavar=("NAME", "PATH"),
-        help="Dataset name and project-relative file or directory (repeatable)",
+        metavar=("NAME", "PATH_OR_URL"),
+        help="Dataset name and project-relative file, directory or external HTTP(S) URL (repeatable)",
+    )
+    add.add_argument(
+        "--linked-file",
+        nargs=3,
+        action="append",
+        default=[],
+        metavar=("DATASET_URL", "FILENAME", "FILE_URL"),
+        help="List a remote file on the named dataset (repeatable)",
     )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
@@ -181,7 +189,9 @@ def main(argv=None, *, review_layout=None):
         if args.command == "add-datasets":
             from shacl_py.paper_review import add_datasets
 
-            add_datasets(args.project.resolve(), args.paper, args.dataset)
+            add_datasets(
+                args.project.resolve(), args.paper, args.dataset, args.linked_file
+            )
             return 0
         if args.command == "setup":
             from shacl_py.setup import setup_project

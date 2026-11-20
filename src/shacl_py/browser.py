@@ -105,6 +105,12 @@ class Item:
             or "local_folder" in self.fields
         )
 
+    @property
+    def linked_files(self):
+        if self.is_dataset and isinstance(self.source, Catalogue):
+            return self.fields.get("linked_files", [])
+        return []
+
     def has_type(self, *names):
         return any(
             kind.rsplit("/", 1)[-1].rsplit("#", 1)[-1].rsplit(":", 1)[-1].casefold()

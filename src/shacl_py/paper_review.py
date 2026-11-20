@@ -73,7 +73,7 @@ def append_link(paper, dataset, role):
         links.append(link)
 
 
-def add_datasets(root, selector, entries):
+def add_datasets(root, selector, entries, linked_files=()):
     document = MetadataFile.read(root / "metadata.yaml")
     graph = document.data.get("catalogue")
     if not graph:
@@ -94,32 +94,60 @@ def add_datasets(root, selector, entries):
         raise ValueError(f"Unknown paper: {selector}")
     datasets = graph.setdefault("datasets", [])
     for name, selection in entries:
-        path = local_path(root, selection)
-        base = path if path.is_dir() else path.parent
-        relative = base.relative_to(root).as_posix()
-        member = path.relative_to(base).as_posix()
-        matches = [
-            d
-            for d in datasets
-            if d.get("title") == name
-            and d.get("local_folder") == relative
-            and any(
-                g.get("label") == "Data files" and member in g["paths"]
-                for g in d.get("file_groups", [])
+        if selection.startswith(("http://", "https://")):
+            location = source_url(selection)
+            dataset = next(
+                (d for d in datasets if d.get("source_url") == location), None
             )
-        ]
-        if len(matches) > 1:
-            raise ValueError(f"Multiple dataset records match {name!r} at {selection}")
-        if matches:
-            dataset = matches[0]
+            if dataset is None:
+                dataset = new_entity(name, location)
+                datasets.append(dataset)
         else:
-            dataset = new_entity(name)
-            set_dataset_location(dataset, root, selection)
-            datasets.append(dataset)
+            path = local_path(root, selection)
+            base = path if path.is_dir() else path.parent
+            relative = base.relative_to(root).as_posix()
+            member = path.relative_to(base).as_posix()
+            matches = [
+                d
+                for d in datasets
+                if d.get("title") == name
+                and d.get("local_folder") == relative
+                and any(
+                    g.get("label") == "Data files" and member in g["paths"]
+                    for g in d.get("file_groups", [])
+                )
+            ]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"Multiple dataset records match {name!r} at {selection}"
+                )
+            if matches:
+                dataset = matches[0]
+            else:
+                dataset = new_entity(name)
+                set_dataset_location(dataset, root, selection)
+                datasets.append(dataset)
         if not any(
             link["dataset"] == dataset["pid"] for link in paper.get("dataset_links", [])
         ):
             append_link(paper, dataset, "related")
+    for dataset_url, filename, file_url in linked_files:
+        matches = [
+            d
+            for d in datasets
+            if d.get("source_url") == source_url(dataset_url)
+            and any(
+                link["dataset"] == d["pid"] for link in paper.get("dataset_links", [])
+            )
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected one dataset linked to this paper at {dataset_url}"
+            )
+        files = matches[0].setdefault("linked_files", [])
+        entry = {"name": filename, "url": source_url(file_url)}
+        if entry not in files:
+            files.append(entry)
     validate_catalogue(graph, root)
     changed = save_metadata(document)
     print(f"{'Updated' if changed else 'Kept'} {document.path}")

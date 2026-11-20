@@ -184,6 +184,9 @@ def browse(items, stored, base, brand, params):
             row["Relative path"]: row for _, rows in groups for row in rows
         }
 
+    def file_count(i):
+        return len(listing(i)[1]) + len(i.linked_files)
+
     def linked(i, group):
         unique = {}
         for j in related(i):
@@ -239,11 +242,17 @@ def browse(items, stored, base, brand, params):
         ):
             continue
         if tag == "Not all local" and global_ds:
-            if all(r["Availability"] == "Available" for r in listing(i)[1].values()):
+            if (
+                not i.linked_files
+                and (i.has_folder or not i.fields.get("source_url"))
+                and all(
+                    r["Availability"] == "Available" for r in listing(i)[1].values()
+                )
+            ):
                 continue
         elif tag != "All" and tag not in (roles(i) if global_ds else labels(i)):
             continue
-        count = len(listing(i)[1]) if global_ds else len(ds)
+        count = file_count(i) if global_ds else len(ds)
         shown.append(
             {
                 "item": i,
@@ -297,7 +306,7 @@ def browse(items, stored, base, brand, params):
     ds = linked(item, datasets)
     parents = list({publication_key(p): p for p in linked(item, papers)}.values())
     tabs = (
-        [("files", "Files", len(listing(item)[1])), ("paper", "Paper", None)]
+        [("files", "Files", file_count(item)), ("paper", "Paper", None)]
         if global_ds
         else [
             ("datasets", "Datasets", len(ds)),
@@ -316,7 +325,7 @@ def browse(items, stored, base, brand, params):
             dsrows.append(
                 {
                     "item": d,
-                    "count": len(listing(d)[1]),
+                    "count": file_count(d),
                     "role": related(item)[d],
                     "href": url(
                         item_route,
@@ -377,6 +386,23 @@ def browse(items, stored, base, brand, params):
                 "local": local,
             }
         )
+    if owner and directory == "." and view in ("datasets", "files"):
+        rows.extend(
+            {
+                "name": f["name"],
+                "path": f["name"],
+                "href": f["url"],
+                "parent": "",
+                "size": "",
+                "local": False,
+            }
+            for f in owner.linked_files
+        )
+    dataset_owner = item if global_ds else selected if view == "datasets" else None
+    try:
+        dataset_url = source_url(field(dataset_owner, "source_url", "url"))
+    except ValueError:
+        dataset_url = None
     doi_label = field(item, "doi", "source_url", "url", "sameAs")
     try:
         doi = source_url(doi_label)
@@ -404,6 +430,8 @@ def browse(items, stored, base, brand, params):
         dsrows=dsrows,
         selected=selected,
         ds_pid=pid(selected),
+        dataset_url=dataset_url,
+        dataset_description=field(dataset_owner, "description"),
         ds_folder=local_folder(selected),
         role=related(item).get(selected, ""),
         availability=f"{sum(f['local'] for f in rows)} of {len(rows)} files local",
