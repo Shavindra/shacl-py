@@ -5,6 +5,7 @@ catalogue:
     description: A worked example of reviewing publications and reusing their datasets.
   publications:
     - pid: urn:example:field-paper
+      display_fields: [pid, description, local_folder]
       title: Shoreline field survey
       description: Station measurements at two coastal sites.
       local_folder: papers/field-survey

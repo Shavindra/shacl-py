@@ -1985,6 +1985,13 @@
           "description": "A free-text account of the subject.",
           "type": "string"
         },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",
           "type": "string"
@@ -2222,6 +2229,13 @@
           "description": "A free-text account of the subject.",
           "type": "string"
         },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",
           "type": "string"
@@ -2451,6 +2465,13 @@
           "description": "A free-text account of the subject.",
           "type": "string"
         },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",
           "type": "string"
@@ -2671,6 +2692,13 @@
         "description": {
           "description": "A free-text account of the subject.",
           "type": "string"
+        },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",
@@ -2903,6 +2931,13 @@
           "description": "A free-text account of the subject.",
           "type": "string"
         },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",
           "type": "string"
@@ -3124,6 +3159,13 @@
         "description": {
           "description": "A free-text account of the subject.",
           "type": "string"
+        },
+        "display_fields": {
+          "description": "Ordered field names for the viewer header.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "display_label": {
           "description": "Label that can be shown when the metadata record is displayed as an item.",

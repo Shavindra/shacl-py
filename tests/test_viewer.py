@@ -1,3 +1,4 @@
+import json
 import shutil
 from html.parser import HTMLParser
 from importlib.resources import files
@@ -82,24 +83,26 @@ def test_view_metadata_file(tmp_path, monkeypatch):
     assert not list(tmp_path.rglob("metadata.yaml"))
 
 
-def test_long_author_lists_are_clipped_and_fonts_are_local(tmp_path, monkeypatch):
-    names = [("Matheus P", "Viana"), ("Jianxu", "Chen"), ("Theo A", "Knijnenburg")]
-    names += [("Ritvik", "Vasan"), ("Calysta", "Yan"), ("Joy E", "Arakaki")]
-    names += [(f"Person {i}", f"Author{i}") for i in range(80)]
-    people = {f"{g} {s}": {"given_name": g, "last_name": s} for g, s in names}
-    study = {
-        "dataset": {"name": "Viana data"},
-        "publication": [{"title": "Cell organisation", "author": list(people)}],
-        "person": people,
-    }
-    (tmp_path / ".studyminimeta.yaml").write_text(yaml.safe_dump(study))
+def test_record_selects_display_fields_and_fonts_are_local(tmp_path, monkeypatch):
+    (tmp_path / "metalad.json").write_text(
+        json.dumps(
+            {
+                "@type": "Dataset",
+                "name": "Measurements",
+                "creators": ["Maria van der Meer", "Research Group"],
+                "custom_units": "nm",
+                "internal_note": "hidden from summary",
+                "display_fields": ["custom_units", "creators"],
+            }
+        )
+    )
     page = open_viewer(tmp_path, monkeypatch)
     body = html(page)
-
-    assert "Viana et al." in body
-    assert "Viana, Chen, Knijnenburg, Vasan, Yan, Arakaki et al." in body
-    assert 'title="Matheus P Viana, Jianxu Chen' in body
-    assert "Person 79 Author79" not in body.split('title="')[0]
+    assert body.index("custom_units") < body.index("creators")
+    assert "Maria van der Meer" in body and "Research Group" in body
+    assert "hidden from summary" not in body
+    follow(page, "Raw metadata")
+    assert "hidden from summary" in html(page)
     assert "googleapis" not in body and "/app/static/fonts/" in body
     fonts = files("shacl_py") / "static/fonts"
     assert (fonts / "ibm-plex-sans-latin-wght-normal.woff2").is_file()

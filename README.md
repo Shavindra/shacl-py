@@ -34,6 +34,8 @@ top bar to browse datasets across papers. Select a filename to inspect its
 availability and any file metadata. **Records** lists other metadata types
 when present.
 
+Record headers show the fields supplied by the metadata. A record can select and order its header fields with `display_fields: [pid, description, local_folder]`. An empty list hides the header fields. Raw metadata always contains the original record.
+
 The viewer reads existing metadata files and MetaLad records together.
 Use `shacl-py serve . --metalad` for the store alone, or
 `shacl-py serve .studyminimeta.yaml` for one file. You can browse directly

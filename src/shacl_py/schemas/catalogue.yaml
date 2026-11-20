@@ -21,15 +21,15 @@ classes:
       reviews: {range: Review, multivalued: true, inlined_as_list: true}
   LocalProject:
     is_a: Project
-    slots: [source_url, local_folder, file_groups]
+    slots: [display_fields, source_url, local_folder, file_groups]
   LocalPublication:
     is_a: Publication
-    slots: [source_url, local_folder, file_groups, author_names]
+    slots: [display_fields, source_url, local_folder, file_groups, author_names]
     attributes:
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
   LocalDataset:
     is_a: Dataset
-    slots: [source_url, local_folder, file_groups, author_names]
+    slots: [display_fields, source_url, local_folder, file_groups, author_names]
     attributes:
       source_datasets:
         range: LocalDataset
@@ -60,6 +60,7 @@ classes:
         description: Literal files or directories relative to the record's local folder.
       section: {range: FileSection}
 slots:
+  display_fields: {range: string, multivalued: true, description: Ordered field names for the viewer header.}
   local_folder:
     range: string
     description: Local folder relative to the project metadata file.

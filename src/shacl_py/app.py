@@ -19,11 +19,9 @@ from shacl_py.browser import (
     source_content,
 )
 from shacl_py.files import scoped_path
-from shacl_py.names import byline, heading, surname
 from shacl_py.native import declared_title
 from shacl_py.records import load_records
 from shacl_py.sources import source_url
-from shacl_py.study import person_names
 
 st.set_page_config(page_title="Study library", layout="wide")
 params = st.query_params.to_dict()
@@ -113,43 +111,30 @@ def field(item, *names):
     )
 
 
-def authors(item):
-    """(full name, family name) pairs in declared order."""
-    if not item:
+def display_fields(item):
+    if item is None:
         return []
-    source = source_content(item.source)
-    ids = item.fields.get("author")
-    if (
-        isinstance(source, dict)
-        and isinstance(source.get("person"), dict)
-        and isinstance(ids, list)
-        and all(isinstance(k, str) for k in ids)
-    ):
-        people = source["person"]
-        return [
-            (
-                name,
-                str(people.get(key, {}).get("last_name") or "").strip()
-                or surname(name),
-            )
-            for key, name in zip(ids, person_names(people, ids))
-        ]
-    for key in ("authors", "author", "author_names", "creator"):
-        if value := item.fields.get(key):
-            names = filter(
-                None, map(display, value if isinstance(value, list) else [value])
-            )
-            return [(name, surname(name)) for name in names]
-    return []
-
-
-def author_line(item):
-    """Every author, for search and the full-list tooltip."""
-    return ", ".join(name for name, _ in authors(item))
-
-
-def surnames(item):
-    return [last for _, last in authors(item)]
+    fields = item.fields
+    keys = fields.get("display_fields", list(fields))
+    if not isinstance(keys, list):
+        keys = list(fields)
+    rows = []
+    for key in keys:
+        if not isinstance(key, str) or key == "display_fields" or key not in fields:
+            continue
+        value = fields[key]
+        if isinstance(value, (dict, list)):
+            text = yaml.safe_dump(value, allow_unicode=True, sort_keys=False).strip()
+        else:
+            text = str(value)
+        href = None
+        if isinstance(value, str):
+            try:
+                href = source_url(value)
+            except ValueError:
+                pass
+        rows.append((key, text, href))
+    return rows
 
 
 def labels(item):
@@ -159,7 +144,7 @@ def labels(item):
     ]
 
 
-def browse(items, stored, base):
+def browse(items, stored):
     papers = [i for i in items if i.is_publication]
     datasets = [i for i in items if i.is_dataset]
     others = [i for i in items if i not in papers and i not in datasets]
@@ -207,14 +192,6 @@ def browse(items, stored, base):
     def roles(i):
         return [related(p)[i] for p in papers if i in related(p) and related(p)[i]]
 
-    def local_folder(i):
-        return field(i, "local_folder") or (
-            os.path.relpath(i.folder, base) if i and i.has_folder else ""
-        )
-
-    def pid(i):
-        return field(i, "pid", "@id", "identifier")
-
     def file_matches(i, q):
         return any(
             q in searchable([path, stored.get(i.folder / path, [])])
@@ -247,9 +224,7 @@ def browse(items, stored, base):
             and not file_matches(i, q)
         ):
             continue
-        if params.get("filter", "").casefold() not in searchable(
-            [i.ref, i.fields, author_line(i)]
-        ):
+        if params.get("filter", "").casefold() not in searchable([i.ref, i.fields]):
             continue
         if tag == "Not all local" and global_ds:
             if all(r["Availability"] == "Available" for r in listing(i)[1].values()):
@@ -261,17 +236,6 @@ def browse(items, stored, base):
             {
                 "item": i,
                 "href": url(sidebar_route | i.route, tag=tag),
-                "byline": " · ".join(
-                    filter(
-                        None,
-                        [
-                            byline(surnames(i)),
-                            field(i, "venue", "journal"),
-                            field(i, "year"),
-                        ],
-                    )
-                ),
-                "authors_full": author_line(i),
                 "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
                 "tags": labels(i),
             }
@@ -312,16 +276,23 @@ def browse(items, stored, base):
     item_route = sidebar_route | item.route | {"tag": tag}
     ds = linked(item, datasets)
     parents = linked(item, papers)
-    tabs = (
-        [("files", "Files", len(listing(item)[1])), ("paper", "Paper", None)]
-        if global_ds
-        else [
-            ("datasets", "Datasets", len(ds)),
-            ("abstract", "Abstract", None),
-            ("notes", "Notes", None),
-            ("files", "Other files", None),
-        ]
+    notes = [field(item, "notes")]
+    notes.extend(
+        display(r.get("notes"))
+        for r in getattr(item.source, "graph", {}).get("reviews", [])
+        if r.get("publication") == item.key
     )
+    tabs = []
+    if ds and not global_ds:
+        tabs.append(("datasets", "Datasets", len(ds)))
+    if not global_ds and item.fields.get("abstract"):
+        tabs.append(("abstract", "Abstract", None))
+    if any(notes):
+        tabs.append(("notes", "Notes", None))
+    if item.has_folder or getattr(item.source, "file_records", {}):
+        tabs.append(("files", "Other files" if item.is_publication else "Files", None))
+    if global_ds and parents:
+        tabs.append(("paper", "Paper", None))
     tabs.append(("source", "Raw metadata", None))
     view = params.get("view", tabs[0][0])
     if view not in {k for k, _, _ in tabs}:
@@ -393,45 +364,23 @@ def browse(items, stored, base):
                 "local": local,
             }
         )
-    doi_label = field(item, "doi", "source_url", "url", "sameAs")
-    try:
-        doi = source_url(doi_label)
-    except ValueError:
-        doi = None
-    notes = [field(item, "notes")]
-    notes.extend(
-        display(r.get("notes"))
-        for r in getattr(item.source, "graph", {}).get("reviews", [])
-        if r.get("publication") == item.key
-    )
     context.update(
         item_route=item_route,
         view=view,
         tabs=tabs,
-        pid=pid(item),
-        folder=local_folder(item),
-        authors=heading(surnames(item)),
-        authors_full=author_line(item),
-        venue=field(item, "journal", "venue", "isPartOf"),
-        year=field(item, "year", "datePublished"),
-        keywords=field(item, "keywords", "keyword"),
-        tags=labels(item),
-        doi=doi,
-        doi_label=doi_label,
+        fields=display_fields(item),
+        dataset_fields=display_fields(selected),
         dsrows=dsrows,
         selected=selected,
-        ds_pid=pid(selected),
-        ds_folder=local_folder(selected),
         role=related(item).get(selected, ""),
         availability=f"{sum(f['local'] for f in rows)} of {len(rows)} files local",
-        format=field(owner, "format", "encodingFormat", "media_type"),
         parents=parents,
         route=route,
         rows=rows,
         folders=folders,
         up=up,
-        abstract=field(item, "abstract", "description") or "No abstract supplied.",
-        notes="\n\n".join(filter(None, notes)) or "No notes supplied.",
+        abstract=field(item, "abstract"),
+        notes="\n\n".join(filter(None, notes)),
         raw=yaml.safe_dump(
             item.fields or source_content(item.source),
             allow_unicode=True,
@@ -462,7 +411,7 @@ def main():
     base = (root if root.is_dir() else root.parent).resolve()
     items = list(items_from(records, base))
     if items:
-        browse(items, file_metadata(records), base)
+        browse(items, file_metadata(records))
     else:
         st.info("No metadata found.")
 
