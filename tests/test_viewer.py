@@ -293,3 +293,35 @@ def test_dataset_counts_after_paper_review_import(tmp_path, monkeypatch):
     follow(page, "Datasets 2")
     assert html(page).split("<main>")[0].count(">Example measurements</b>") == 1
     assert "<code>papers/sample/data/raw</code>" in html(page).split("<main>")[1]
+
+
+def test_add_datasets_command(tmp_path):
+    root = tmp_path / "project"
+    shutil.copytree(EXAMPLE, root)
+    path = root / "metadata.yaml"
+    args = [
+        "add-datasets",
+        "--project",
+        str(root),
+        "--paper",
+        "papers/field-survey",
+        "--dataset",
+        "Readings file",
+        "papers/field-survey/data/raw/readings.csv",
+        "--dataset",
+        "Output folder",
+        "papers/field-survey/data/output",
+    ]
+    before = path.read_bytes()
+    assert main(args + ["--dataset", "Missing", "missing"]) == 1
+    assert path.read_bytes() == before
+    assert main(args) == 0
+    graph = yaml.safe_load(path.read_text())["catalogue"]
+    linked = {link["dataset"] for link in graph["publications"][0]["dataset_links"]}
+    assert {d["title"] for d in graph["datasets"] if d["pid"] in linked} >= {
+        "Readings file",
+        "Output folder",
+    }
+    saved = path.read_bytes()
+    assert main(args) == 0
+    assert path.read_bytes() == saved

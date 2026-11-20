@@ -98,6 +98,22 @@ projects can use their own folder names and file group labels. Run
 `shacl-py serve examples/coastal-survey` in a source checkout to browse the
 complete worked example.
 
+## Add datasets to an existing paper
+
+Run from the project root, or set `--project DIR`. Supply the paper’s folder,
+PID, title or DOI. Each `--dataset` takes a name and a project-relative path
+to an existing file or folder. Repeat the option to link several datasets.
+
+~~~sh
+shacl-py add-datasets --paper papers/field-survey \
+  --dataset "Station readings" papers/field-survey/data/raw \
+  --dataset "Station means file" papers/field-survey/data/output/station-means.csv
+~~~
+
+The command updates the root catalogue in `metadata.yaml`. Running the same
+command again reuses the dataset records and links. If any path is invalid,
+the command exits before saving. Use `shacl-py serve .` to browse the result.
+
 ## Earlier flat records
 
 `init` and `generate` can create a flat record. **Files** browses its local

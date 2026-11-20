@@ -138,6 +138,31 @@ def main(argv=None, *, review_layout=None):
     setup.add_argument(
         "--no-input", action="store_true", help="Use available metadata without prompts"
     )
+    add = commands.add_parser(
+        "add-datasets",
+        help="Link local datasets to a catalogued paper",
+        description="Link one or more local datasets to an existing paper in the project catalogue.",
+        epilog='Example: shacl-py add-datasets --paper papers/survey --dataset "Station readings" papers/survey/data/raw',
+    )
+    add.add_argument(
+        "--project",
+        type=Path,
+        default=Path("."),
+        help="Project root (default: current directory)",
+    )
+    add.add_argument(
+        "--paper",
+        required=True,
+        help="Paper folder relative to project, PID, title or DOI",
+    )
+    add.add_argument(
+        "--dataset",
+        nargs=2,
+        action="append",
+        required=True,
+        metavar=("NAME", "PATH"),
+        help="Dataset name and project-relative file or directory (repeatable)",
+    )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -153,6 +178,11 @@ def main(argv=None, *, review_layout=None):
         )
     args = parser.parse_args(argv)
     try:
+        if args.command == "add-datasets":
+            from shacl_py.paper_review import add_datasets
+
+            add_datasets(args.project.resolve(), args.paper, args.dataset)
+            return 0
         if args.command == "setup":
             from shacl_py.setup import setup_project
 

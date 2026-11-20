@@ -63,6 +63,17 @@ and [customisable Python helper](examples/paper-review.py) show the metadata
 and folder conventions. To import an existing collection without prompts, use
 `shacl-py setup . --template paper-review --papers-folder research/papers --no-input`.
 
+To link more datasets to an existing paper, run from the project root and repeat
+`--dataset NAME PATH` for each local file or directory:
+
+~~~sh
+shacl-py add-datasets --paper papers/field-survey \
+  --dataset "Station readings" papers/field-survey/data/raw \
+  --dataset "Station means file" papers/field-survey/data/output/station-means.csv
+~~~
+
+The command updates the catalogue. Repeating the same name and path reuses the dataset.
+
 ## Other commands
 
 - `shacl-py validate ROOT` checks records again after you edit them.

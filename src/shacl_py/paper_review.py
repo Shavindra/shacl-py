@@ -2,10 +2,11 @@
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
-from shacl_py.catalogue import record_validator
+from shacl_py.catalogue import record_validator, validate_catalogue
 from shacl_py.files import IGNORED, local_path
-from shacl_py.metadata_io import MetadataFile
+from shacl_py.metadata_io import MetadataFile, save_metadata
 from shacl_py.prompts import (
     add_group,
     choose,
@@ -70,6 +71,58 @@ def append_link(paper, dataset, role):
         ]
     if link not in links:
         links.append(link)
+
+
+def add_datasets(root, selector, entries):
+    document = MetadataFile.read(root / "metadata.yaml")
+    graph = document.data.get("catalogue")
+    if not graph:
+        raise ValueError(
+            "No project catalogue found. Run shacl-py setup --template paper-review first."
+        )
+    validate_catalogue(graph, root)
+    publications = graph.get("publications", [])
+    matches = [
+        p for p in publications if p.get("local_folder") == Path(selector).as_posix()
+    ]
+    if len(matches) > 1:
+        raise ValueError("Several papers use this folder. Select a paper by PID.")
+    paper = matches[0] if matches else lookup(publications, selector)
+    if paper is None and selector.startswith("10."):
+        paper = lookup(publications, source_url(selector))
+    if paper is None:
+        raise ValueError(f"Unknown paper: {selector}")
+    datasets = graph.setdefault("datasets", [])
+    for name, selection in entries:
+        path = local_path(root, selection)
+        base = path if path.is_dir() else path.parent
+        relative = base.relative_to(root).as_posix()
+        member = path.relative_to(base).as_posix()
+        matches = [
+            d
+            for d in datasets
+            if d.get("title") == name
+            and d.get("local_folder") == relative
+            and any(
+                g.get("label") == "Data files" and member in g["paths"]
+                for g in d.get("file_groups", [])
+            )
+        ]
+        if len(matches) > 1:
+            raise ValueError(f"Multiple dataset records match {name!r} at {selection}")
+        if matches:
+            dataset = matches[0]
+        else:
+            dataset = new_entity(name)
+            set_dataset_location(dataset, root, selection)
+            datasets.append(dataset)
+        if not any(
+            link["dataset"] == dataset["pid"] for link in paper.get("dataset_links", [])
+        ):
+            append_link(paper, dataset, "related")
+    validate_catalogue(graph, root)
+    changed = save_metadata(document)
+    print(f"{'Updated' if changed else 'Kept'} {document.path}")
 
 
 def import_paper(graph, root, folder, layout, stored=None):
