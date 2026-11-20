@@ -12,8 +12,17 @@
 {% for f in rows if params.get('find','')|lower in f.path|lower %}<div class="frow"><a href="{{ url(route,file=f.path) }}" target="_self">{{ f.name }}</a><span>{{ f.parent }}</span><span>{{ f.size }}</span><span class="status {{ 'remote' if not f.local }}">{{ 'Local' if f.local else 'Remote' }}</span></div>{% endfor %}
 </div>
 {% endmacro %}
+{% macro field_value(value) -%}
+{%- if value is mapping and value -%}
+<dl class="facts">{% for key, child in value.items() %}<dt>{{ key }}</dt><dd>{{ field_value(child) }}</dd>{% endfor %}</dl>
+{%- elif value is sequence and value is not string and value -%}
+<ol class="values">{% for child in value %}<li>{{ field_value(child) }}{% if not loop.last %}<span aria-hidden="true">, </span>{% endif %}</li>{% endfor %}</ol>
+{%- elif value is none -%}null
+{%- else -%}{{ value }}
+{%- endif -%}
+{%- endmacro %}
 {% macro facts(fields) -%}
-<div class="facts">{% for key,value,href in fields %}<div>{{ key }} {% if href %}<a href="{{ href }}" target="_blank" rel="noreferrer">{{ value }}</a>{% else %}<span class="value">{{ value }}</span>{% endif %}</div>{% endfor %}</div>
+<dl class="facts">{% for key,value,href in fields %}<dt>{{ key }}</dt><dd>{% if href %}<a href="{{ href }}" target="_blank" rel="noreferrer">{{ value }}</a>{% else %}{{ field_value(value) }}{% endif %}</dd>{% endfor %}</dl>
 {%- endmacro %}
 <div class="study">
 <header><strong><i></i>Study library</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}" href="{{ href }}" target="_self">{{ name }} <small>{{ count }}</small></a>{% endfor %}</nav>{{ search('q','Search papers, datasets, files',{}) }}</header>
