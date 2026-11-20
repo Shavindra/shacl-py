@@ -107,7 +107,7 @@ def field(item, *names):
     )
 
 
-def author_line(item):
+def author_line(item, limit=None):
     source = source_content(item.source)
     ids = item.fields.get("author")
     if (
@@ -116,8 +116,24 @@ def author_line(item):
         and isinstance(ids, list)
         and all(isinstance(k, str) for k in ids)
     ):
-        return ", ".join(person_names(source["person"], ids))
-    return field(item, "author_names", "authors", "author", "creator")
+        names = person_names(source["person"], ids)
+    else:
+        value = next(
+            (
+                item.fields[k]
+                for k in ("author_names", "authors", "author", "creator")
+                if item.fields.get(k)
+            ),
+            [],
+        )
+        names = (
+            list(filter(None, map(display, value)))
+            if isinstance(value, list)
+            else [display(value)]
+        )
+    if limit is not None and len(names) > limit:
+        return ", ".join(names[:limit]) + ", …"
+    return ", ".join(names)
 
 
 def sidebar_author(item):
@@ -144,6 +160,20 @@ def browse(items, stored, base, brand, params):
 
     def key_for(i):
         return keys[i] if i.is_dataset else publication_key(i)
+
+    years = {}
+    for paper in papers:
+        if year := field(paper, "year", "datePublished"):
+            years.setdefault(key_for(paper), set()).add(
+                year[:4] if year[:4].isdigit() else year
+            )
+
+    def publication_year(item):
+        year = field(item, "year", "datePublished")
+        if year:
+            return year[:4] if year[:4].isdigit() else year
+        matches = years.get(key_for(item), set())
+        return next(iter(matches)) if len(matches) == 1 else ""
 
     others = [i for i in items if i not in papers and i not in datasets]
     sections = {
@@ -259,7 +289,7 @@ def browse(items, stored, base, brand, params):
                 "href": url(sidebar_route | i.route, tag=tag),
                 "authors": sidebar_author(i),
                 "venue": field(i, "venue", "journal"),
-                "year": field(i, "year", "datePublished"),
+                "year": publication_year(i),
                 "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
                 "tags": labels(i),
             }
@@ -420,9 +450,9 @@ def browse(items, stored, base, brand, params):
         tabs=tabs,
         pid=pid(item),
         folder=local_folder(item),
-        authors=author_line(item),
+        authors=author_line(item, limit=10),
         venue=field(item, "journal", "venue", "isPartOf"),
-        year=field(item, "year", "datePublished"),
+        year=publication_year(item),
         keywords=field(item, "keywords", "keyword"),
         tags=labels(item),
         doi=doi,

@@ -330,3 +330,42 @@ def test_add_datasets_command(tmp_path):
     saved = path.read_bytes()
     assert main(args) == 0
     assert path.read_bytes() == saved
+
+
+def test_header_metadata_and_dataset_description(tmp_path, monkeypatch):
+    folder = tmp_path / "papers" / "sample"
+    folder.mkdir(parents=True)
+    names = [f"Author {i:02}" for i in range(1, 12)]
+    metadata = {
+        "publication": [
+            {
+                "title": "Field survey",
+                "doi": "10.1234/field",
+                "year": 2023,
+                "author": names,
+            }
+        ],
+        "dataset": {"name": "Readings", "description": "Depth at each station."},
+        "person": {},
+    }
+    (folder / ".studyminimeta.yaml").write_text(yaml.safe_dump(metadata))
+    assert (
+        main(
+            [
+                "setup",
+                str(tmp_path),
+                "--template",
+                "paper-review",
+                "--papers-folder",
+                "papers",
+                "--no-input",
+            ]
+        )
+        == 0
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    body = html(page).split("<main>")[1]
+    assert "Author 10, …" in body and "Author 11" not in body
+    assert " · 2023" in body and "Depth at each station." in body
+    follow(page, "Open in Datasets")
+    assert "Depth at each station." in html(page).split("<main>")[1]
