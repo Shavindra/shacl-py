@@ -111,6 +111,15 @@ def field(item, *names):
     )
 
 
+def plain(value):
+    """Builtin dicts and lists, so yaml.safe_dump accepts ruamel round-trip types."""
+    if isinstance(value, dict):
+        return {str(k): plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [plain(v) for v in value]
+    return value
+
+
 def display_fields(item):
     if item is None:
         return []
@@ -124,7 +133,9 @@ def display_fields(item):
             continue
         value = fields[key]
         if isinstance(value, (dict, list)):
-            text = yaml.safe_dump(value, allow_unicode=True, sort_keys=False).strip()
+            text = yaml.safe_dump(
+                plain(value), allow_unicode=True, sort_keys=False
+            ).strip()
         else:
             text = str(value)
         href = None
@@ -382,7 +393,7 @@ def browse(items, stored):
         abstract=field(item, "abstract"),
         notes="\n\n".join(filter(None, notes)),
         raw=yaml.safe_dump(
-            item.fields or source_content(item.source),
+            plain(item.fields or source_content(item.source)),
             allow_unicode=True,
             sort_keys=False,
         )
@@ -391,7 +402,7 @@ def browse(items, stored):
     )
     if view == "source":
         context["source"] = yaml.safe_dump(
-            source_content(item.source), allow_unicode=True, sort_keys=False
+            plain(source_content(item.source)), allow_unicode=True, sort_keys=False
         )
     render()
     if "file" in params and owner:

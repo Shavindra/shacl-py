@@ -109,6 +109,19 @@ def test_record_selects_display_fields_and_fonts_are_local(tmp_path, monkeypatch
     assert (fonts / "source-serif-4-latin-opsz-normal.woff2").is_file()
 
 
+def test_study_lists_render_in_fields_and_raw_metadata(tmp_path, monkeypatch):
+    (tmp_path / ".studyminimeta.yaml").write_text(
+        "dataset: {name: Data}\n"
+        "publication: [{title: Paper, author: [Ann Lee, Bo Chan]}]\n"
+        "person:\n  Ann Lee: {given_name: Ann, last_name: Lee}\n"
+        "  Bo Chan: {given_name: Bo, last_name: Chan}\n"
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    assert "Paper</h1>" in html(page)
+    follow(page, "Raw metadata")
+    assert "Ann Lee" in html(page)
+
+
 def test_view_metalad_store_read_only(tmp_path, monkeypatch):
     config = tmp_path / "gitconfig"
     config.write_text("[user]\nname = Viewer test\nemail = test@example.org\n")
