@@ -465,7 +465,8 @@ def main():
     items = list(items_from(records, base))
     if items:
         st.html(assets / "browser.css")
-        viewer(items, file_metadata(records), base, brand)
+        with st.container(key="shacl_viewer"):
+            viewer(items, file_metadata(records), base, brand)
     else:
         st.info("No metadata found.")
 
