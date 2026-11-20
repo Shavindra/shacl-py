@@ -1,6 +1,7 @@
 """Navigation over authored Concepts records and native metadata sources."""
 
 import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -159,6 +160,28 @@ def items_from(records, root):
                 source.data.get("schema_type") or "Record",
                 source.data,
             )
+
+
+def publication_key(item):
+    """Use a declared DOI or global PID. Unidentified entries stay source-specific."""
+    if item.is_publication:
+        for field in ("doi", "source_url", "sameAs", "pid", "@id", "identifier"):
+            value = item.fields.get(field)
+            if isinstance(value, str) and (
+                match := re.fullmatch(
+                    r"(?:(?:https?://(?:dx\.)?doi\.org/|doi:\s*))?(10\.\d{4,9}/\S+)",
+                    value.strip(),
+                    re.IGNORECASE,
+                )
+            ):
+                return ("doi", match[1].casefold())
+        for field in ("pid", "@id", "identifier"):
+            value = item.fields.get(field)
+            if isinstance(value, str) and value.startswith(
+                ("urn:", "https://", "http://")
+            ):
+                return ("pid", value)
+    return item
 
 
 def dataset_links(item):

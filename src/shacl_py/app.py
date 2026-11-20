@@ -16,6 +16,7 @@ from shacl_py.browser import (
     file_selection,
     items_from,
     neighbours,
+    publication_key,
     searchable,
     source_content,
 )
@@ -251,13 +252,25 @@ def browse(items, stored, base, brand):
                 "tags": labels(i),
             }
         )
+    if section == "Papers":
+        unique = {}
+        for row in shown:
+            key = publication_key(row["item"])
+            if key not in unique or row["item"] is selected_item:
+                unique[key] = row
+        shown = list(unique.values())
     item = (
         selected_item
         if any(r["item"] is selected_item for r in shown)
         else next((r["item"] for r in shown), None)
     )
     nav = [
-        (name, url({}, section=name.lower(), q=q), len(group), name == section)
+        (
+            name,
+            url({}, section=name.lower(), q=q),
+            len({publication_key(i) for i in group}),
+            name == section,
+        )
         for name, group in sections.items()
     ]
     context = {
@@ -287,7 +300,7 @@ def browse(items, stored, base, brand):
         return
     item_route = sidebar_route | item.route | {"tag": tag}
     ds = linked(item, datasets)
-    parents = linked(item, papers)
+    parents = list({publication_key(p): p for p in linked(item, papers)}.values())
     tabs = (
         [("files", "Files", len(listing(item)[1])), ("paper", "Paper", None)]
         if global_ds
@@ -416,6 +429,11 @@ def browse(items, stored, base, brand):
         else "",
     )
     if view == "source":
+        context["alternate_sources"] = [
+            p
+            for p in papers
+            if p is not item and publication_key(p) == publication_key(item)
+        ]
         context["source"] = yaml.safe_dump(
             source_content(item.source), allow_unicode=True, sort_keys=False
         )

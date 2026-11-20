@@ -229,3 +229,36 @@ def test_viewer_branding(tmp_path, monkeypatch):
         assert circle not in markup
         assert 'src="data:image/svg+xml;base64,' in markup
         assert "Cell sim</strong>" in markup
+
+
+def test_setup_and_serve_overlapping_sources(tmp_path, monkeypatch):
+    folder = tmp_path / "papers" / "sample"
+    folder.mkdir(parents=True)
+    metadata = folder / ".studyminimeta.yaml"
+    paper = {"title": "Field survey", "doi": "10.1234/EXAMPLE"}
+    metadata.write_text(yaml.safe_dump({"person": {}, "publication": [paper]}))
+    setup = [
+        "setup",
+        str(tmp_path),
+        "--template",
+        "paper-review",
+        "--papers-folder",
+        "papers",
+        "--no-input",
+    ]
+    assert main(setup) == 0
+    catalogue = tmp_path / "metadata.yaml"
+    before = catalogue.read_bytes()
+    assert main(setup) == 0
+    assert catalogue.read_bytes() == before
+    # Another article can share a title. Its own DOI identifies it separately.
+    second = folder / "paper.json"
+    second.write_text('{"title":"Field survey","doi":"10.1234/different"}')
+    page = open_viewer(tmp_path, monkeypatch)
+    body = html(page)
+    assert "Papers <small>2</small>" in body
+    assert body.split("<main>")[0].count(">Field survey</b>") == 2
+    follow(page, "Raw metadata")
+    assert "papers/sample/.studyminimeta.yaml</a>" in html(page)
+    follow(page, "papers/sample/.studyminimeta.yaml")
+    assert "10.1234/EXAMPLE" in html(page).split("<article>")[-1]

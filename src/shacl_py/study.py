@@ -1,5 +1,6 @@
 """MetaLad StudyMiniMeta input belongs to the containing DataLad dataset."""
 
+import yaml
 from datalad_metalad.extractors.studyminimeta.ldcreator import LDCreator
 
 from shacl_py.metadata_io import MetadataFile
@@ -14,7 +15,8 @@ def dataset_root(folder):
 
 
 def read_study(path):
-    data = MetadataFile.read(path).data
+    document = MetadataFile.read(path)
+    data = yaml.safe_load(document.original) if document.original else {}
     if data:
         validate_study({"person": {}, **data}, path)
     return data
