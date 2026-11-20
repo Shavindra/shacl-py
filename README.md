@@ -34,6 +34,10 @@ top bar to browse datasets across papers. Select a filename to inspect its
 availability and any file metadata. **Records** lists other metadata types
 when present.
 
+Each view has a bookmarkable URL. Links, filters and searches update the open
+viewer, and the browser's Back and Forward buttons restore previous views.
+Refresh the page to read changes to the project's metadata.
+
 The viewer reads existing metadata files and MetaLad records together.
 Use `shacl-py serve . --metalad` for the store alone, or
 `shacl-py serve .studyminimeta.yaml` for one file. You can browse directly

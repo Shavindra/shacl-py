@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap');
-.stApp header[data-testid="stHeader"],[data-testid="stToolbar"]{display:none}
+.stApp header[data-testid="stHeader"],[data-testid="stToolbar"],.st-key-viewer_navigation{display:none}
 .stMainBlockContainer{max-width:none!important;padding:0!important}
 .study{font:13.5px/1.4 'IBM Plex Sans',system-ui,sans-serif;color:#111;background:white;min-height:100vh}
 .study *{box-sizing:border-box}.study a{color:inherit}.study header,.study nav,.study .inline,.study .chips,.study .dshead,.study .filebar{display:flex;align-items:center}
