@@ -262,3 +262,34 @@ def test_setup_and_serve_overlapping_sources(tmp_path, monkeypatch):
     assert "papers/sample/.studyminimeta.yaml</a>" in html(page)
     follow(page, "papers/sample/.studyminimeta.yaml")
     assert "10.1234/EXAMPLE" in html(page).split("<article>")[-1]
+
+
+def test_dataset_counts_after_paper_review_import(tmp_path, monkeypatch):
+    folder = tmp_path / "papers" / "sample"
+    (folder / "data/raw").mkdir(parents=True)
+    (folder / ".studyminimeta.yaml").write_text(
+        "dataset: {name: Example measurements}\npublication: [{title: Field survey, doi: 10.1234/example}]\nperson: {}\n"
+    )
+    (tmp_path / ".studyminimeta.yaml").write_text(
+        "dataset: {name: Whole project}\nperson: {}\n"
+    )
+    assert (
+        main(
+            [
+                "setup",
+                str(tmp_path),
+                "--template",
+                "paper-review",
+                "--papers-folder",
+                "papers",
+                "--no-input",
+            ]
+        )
+        == 0
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    assert "Datasets <small>2</small>" in html(page).split("</header>")[0]
+    assert "Datasets <small>1</small>" in html(page).split("<main>")[1]
+    follow(page, "Datasets 2")
+    assert html(page).split("<main>")[0].count(">Example measurements</b>") == 1
+    assert "<code>papers/sample/data/raw</code>" in html(page).split("<main>")[1]

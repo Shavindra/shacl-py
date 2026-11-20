@@ -184,6 +184,39 @@ def publication_key(item):
     return item
 
 
+def dataset_keys(papers, datasets):
+    """Match StudyMiniMeta datasets to their unambiguous paper-review imports."""
+    keys = {}
+    imported = defaultdict(set)
+    for paper in papers:
+        if not isinstance(paper.source, Catalogue) or not paper.has_folder:
+            continue
+        links = dataset_links(paper)
+        for dataset in datasets:
+            if dataset.source is paper.source and dataset.key in links:
+                imported[paper.folder, dataset.label].add(dataset)
+    for dataset in datasets:
+        location = dataset.fields.get("source_url") or dataset.fields.get("location")
+        keys[dataset] = dataset
+        if isinstance(location, str) and location.startswith(("https://", "http://")):
+            keys[dataset] = ("dataset", location)
+        else:
+            for field in ("pid", "@id", "identifier"):
+                value = dataset.fields.get(field)
+                if isinstance(value, str) and value.startswith(
+                    ("urn:", "https://", "http://")
+                ):
+                    keys[dataset] = ("dataset-id", value)
+                    break
+    for dataset in datasets:
+        if dataset.ref.rsplit("/", 1)[-1] != ".studyminimeta.yaml":
+            continue
+        matches = imported[dataset.folder, dataset.label]
+        if len(matches) == 1 and keys[dataset] is dataset:
+            keys[dataset] = keys[next(iter(matches))]
+    return keys
+
+
 def dataset_links(item):
     links = {
         row["dataset"]: row["role"].capitalize()

@@ -12,6 +12,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from shacl_py.branding import branding
 from shacl_py.browser import (
+    dataset_keys,
     file_metadata,
     file_selection,
     items_from,
@@ -146,6 +147,11 @@ def labels(item):
 def browse(items, stored, base, brand):
     papers = [i for i in items if i.is_publication]
     datasets = [i for i in items if i.is_dataset]
+    keys = dataset_keys(papers, datasets)
+
+    def key_for(i):
+        return keys[i] if i.is_dataset else publication_key(i)
+
     others = [i for i in items if i not in papers and i not in datasets]
     sections = {
         name: group
@@ -186,7 +192,11 @@ def browse(items, stored, base, brand):
         }
 
     def linked(i, group):
-        return [j for j in related(i) if j in group]
+        unique = {}
+        for j in related(i):
+            if j in group:
+                unique.setdefault(key_for(j), j)
+        return list(unique.values())
 
     def roles(i):
         return [related(p)[i] for p in papers if i in related(p) and related(p)[i]]
@@ -252,10 +262,10 @@ def browse(items, stored, base, brand):
                 "tags": labels(i),
             }
         )
-    if section == "Papers":
+    if section in ("Papers", "Datasets"):
         unique = {}
         for row in shown:
-            key = publication_key(row["item"])
+            key = key_for(row["item"])
             if key not in unique or row["item"] is selected_item:
                 unique[key] = row
         shown = list(unique.values())
@@ -268,7 +278,7 @@ def browse(items, stored, base, brand):
         (
             name,
             url({}, section=name.lower(), q=q),
-            len({publication_key(i) for i in group}),
+            len({key_for(i) for i in group}),
             name == section,
         )
         for name, group in sections.items()
@@ -430,9 +440,7 @@ def browse(items, stored, base, brand):
     )
     if view == "source":
         context["alternate_sources"] = [
-            p
-            for p in papers
-            if p is not item and publication_key(p) == publication_key(item)
+            p for p in items if p is not item and key_for(p) == key_for(item)
         ]
         context["source"] = yaml.safe_dump(
             source_content(item.source), allow_unicode=True, sort_keys=False
