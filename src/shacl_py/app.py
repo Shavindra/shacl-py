@@ -19,6 +19,7 @@ from shacl_py.browser import (
     source_content,
 )
 from shacl_py.files import scoped_path
+from shacl_py.names import byline, heading, surname
 from shacl_py.native import declared_title
 from shacl_py.records import load_records
 from shacl_py.sources import source_url
@@ -112,7 +113,10 @@ def field(item, *names):
     )
 
 
-def author_line(item):
+def authors(item):
+    """(full name, family name) pairs in declared order."""
+    if not item:
+        return []
     source = source_content(item.source)
     ids = item.fields.get("author")
     if (
@@ -121,8 +125,31 @@ def author_line(item):
         and isinstance(ids, list)
         and all(isinstance(k, str) for k in ids)
     ):
-        return ", ".join(person_names(source["person"], ids))
-    return field(item, "authors", "author", "creator")
+        people = source["person"]
+        return [
+            (
+                name,
+                str(people.get(key, {}).get("last_name") or "").strip()
+                or surname(name),
+            )
+            for key, name in zip(ids, person_names(people, ids))
+        ]
+    for key in ("authors", "author", "author_names", "creator"):
+        if value := item.fields.get(key):
+            names = filter(
+                None, map(display, value if isinstance(value, list) else [value])
+            )
+            return [(name, surname(name)) for name in names]
+    return []
+
+
+def author_line(item):
+    """Every author, for search and the full-list tooltip."""
+    return ", ".join(name for name, _ in authors(item))
+
+
+def surnames(item):
+    return [last for _, last in authors(item)]
 
 
 def labels(item):
@@ -238,7 +265,7 @@ def browse(items, stored, base):
                     filter(
                         None,
                         [
-                            author_line(i),
+                            byline(surnames(i)),
                             field(i, "venue", "journal"),
                             field(i, "year"),
                         ],
@@ -382,7 +409,8 @@ def browse(items, stored, base):
         tabs=tabs,
         pid=pid(item),
         folder=local_folder(item),
-        authors=author_line(item),
+        authors=heading(surnames(item)),
+        authors_full=author_line(item),
         venue=field(item, "journal", "venue", "isPartOf"),
         year=field(item, "year", "datePublished"),
         keywords=field(item, "keywords", "keyword"),

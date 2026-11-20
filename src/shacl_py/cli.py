@@ -243,6 +243,7 @@ def main(argv=None, *, review_layout=None):
                 "--server.address=127.0.0.1",
                 f"--server.port={args.port}",
                 "--server.headless=true",
+                "--server.enableStaticServing=true",
                 "--client.toolbarMode=minimal",
                 "--browser.gatherUsageStats=false",
                 "--server.fileWatcherType=none",
