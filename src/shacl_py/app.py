@@ -271,6 +271,7 @@ def browse(items, stored, base):
                         ],
                     )
                 ),
+                "authors_full": author_line(i),
                 "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
                 "tags": labels(i),
             }
