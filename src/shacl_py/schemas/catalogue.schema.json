@@ -2967,6 +2967,11 @@
           "description": "Persistent and globally unique identifier of a `Thing`.",
           "type": "string"
         },
+        "primary_author": {
+          "description": "Explicit primary author display name.",
+          "pattern": "\\S",
+          "type": "string"
+        },
         "related_mappings": {
           "description": "A list of terms from different schemas or terminology systems that have related meaning.",
           "items": {
@@ -3187,6 +3192,11 @@
         },
         "pid": {
           "description": "Persistent and globally unique identifier of a `Thing`.",
+          "type": "string"
+        },
+        "primary_author": {
+          "description": "Explicit primary author display name.",
+          "pattern": "\\S",
           "type": "string"
         },
         "related_mappings": {

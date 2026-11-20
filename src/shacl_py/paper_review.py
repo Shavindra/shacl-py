@@ -124,6 +124,11 @@ def import_paper(graph, root, folder, layout, stored=None):
     people = data.get("person", {})
     if authors := person_names(people, paper_info.get("author", [])):
         paper.setdefault("author_names", authors)
+    primary = fields.get("primary_author")
+    if not primary and (key := paper_info.get("primary_author")):
+        primary = person_names(people, [key])[0]
+    if primary:
+        paper.setdefault("primary_author", primary)
     if description := fields.get("description"):
         paper.setdefault("description", description)
     if status := fields.get("review_status"):

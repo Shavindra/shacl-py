@@ -1,4 +1,4 @@
-"""Read-only study library backed by Concepts and MetaLad records."""
+"""Read-only shaclpy viewer backed by Concepts and MetaLad records."""
 
 import os
 from functools import cache
@@ -10,6 +10,7 @@ import streamlit as st
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from shacl_py.branding import branding
 from shacl_py.browser import (
     file_metadata,
     file_selection,
@@ -24,7 +25,6 @@ from shacl_py.records import load_records
 from shacl_py.sources import source_url
 from shacl_py.study import person_names
 
-st.set_page_config(page_title="Study library", layout="wide")
 params = st.query_params.to_dict()
 assets = Path(__file__).with_name("templates")
 template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_template(
@@ -122,7 +122,17 @@ def author_line(item):
         and all(isinstance(k, str) for k in ids)
     ):
         return ", ".join(person_names(source["person"], ids))
-    return field(item, "authors", "author", "creator")
+    return field(item, "author_names", "authors", "author", "creator")
+
+
+def sidebar_author(item):
+    primary = field(item, "primary_author").strip() if item.is_publication else ""
+    if not primary:
+        return author_line(item)
+    source = source_content(item.source)
+    if isinstance(source, dict) and isinstance(source.get("person"), dict):
+        return person_names(source["person"], [primary])[0]
+    return primary
 
 
 def labels(item):
@@ -132,7 +142,7 @@ def labels(item):
     ]
 
 
-def browse(items, stored, base):
+def browse(items, stored, base, brand):
     papers = [i for i in items if i.is_publication]
     datasets = [i for i in items if i.is_dataset]
     others = [i for i in items if i not in papers and i not in datasets]
@@ -234,16 +244,9 @@ def browse(items, stored, base):
             {
                 "item": i,
                 "href": url(sidebar_route | i.route, tag=tag),
-                "byline": " · ".join(
-                    filter(
-                        None,
-                        [
-                            author_line(i),
-                            field(i, "venue", "journal"),
-                            field(i, "year"),
-                        ],
-                    )
-                ),
+                "authors": sidebar_author(i),
+                "venue": field(i, "venue", "journal"),
+                "year": field(i, "year", "datePublished"),
                 "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
                 "tags": labels(i),
             }
@@ -258,6 +261,7 @@ def browse(items, stored, base):
         for name, group in sections.items()
     ]
     context = {
+        "brand": brand,
         "params": params,
         "section": section,
         "url": url,
@@ -425,15 +429,21 @@ def browse(items, stored, base):
 
 def main():
     root = Path(os.environ.get("SHACL_PY_ROOT", ".")).absolute()
+    base = (root if root.is_dir() else root.parent).resolve()
+    try:
+        brand = branding(base)
+    except TypeError as error:
+        st.error(str(error))
+        return
+    st.set_page_config(page_title=brand["page_title"], layout="wide")
     records, errors = load_records(
         root, metalad=os.environ.get("SHACL_PY_METALAD") == "1"
     )
     for error in errors:
         st.error(error)
-    base = (root if root.is_dir() else root.parent).resolve()
     items = list(items_from(records, base))
     if items:
-        browse(items, file_metadata(records), base)
+        browse(items, file_metadata(records), base, brand)
     else:
         st.info("No metadata found.")
 

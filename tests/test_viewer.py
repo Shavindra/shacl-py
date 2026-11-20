@@ -186,3 +186,46 @@ def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     follow(page, "Other files")
     follow(page, "missing.csv")
     assert "Unavailable" in html(page) and not page.button
+
+
+def test_primary_author_in_paper_list(tmp_path, monkeypatch):
+    metadata = tmp_path / ".studyminimeta.yaml"
+    paper = {"title": "Field survey", "author": ["a", "b"], "primary_author": "b"}
+    study = {
+        "publication": [paper],
+        "person": {
+            "a": {"given_name": "Jo", "last_name": "Smith"},
+            "b": {"given_name": "Sam", "last_name": "Patel"},
+        },
+    }
+    for expected in ("Sam Patel", "Jo Smith, Sam Patel"):
+        metadata.write_text(yaml.safe_dump(study))
+        page = open_viewer(tmp_path, monkeypatch)
+        assert f'class="byline-text">{expected}</span>' in html(page).split("<main>")[0]
+        assert "Jo Smith, Sam Patel" in html(page).split("<main>")[1]
+        paper.pop("primary_author", None)
+
+
+def test_viewer_branding(tmp_path, monkeypatch):
+    from shacl_py.branding import branding
+
+    metadata = tmp_path / ".studyminimeta.yaml"
+    metadata.write_text("publication: [{title: Field survey}]\nperson: {}\n")
+    folder = tmp_path / ".shacl-py"
+    folder.mkdir()
+    config = folder / "config.yaml"
+    circle = '<circle cx="9" cy="9" r="9" fill="#fff">'
+    assert circle in html(open_viewer(tmp_path, monkeypatch))
+    assert branding(tmp_path)["page_title"] == "shaclpy"
+    config.write_text("app_name: Cell sim\n")
+    assert branding(tmp_path)["page_title"] == "Cell sim"
+    config.write_text(
+        "app_name: Cell sim\npage_title: Papers\napp_theme: {logo: logo.svg}\n"
+    )
+    (folder / "logo.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+    assert branding(tmp_path)["page_title"] == "Papers"
+    for root in (tmp_path, metadata):
+        markup = html(open_viewer(root, monkeypatch))
+        assert circle not in markup
+        assert 'src="data:image/svg+xml;base64,' in markup
+        assert "Cell sim</strong>" in markup

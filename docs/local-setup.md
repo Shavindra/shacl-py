@@ -127,3 +127,34 @@ ruff format --check .
 pytest
 python -m build
 ~~~
+
+### Paper list author
+
+In a publication in `.studyminimeta.yaml`, set the optional `primary_author`
+to one of the person identifiers in its `author` list. For example, with
+`author: [a, b]`, use `primary_author: b` to show the second person's name.
+This is a shacl-py extension for the source YAML. MetaLad's standard
+StudyMiniMeta extractor omits this field from its exported metadata.
+
+In a flat paper record or a catalogue publication in `metadata.yaml`, use
+the display name directly, for example `primary_author: Alex Smith`.
+Without a primary author the left-hand paper list uses the full byline in source order.
+Long bylines show an ellipsis. Open the paper to read its full byline.
+
+### Viewer title and logo
+
+Create `.shacl-py/config.yaml` in the folder passed to `shacl-py serve`.
+When serving a single metadata file, use its parent folder.
+
+```yaml
+app_name: Cell sim
+page_title: Cell sim catalogue
+app_theme:
+  logo: logo.svg
+```
+
+Place the image beside the config file, use a relative path such as
+`assets/logo.png`, or supply an HTTP(S) image URL. Each setting is optional.
+The header defaults to **shaclpy** and a solid white circle. The browser
+tab uses `page_title`, falling back to `app_name`.
+These keys follow the [shacl-vue configuration](https://shacl-vue.psychoinformatics.de/app-configuration.html).

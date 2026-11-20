@@ -26,6 +26,7 @@ classes:
     is_a: Publication
     slots: [source_url, local_folder, file_groups, author_names]
     attributes:
+      primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
   LocalDataset:
     is_a: Dataset

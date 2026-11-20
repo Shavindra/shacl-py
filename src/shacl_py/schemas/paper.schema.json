@@ -1012,6 +1012,14 @@
                     "pattern": "^\\S+:\\S+$",
                     "type": "string"
                 },
+                "primary_author": {
+                    "description": "Explicit primary author display name.",
+                    "pattern": "\\S",
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
                 "related_mappings": {
                     "description": "A list of terms from different schemas or terminology systems that have related meaning.",
                     "items": {
@@ -1267,6 +1275,14 @@
                     "description": "Persistent and globally unique identifier of a `Thing`.",
                     "pattern": "^\\S+:\\S+$",
                     "type": "string"
+                },
+                "primary_author": {
+                    "description": "Explicit primary author display name.",
+                    "pattern": "\\S",
+                    "type": [
+                        "string",
+                        "null"
+                    ]
                 },
                 "related_mappings": {
                     "description": "A list of terms from different schemas or terminology systems that have related meaning.",
@@ -3093,6 +3109,14 @@
             "description": "Persistent and globally unique identifier of a `Thing`.",
             "pattern": "^\\S+:\\S+$",
             "type": "string"
+        },
+        "primary_author": {
+            "description": "Explicit primary author display name.",
+            "pattern": "\\S",
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "related_mappings": {
             "description": "A list of terms from different schemas or terminology systems that have related meaning.",
