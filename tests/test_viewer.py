@@ -3,8 +3,8 @@ from html.parser import HTMLParser
 from importlib.resources import files
 from pathlib import Path
 from unittest.mock import patch
-from urllib.parse import parse_qsl
 
+import streamlit as st
 import yaml
 from datalad.api import create, meta_add
 from streamlit.testing.v1 import AppTest
@@ -16,6 +16,11 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples/coastal-survey"
 
 def open_viewer(root, monkeypatch):
     monkeypatch.setenv("SHACL_PY_ROOT", str(root))
+    # AppTest runs Python without a browser to supply the URL fragment.
+    monkeypatch.setattr(
+        "shacl_py.navigation.router",
+        lambda **_: {"route": st.session_state.get("fragment", "")},
+    )
     page = AppTest.from_file(str(files("shacl_py") / "app.py")).run()
     assert not page.exception
     return page
@@ -54,8 +59,8 @@ def follow(page, label):
         for key, value in parser.links.items()
         if key == label or key.startswith(label + " ")
     )
-    page.query_params.clear()
-    page.query_params.update(parse_qsl(href.removeprefix("?")))
+    assert href.startswith("#")
+    page.session_state["fragment"] = href[1:]
     page.run()
     assert not page.exception and not page.error
     return page

@@ -4,7 +4,6 @@ import os
 from functools import cache
 from html import escape
 from pathlib import Path
-from urllib.parse import urlencode
 
 import streamlit as st
 import yaml
@@ -23,21 +22,15 @@ from shacl_py.browser import (
 )
 from shacl_py.files import scoped_path
 from shacl_py.native import declared_title
+from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
 from shacl_py.sources import source_url
 from shacl_py.study import person_names
 
-params = st.query_params.to_dict()
 assets = Path(__file__).with_name("templates")
 template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_template(
     "browser.html"
 )
-
-
-def url(route, **updates):
-    return "?" + urlencode(
-        {k: v for k, v in (route | updates).items() if v is not None}
-    )
 
 
 def link(label, route):
@@ -144,7 +137,7 @@ def labels(item):
     ]
 
 
-def browse(items, stored, base, brand):
+def browse(items, stored, base, brand, params):
     papers = [i for i in items if i.is_publication]
     datasets = [i for i in items if i.is_dataset]
     keys = dataset_keys(papers, datasets)
@@ -297,16 +290,8 @@ def browse(items, stored, base, brand):
         "item": item,
     }
 
-    def render():
-        st.html(
-            "<style>"
-            + (assets / "browser.css").read_text()
-            + "</style>"
-            + template.render(context)
-        )
-
     if not item:
-        render()
+        st.html(template.render(context))
         return
     item_route = sidebar_route | item.route | {"tag": tag}
     ds = linked(item, datasets)
@@ -445,12 +430,22 @@ def browse(items, stored, base, brand):
         context["source"] = yaml.safe_dump(
             source_content(item.source), allow_unicode=True, sort_keys=False
         )
-    render()
+    st.html(template.render(context))
     if "file" in params and owner:
         if row := files.get(params["file"]):
             file_page(owner, row, route, stored)
         else:
             st.warning("This file is outside the current selection.")
+
+
+@st.fragment
+def viewer(items, stored, base, brand):
+    params = current_route()
+    if params is not None:
+        try:
+            browse(items, stored, base, brand, params)
+        except (OSError, ValueError) as error:
+            st.error(str(error))
 
 
 def main():
@@ -469,7 +464,9 @@ def main():
         st.error(error)
     items = list(items_from(records, base))
     if items:
-        browse(items, file_metadata(records), base, brand)
+        st.html(assets / "browser.css")
+        with st.container(key="shacl_viewer"):
+            viewer(items, file_metadata(records), base, brand)
     else:
         st.info("No metadata found.")
 
