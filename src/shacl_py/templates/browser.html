@@ -13,7 +13,7 @@
 </div>
 {% endmacro %}
 {% macro dataset_details() -%}
-{% if dataset_description %}<p>{{ dataset_description }}</p>{% endif %}
+{% if dataset_description %}<p class="dataset-description">{{ dataset_description }}</p>{% endif %}
 {% if dataset_url %}<a href="{{ dataset_url }}" target="_blank" rel="noreferrer">Open dataset source ↗</a>{% endif %}
 {%- endmacro %}
 <div class="study">
@@ -25,7 +25,12 @@
 {% if global_ds %}{{ dataset_details() }}<div class="facts"><div>Paper {% for paper in parents %}<a href="{{ url(paper.route,dataset=item.key,dataset_record=item.ref) }}" target="_self">{{ paper.label }}</a> {% endfor %}</div>{% if folder %}<div>Folder <code>{{ folder }}</code></div>{% endif %}<div>Available <span>{{ availability }}</span></div>{% if format %}<div>Format <span>{{ format }}</span></div>{% endif %}</div>
 {% else %}<div>{{ authors }}{% if authors and venue %} · {% endif %}<i>{{ venue }}</i>{% if year %}{% if authors or venue %} · {% endif %}{{ year }}{% endif %}</div><div class="inline">{% for tag in tags %}<em>{{ tag }}</em>{% endfor %}{% if doi %}<span>DOI <a href="{{ doi }}" target="_blank" rel="noreferrer">{{ doi_label }}</a></span>{% endif %}{% if keywords %}<span>Keywords　{{ keywords }}</span>{% endif %}</div>{% endif %}
 <nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav></section>
-{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b><small>{{ d.count }}</small><span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a><em>{{ role }}</em></div>{{ dataset_details() }}<div class="facts"><div>PID <code>{{ ds_pid }}</code></div>{% if ds_folder %}<div>Folder <code>{{ ds_folder }}</code></div>{% endif %}<div>Available <span>{{ availability }}</span></div>{% if format %}<div>Format <span>{{ format }}</span></div>{% endif %}</div>{{ filetable(rows,folders) }}{% else %}No matching datasets.{% endif %}</article></div>
+{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b><small>{{ d.count }}</small><span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a><em>{{ role }}</em></div>{{ dataset_details() }}<dl class="dataset-facts">
+{% if ds_pid %}<dt>PID</dt><dd><code>{{ ds_pid }}</code></dd>{% endif %}
+{% if ds_folder %}<dt>Folder</dt><dd><code>{{ ds_folder }}</code></dd>{% endif %}
+<dt>Available</dt><dd>{{ availability }}</dd>
+{% if format %}<dt>Format</dt><dd>{{ format }}</dd>{% endif %}
+</dl>{{ filetable(rows,folders) }}{% else %}No matching datasets.{% endif %}</article></div>
 {% elif view=='files' %}<article>{{ filetable(rows,folders) }}</article>
 {% elif view=='abstract' %}<article class="abstract serif">{{ abstract }}</article>
 {% elif view=='notes' %}<article><div class="notes">{{ notes }}</div></article>
