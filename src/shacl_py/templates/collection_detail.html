@@ -1,0 +1,102 @@
+{% from 'collection_fields.html' import field_value with context %}
+{% set layout = collection.presentation %}
+{% set d = detail %}
+{% set g = d.group %}
+{% set scope = d.scope %}
+{% macro star() %}<span class="star" title="Starred" aria-label="Starred">★</span>{% endmacro %}
+{% macro reference(ref) %}
+<div class="ref-row">
+  {% if ref.scope %}<small>{{ ref.scope }}</small>{% endif %}
+  {% if ref.citation %}<span>{{ ref.citation }}</span>{% endif %}
+  <div class="ref-links">
+    {% if ref.href %}<span><dfn>{{ 'DOI' if ref.doi else 'Source' }}</dfn> <a class="mono" href="{{ ref.href }}" target="_blank" rel="noreferrer">{{ ref.doi or ref.href }}</a></span>{% elif ref.doi %}<span>DOI {{ ref.doi }}</span>{% endif %}
+    {% if ref.cited_by %}<span><dfn>Also cited by</dfn> {% for label, entry, variant in ref.cited_by %}<a href="{{ url({'section':section}, entry=entry, variant=variant) }}" target="_self">{{ label }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+    {% if ref.occurrences and ref.occurrences > 1 %}<span>DOI appears {{ ref.occurrences }}× in this list</span>{% endif %}
+  </div>
+  {% if ref.notes %}<small class="ref-note">{{ ref.notes }}</small>{% endif %}
+</div>
+{% endmacro %}
+<div class="layout collection-detail"><aside>
+  <div class="tools">
+    <div class="cap">{{ collection.title }} <small>{{ d.shown|length }}</small></div>
+    {{ search('filter', layout.get('filter_placeholder','Filter records'), scope) }}
+    {% if layout.starred %}<div class="chips">
+      {% for tag, name in [(none,'All'),('starred','Starred')] %}
+      <a class="chip {{ 'active' if scope.get('tag') == tag }}" href="{{ url(scope, tag=tag) }}" target="_self">{{ name }}</a>
+      {% endfor %}</div>{% endif %}
+  </div>
+  <div class="collection-list">{% for group in d.shown %}
+    {% set active = group == g and not d.reference_page %}
+    <a class="row grid {{ 'sel' if active }}" href="{{ url(scope, entry=group.entry) }}" target="_self"{% if active %} aria-current="true"{% endif %}>
+      <b>{{ group.name }}</b> {% if group.starred %}{{ star() }}{% endif %}
+      <span class="record-subtitle"><code>{{ group.terms|join(', ') or group.entry }}</code>{% if group.variant_count > 1 %}<small>{{ group.variant_count }} {{ layout.variants.plural }}</small>{% endif %}</span>
+    </a>
+  {% endfor %}</div>
+  {% if layout.unassigned_references %}<a class="unassigned row {{ 'sel' if d.reference_page }}" href="{{ url(scope, panel='unassigned') }}" target="_self">Unassigned references <small>{{ d.unassigned_count }}</small></a>{% endif %}
+</aside><main>
+{% if d.reference_page %}
+  <section class="heading ref-heading"><div class="mono muted">{{ layout.unassigned_references }}</div><h1>Unassigned references</h1>
+    <p class="lede">The source catalogue lists these references separately from its records. {{ d.reference_page.distinct }} distinct DOI{{ 's' if d.reference_page.distinct != 1 }} across {{ d.unassigned_count }} {{ 'entry' if d.unassigned_count == 1 else 'entries' }}.</p>
+  </section>
+  <article class="ref-list">{% for ref in d.reference_page.rows %}{{ reference(ref) }}{% else %}No unassigned references.{% endfor %}</article>
+{% elif g %}
+  <section class="heading">
+    <div class="mono muted">{{ collection.key }}<span class="slash">/</span>{{ g.terms|join(', ') or d.entry }}</div>
+    <div class="titleline"><h1>{{ g.name }}</h1>{% if g.starred %}{{ star() }}{% endif %}</div>
+    {% if layout.terms %}
+      <dl class="facts"><div><dt>{{ layout.terms.label }}</dt><dd>{% for term, link in d.terms %}{% if link %}<a class="mono" href="{{ link }}" target="_blank" rel="noreferrer">{{ term }}</a>{% else %}<code>{{ term }}</code>{% endif %} {% if not loop.last %} · {% endif %}{% else %}<span class="muted">Not mapped</span>{% endfor %}{% if d.terms %} {{ g.name }}{% endif %}</dd></div></dl>
+      {% if d.terms and layout.terms.definition %}<div class="term-definition">
+        <p class="lede">{{ d.definition or 'No definition recorded.' }}</p>
+        {% if d.definition %}<small>{{ layout.terms.attribution }}{% if layout.terms.provider %} · {% if d.terms[0][1] %}<a href="{{ d.terms[0][1] }}" target="_blank" rel="noreferrer">{{ layout.terms.provider }}</a>{% else %}{{ layout.terms.provider }}{% endif %}{% endif %}{% if layout.terms.licence %} · {% if layout.terms.licence_url %}<a href="{{ layout.terms.licence_url }}" target="_blank" rel="noreferrer">{{ layout.terms.licence }}</a>{% else %}{{ layout.terms.licence }}{% endif %}{% endif %}</small>{% endif %}
+      </div>{% endif %}
+    {% endif %}
+    {% if d.summary and (d.variant or layout.summary not in layout.overview) %}<p class="lede">{{ d.summary }}</p>{% endif %}
+    {% if g.variants %}<nav class="variant-tabs" aria-label="{{ layout.variants.label }}">
+      {% for v in d.tabs %}<a class="{{ 'on' if v == d.variant }}" href="{{ url(scope, entry=v.entry, variant=v.key, view=params.get('view')) }}" target="_self"{% if v==d.variant %} aria-current="page"{% endif %}>{{ v.name }}</a>{% endfor %}
+    </nav>{% endif %}
+  </section>
+  {% if d.missing_variant %}<article>Record not found.</article>{% else %}
+  <div class="record-meta">
+    <div class="record-id"><dfn>Record</dfn>{% if d.variant_records|length > 1 %}
+      {% for v in d.variant_records %}<a class="chip {{ 'active' if v == d.variant }}" href="{{ url(scope, entry=v.entry, variant=v.key, view=params.get('view')) }}" target="_self">{{ v.key }}</a>{% endfor %}
+      {% else %}<code>{{ d.variant.key if d.variant else d.entry }}</code>{% endif %}</div>
+    <dl class="facts">
+      {% if d.variant %}<div><dt>{{ layout.variants.label }}</dt><dd><i>{{ d.variant.name }}</i> <code>{{ d.variant.category }}</code></dd></div>{% endif %}
+      {% for label, value in d.variant_context %}<div><dt>{{ label }}</dt><dd>{{ field_value(value) }}</dd></div>{% endfor %}
+      {% if d.source %}{% set s = d.source %}
+        {% if s.title or d.source_href %}<div><dt>Source</dt><dd>{% if d.source_href %}<a href="{{ d.source_href }}" target="_blank" rel="noreferrer">{{ s.title or d.source_href }}</a>{% else %}{{ s.title }}{% endif %} <code>{{ [s.sheet,s.range]|select|join('!') }}</code></dd></div>{% endif %}
+        {% if s.modified_at %}<div><dt>Modified</dt><dd><time datetime="{{ s.modified_at }}" title="{{ s.modified_at }}"><code>{{ (s.modified_at|string|replace('T',' '))[:16] }}</code></time></dd></div>{% endif %}
+        {% if s.imported_on %}<div><dt>Imported</dt><dd><code>{{ s.imported_on }}</code></dd></div>{% endif %}
+      {% endif %}
+    </dl>
+    <nav class="subtabs" aria-label="Record details">
+      {% for value, name in [(none,'Overview'),('raw','Raw metadata')] %}<a class="{{ 'on' if (params.get('view') == 'raw') == (value == 'raw') }}" href="{{ url(d.route, view=value) }}" target="_self">{{ name }}</a>{% endfor %}
+    </nav>
+  </div>
+  {% if params.get('view') == 'raw' %}
+    <article><pre>{{ d.raw }}</pre>{% if d.full_record %}<details><summary>Full collection record</summary><pre>{{ d.full_record }}</pre></details>{% endif %}{% if collection.context %}<details><summary>Catalogue metadata</summary><pre>{{ d.catalogue_raw }}</pre></details>{% endif %}</article>
+  {% else %}
+    <article class="record-overview">
+      {% if layout.variants and not g.variants %}<p class="hint">No {{ layout.variants.label|lower }} record.</p>{% endif %}
+      {% if d.variant or not layout.variants or d.overview|selectattr(1)|list %}<dl class="overview-fields">
+      {% for label, value in d.overview %}<div><dt>{{ label }}</dt><dd>{% if value is not none and value != '' %}{{ field_value(value) }}{% else %}<span class="hint">Not specified</span>{% endif %}</dd></div>{% endfor %}
+      </dl>{% endif %}
+      {% if layout.images %}<section><div class="section-title">Images <small>{{ d.images|length }}</small></div>
+        <div class="image-grid">{% for im in d.images %}<figure>
+          <div class="image-frame">{% if im.preview %}<img src="{{ im.preview }}" alt="{{ im.alt_text or im.caption or '' }}" loading="lazy">{% else %}<span>Image unavailable</span>{% endif %}</div>
+          <figcaption>{% if im.kind %}<span class="image-kind">{{ im.kind }}</span>{% endif %}{% if im.scope %}<span class="image-kind">{{ im.scope }}</span>{% endif %} {{ im.caption or '' }}</figcaption>
+          <dl>{% for label, value, link in [('Source',im.source_reference,im.source_href),('Credit',im.credit,none),('Licence',im.licence,none),('Alt text',im.alt_text,none),('Location',im.path or im.url,im.remote if not im.path else none)] %}
+          <div><dt>{{ label }}</dt><dd>{% if link %}<a href="{{ link }}" target="_blank" rel="noreferrer">{{ value }}</a>{% elif value %}{{ value }}{% else %}<span class="hint">Not specified</span>{% endif %}</dd></div>{% endfor %}</dl>
+          <dl>{% for label, value in [('Modality',im.modality),('Figure',im.figure),('Panel',im.panel),('Dataset',im.dataset_id)] if value %}<div><dt>{{ label }}</dt><dd>{{ field_value(value) }}</dd></div>{% endfor %}</dl>
+        </figure>{% else %}<span class="hint">No images attached.</span>{% endfor %}</div>
+      </section>{% endif %}
+      {% if layout.references %}<section><div class="section-title">References <small>{{ d.references|length }}</small></div>
+        {% for ref in d.references %}{{ reference(ref) }}{% else %}<p class="hint">No references attached.</p>{% endfor %}
+      </section>{% endif %}
+      {% for label, value in d.sections %}<details class="record-section"{% if not d.variant %} open{% endif %}><summary>{{ label }}</summary>{{ field_value(value) }}</details>{% endfor %}
+    </article>
+  {% endif %}{% endif %}
+{% elif params.get('filter') or params.get('q') or scope.get('tag') %}<article>No matching records.</article>
+{% elif params.get('entry') %}<article>Record not found.</article>
+{% else %}<article>No records in this collection.</article>{% endif %}
+</main></div>

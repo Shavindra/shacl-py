@@ -2,7 +2,8 @@
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from jsonschema.exceptions import SchemaError
 from jsonschema.validators import validator_for
@@ -12,6 +13,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.constructor import SafeConstructor
 from ruamel.yaml.error import YAMLError
 
+from shacl_py.catalogue import record_validator
 from shacl_py.files import read_metadata, scoped_path
 
 CONFIG = ".shacl-py/config.yaml"
@@ -46,6 +48,9 @@ class Collection:
     field_labels: dict[str, str]
     entries: dict[str, dict]
     context: dict
+    presentation: dict
+    project_root: Path | None
+    groups: list = field(default_factory=list)
 
     @property
     def section(self):
@@ -119,15 +124,24 @@ def validate_document(schema_path, document, schema_text):
         raise ValueError(f"{issue.json_path}: {issue.message}")
 
 
-def parse_collection(key, settings, schema_path, content, *, schema_text=None):
+def parse_collection(
+    key, settings, schema_path, content, *, schema_text=None, project_root=None
+):
     document = read_document(content)
     validate_document(schema_path, document, schema_text)
     title = text_field(settings, "title", key)
     id_field = text_field(settings, "id_field", "id")
     label_field = text_field(settings, "label_field", "name")
     labels = mapping(settings.get("field_labels", {}), "field_labels")
-    for field in labels:
-        text_field(labels, field)
+    for label_key in labels:
+        text_field(labels, label_key)
+    presentation = settings.get("presentation", {})
+    if "presentation" in settings:
+        issue = next(
+            record_validator("collection-view").iter_errors(presentation), None
+        )
+        if issue:
+            raise ValueError(f"presentation {issue.json_path}: {issue.message}")
     context = {}
     rows = document
     if "records" in settings:
@@ -153,7 +167,19 @@ def parse_collection(key, settings, schema_path, content, *, schema_text=None):
         except ValueError as error:
             raise ValueError(f"record [{i}].{error}") from error
         entries[identifier] = row
-    return Collection(key, title, label_field, labels, entries, context)
+    collection = Collection(
+        key, title, label_field, labels, entries, context, presentation, project_root
+    )
+    if presentation:
+        from shacl_py.collection_view import collection_groups
+
+        if (
+            presentation.get("source")
+            and context.get(presentation["source"]) is not None
+        ):
+            mapping(context[presentation["source"]], presentation["source"])
+        collection.groups = collection_groups(collection)
+    return collection
 
 
 def load_collections(root, *, only=None):
@@ -198,7 +224,9 @@ def load_collections(root, *, only=None):
             if only is None:
                 paths.add(schema)
             collections.append(
-                parse_collection(key, definition, schema, read_metadata(data))
+                parse_collection(
+                    key, definition, schema, read_metadata(data), project_root=root
+                )
             )
         except (OSError, TypeError, ValueError) as error:
             errors.append(f"{location}: {error}")

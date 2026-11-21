@@ -1,0 +1,16 @@
+{% macro fields(record) -%}
+<dl class="collection-fields">
+  {% for key, value in record.items() %}
+  <div><dt>{{ collection.field_labels.get(key, key) }}</dt><dd>{{ field_value(value) }}</dd></div>
+  {% endfor %}
+</dl>
+{%- endmacro %}
+
+{% macro field_value(value) -%}
+  {%- if value is mapping -%}{{ fields(value) if value else '{}' }}
+  {%- elif value is string -%}
+    {%- if value.startswith(('https://', 'http://')) -%}<a href="{{ value }}" target="_blank" rel="noreferrer">{{ value }}</a>{%- else -%}{{ value }}{%- endif -%}
+  {%- elif value is sequence and value -%}<ul>{% for child in value %}<li>{{ field_value(child) }}</li>{% endfor %}</ul>
+  {%- elif value is none -%}<code>null</code>
+  {%- else -%}{{ value | tojson }}{%- endif -%}
+{%- endmacro %}

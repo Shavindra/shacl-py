@@ -1,6 +1,5 @@
 """Read-only shaclpy viewer backed by Concepts and MetaLad records."""
 
-import base64
 import json
 import os
 import re
@@ -31,7 +30,8 @@ from shacl_py.browser import (
     source_content,
 )
 from shacl_py.collection import Collection
-from shacl_py.files import scoped_path
+from shacl_py.collection_view import detail_view
+from shacl_py.files import IMAGE_TYPES, inline_image, scoped_path
 from shacl_py.graph import record_graph
 from shacl_py.native import declared_title
 from shacl_py.navigation import current_route, url
@@ -68,15 +68,7 @@ FORMATS = {
     ".pdf": "PDF",
     ".txt": "Text",
 }
-IMAGES = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".gif": "image/gif",
-    ".webp": "image/webp",
-}
 PREVIEW_BYTES = 8192
-IMAGE_BYTES = 5 * 1048576
 
 
 def human_size(n):
@@ -138,10 +130,8 @@ def file_preview(path, base):
             path.is_symlink() and not path.resolve().is_relative_to(base)
         ):
             return preview
-        if mime := IMAGES.get(path.suffix.casefold()):
-            if path.stat().st_size <= IMAGE_BYTES:
-                encoded = base64.b64encode(path.read_bytes()).decode()
-                preview["image"] = f"data:{mime};base64,{encoded}"
+        if path.suffix.casefold() in IMAGE_TYPES:
+            preview["image"] = inline_image(path, base)
             return preview
         with path.open("rb") as stream:
             data = stream.read(PREVIEW_BYTES + 1)
@@ -297,6 +287,7 @@ def browse(items, stored, base, brand, params, collections):
         )
         for name, group in sections.items()
     ]
+    records_tab = nav.pop() if others else None
     nav.extend(
         (
             c.title,
@@ -305,11 +296,13 @@ def browse(items, stored, base, brand, params, collections):
                 section=c.section,
                 q=q if section == c.section else shared_query or None,
             ),
-            len(c.entries),
+            len(c.groups) if c.presentation else len(c.entries),
             section == c.section,
         )
         for c in collections
     )
+    if records_tab:
+        nav.append(records_tab)
     if items:
         nav.append(
             (
@@ -328,6 +321,15 @@ def browse(items, stored, base, brand, params, collections):
     }
     if section in collection_sections:
         collection = collection_sections[section]
+        if collection.presentation:
+            st.html(
+                template.render(
+                    context,
+                    collection=collection,
+                    detail=detail_view(collection, params),
+                )
+            )
+            return
         rows = {
             key: row
             for key, row in collection.entries.items()

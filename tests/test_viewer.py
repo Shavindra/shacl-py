@@ -54,10 +54,8 @@ def follow(page, label):
 
     parser = Links()
     parser.feed(html(page))
-    href = next(
-        value
-        for key, value in parser.links.items()
-        if key == label or key.startswith(label + " ")
+    href = parser.links.get(label) or next(
+        value for key, value in parser.links.items() if key.startswith(label + " ")
     )
     assert href.startswith("#")
     page.session_state["fragment"] = href[1:]

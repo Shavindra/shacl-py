@@ -55,6 +55,8 @@ Each view has a bookmarkable URL. Links, filters and searches update the open
 viewer, and the browser's Back and Forward buttons restore previous views.
 Refresh the page to read changes to the project's metadata.
 
+The [editable wireframes](docs/wireframes/) show the current viewer design and earlier layouts.
+
 The viewer reads existing metadata files and MetaLad records together.
 Use `shacl-py serve . --metalad` for the store alone, or
 `shacl-py serve .studyminimeta.yaml` for one file. You can browse directly
@@ -125,6 +127,25 @@ be unique within a collection. Labels must be text. The viewer displays
 nested fields and keeps catalogue-level fields under **Catalogue metadata**.
 `shacl-py validate .` checks the whole document against the selected
 schema and reports field paths for invalid values.
+
+A collection can also declare a `presentation` in its settings or template.
+For example, this configuration lists each station once and opens a tab for
+each survey campaign with observations.
+
+~~~yaml
+presentation:
+  starred: featured
+  variants: {field: surveys, id_field: id, group_field: campaign_id, label_field: campaign_name, label: Campaign, plural: campaigns}
+  overview: [description, depth, method]
+  images: images
+  references: references
+  unassigned_references: unassigned_references
+~~~
+
+`terms` can link catalogue identifiers to an external vocabulary and show a
+stored definition. Records with the same set of mapped terms share a sidebar
+entry. `sections` can display additional fields or look up shared notes by ID.
+**Raw metadata** shows the complete source record. [Presentation settings](src/shacl_py/schemas/collection-view.schema.json)
 
 ### Reuse a collection template
 

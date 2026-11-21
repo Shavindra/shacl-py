@@ -1,11 +1,35 @@
 """Read-only access to declared project paths."""
 
+import base64
 import os
 import stat
 from pathlib import Path, PureWindowsPath
 
 FILE_PATTERN_SLOTS = ("data_file_patterns", "dataset_file_patterns")
 IGNORED = {".git", ".datalad", ".venv", "venv", "__pycache__", ".pytest_cache"}
+IMAGE_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
+
+
+def inline_image(path, root):
+    """Preview a local raster or an available annexed image within the project."""
+    mime = IMAGE_TYPES.get(path.suffix.casefold())
+    try:
+        if (
+            mime
+            and path.resolve().is_relative_to(root)
+            and path.is_file()
+            and path.stat().st_size <= 5 * 1048576
+        ):
+            return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
+    except OSError, RuntimeError:
+        pass
+    return None
 
 
 def read_metadata(path: Path) -> str:

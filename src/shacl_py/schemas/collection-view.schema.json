@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["overview"],
+  "$defs": {"text": {"type": "string", "minLength": 1}},
+  "properties": {
+    "overview": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
+    "sections": {"type": "array", "items": {
+      "type": "object", "required": ["field", "label"], "additionalProperties": false,
+      "properties": {
+        "field": {"$ref": "#/$defs/text"}, "label": {"$ref": "#/$defs/text"},
+        "scope": {"enum": ["record", "variant"]},
+        "lookup": {"type": "object", "required": ["table", "id_field"], "additionalProperties": false,
+          "properties": {"table": {"$ref": "#/$defs/text"}, "id_field": {"$ref": "#/$defs/text"}}}
+      }
+    }},
+    "starred": {"$ref": "#/$defs/text"},
+    "aliases": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/text"},
+    "images": {"$ref": "#/$defs/text"},
+    "references": {"$ref": "#/$defs/text"},
+    "unassigned_references": {"$ref": "#/$defs/text"},
+    "source": {"$ref": "#/$defs/text"},
+    "filter_placeholder": {"$ref": "#/$defs/text"},
+    "terms": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field", "label"],
+      "properties": {
+        "field": {"$ref": "#/$defs/text"}, "label": {"$ref": "#/$defs/text"},
+        "definition": {"$ref": "#/$defs/text"}, "url": {"type": "string", "pattern": "^https?://.+\\{id\\}"},
+        "attribution": {"$ref": "#/$defs/text"}, "provider": {"$ref": "#/$defs/text"},
+        "licence": {"$ref": "#/$defs/text"}, "licence_url": {"type": "string", "pattern": "^https?://"}
+      }
+    },
+    "variants": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field", "id_field", "label_field", "label", "plural"],
+      "properties": {
+        "field": {"$ref": "#/$defs/text"}, "id_field": {"$ref": "#/$defs/text"},
+        "group_field": {"$ref": "#/$defs/text"},
+        "context_fields": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
+        "label_field": {"$ref": "#/$defs/text"}, "label": {"$ref": "#/$defs/text"},
+        "plural": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}
