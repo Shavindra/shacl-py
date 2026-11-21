@@ -29,8 +29,6 @@
 /* Structured collection detail */
 .study .collection-detail>aside{position:sticky;top:52px;align-self:start;height:calc(100dvh - 52px);display:flex;flex-direction:column;min-height:0;padding:0}
 .study .collection-list{overflow:auto;flex:1;padding:4px 0 8px}
-.study .collection-detail .star{font:13px/1 system-ui;color:#111;align-self:center}
-.study .collection-detail h1+.star{font-size:18px}
 .study .record-subtitle{display:flex;align-items:baseline;gap:10px;grid-column:1/-1;min-width:0}
 .study .record-subtitle code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#6b6b6b}
 .study .record-subtitle small{margin-left:auto;white-space:nowrap}
@@ -96,6 +94,9 @@
 .study .chip.active{background:#111;border-color:#111;color:#fff}
 .study .row{display:flex;flex-direction:column;gap:4px;text-decoration:none;padding:10px 16px}
 .study .row:hover{background:#f0f0f0;text-decoration:none}
+.study .record-title{display:flex;align-items:baseline;gap:6px;min-width:0}
+.study .star,.study .row .star{font:13px/1 system-ui;color:#111;align-self:center}
+.study h1+.star{font-size:18px}
 .study .row b{font-size:14px;font-weight:500;color:#111}
 .study .row b.serif{font-size:14.5px;line-height:1.3;text-wrap:pretty}
 .study .row span{color:#6b6b6b;font-size:12px}

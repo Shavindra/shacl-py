@@ -238,6 +238,12 @@ def browse(items, stored, base, brand, params, collections):
     def key_for(i):
         return keys[i] if i.is_dataset else publication_key(i)
 
+    # One displayed record can have both catalogue and StudyMiniMeta descriptions.
+    highlighted = {key_for(i) for i in items if i.fields.get("highlighted") is True}
+
+    def is_starred(i):
+        return key_for(i) in highlighted
+
     years = {}
     for paper in papers:
         if year := declared_year(paper):
@@ -435,12 +441,23 @@ def browse(items, stored, base, brand, params, collections):
             for path in listing(i)[1]
         )
 
+    def sidebar_match(i, words, extra=""):
+        if not words:
+            return True
+        text = searchable([i.label, i.key, i.ref, i.fields, author_line(i), extra])
+        return all(word in text for word in words)
+
     tag = params.get("tag", "All")
+    can_star = section in ("Papers", "Datasets") or any(is_starred(i) for i in scope)
+    starred_only = can_star and params.get("starred") == "1"
+    filter_words = params.get("filter", "").casefold().split()
     sidebar_route = {
         "section": section.lower(),
         "q": q,
         "filter": params.get("filter", ""),
     }
+    if starred_only:
+        sidebar_route["starred"] = "1"
     options = [
         "All",
         *sorted(
@@ -452,16 +469,14 @@ def browse(items, stored, base, brand, params, collections):
         options.append("Not all local")
     shown = []
     for i in scope:
+        if starred_only and not is_starred(i):
+            continue
         ds = linked(i, datasets)
         if (
             q
             and q not in searchable([i.ref, i.fields])
             and not any(q in searchable(d.fields) or file_matches(d, q) for d in ds)
             and not file_matches(i, q)
-        ):
-            continue
-        if params.get("filter", "").casefold() not in searchable(
-            [i.ref, i.fields, author_line(i)]
         ):
             continue
         if tag == "Not all local" and global_ds:
@@ -475,20 +490,24 @@ def browse(items, stored, base, brand, params, collections):
                 continue
         elif tag != "All" and tag not in (roles(i) if global_ds else labels(i)):
             continue
-        parent = next(iter(linked(i, papers)), None) if global_ds else None
+        if global_ds:
+            parent = next(iter(linked(i, papers)), None)
+            byline = short_citation(parent, publication_year(parent)) if parent else ""
+            year = ""
+        else:
+            byline, year = sidebar_author(i), publication_year(i)
+        if not sidebar_match(i, filter_words, [byline, year]):
+            continue
         shown.append(
             {
                 "item": i,
                 "href": url(sidebar_route | i.route, tag=tag),
-                "authors": short_citation(parent, publication_year(parent))
-                if parent
-                else ""
-                if global_ds
-                else sidebar_author(i),
+                "starred": is_starred(i),
+                "authors": byline,
                 "venue": field(i, "format", "encodingFormat", "media_type")
                 if global_ds
                 else field(i, "venue", "journal"),
-                "year": "" if global_ds else publication_year(i),
+                "year": year,
                 "count": count_label(*dataset_summary(i))
                 if global_ds
                 else count_label(len(ds), "dataset"),
@@ -503,6 +522,7 @@ def browse(items, stored, base, brand, params, collections):
             if key not in unique or row["item"] is selected_item:
                 unique[key] = row
         shown = list(unique.values())
+    shown.sort(key=lambda row: not row["starred"])
     item = (
         selected_item
         if any(r["item"] is selected_item for r in shown)
@@ -514,6 +534,9 @@ def browse(items, stored, base, brand, params, collections):
             "global_ds": global_ds,
             "options": options,
             "active_filter": tag,
+            "can_star": can_star,
+            "starred_only": starred_only,
+            "is_starred": is_starred,
             "sidebar_route": sidebar_route,
             "item": item,
         }
@@ -523,7 +546,7 @@ def browse(items, stored, base, brand, params, collections):
         st.html(template.render(context))
         return
     item_route = sidebar_route | item.route | {"tag": tag}
-    ds = linked(item, datasets)
+    ds = sorted(linked(item, datasets), key=lambda d: not is_starred(d))
     parents = list({publication_key(p): p for p in linked(item, papers)}.values())
     tabs = (
         [
@@ -551,8 +574,9 @@ def browse(items, stored, base, brand, params, collections):
     if view not in {k for k, _, _ in tabs}:
         view = default_view
     dsrows = []
+    dataset_words = params.get("dsfilter", "").casefold().split()
     for d in ds:
-        if params.get("dsfilter", "").casefold() in searchable(d.fields):
+        if sidebar_match(d, dataset_words, related(item)[d]):
             dsrows.append(
                 {
                     "item": d,
@@ -581,6 +605,8 @@ def browse(items, stored, base, brand, params, collections):
     route = item_route | {"view": view}
     if view == "datasets" and selected:
         route.update(dataset=selected.key, dataset_record=selected.ref)
+        if params.get("dsfilter"):
+            route["dsfilter"] = params["dsfilter"]
     directory = params.get("folder", ".")
     linked_folders, linked_rows = (
         linked_file_selection(owner.linked_files, directory)
@@ -726,8 +752,9 @@ def browse(items, stored, base, brand, params, collections):
                 "href": url(p.route, dataset=item.key, dataset_record=item.ref),
                 "short": short_citation(p, publication_year(p)),
                 "title": p.label,
+                "starred": is_starred(p),
             }
-            for p in parents
+            for p in sorted(parents, key=lambda paper: not is_starred(paper))
         ],
         availability=availability,
         external=external,

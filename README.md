@@ -34,6 +34,11 @@ top bar to browse datasets across papers. Select a filename to inspect its
 availability and any file metadata. **Records** lists other metadata types
 when present.
 
+Set `highlighted: true` on an entry in `catalogue.publications` or
+`catalogue.datasets` in `metadata.yaml` to star it. Starred records appear
+first, including datasets listed under a paper. Choose **Starred** to see
+only those entries. Type in the left-hand filter to narrow the list.
+
 Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.

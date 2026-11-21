@@ -50,6 +50,8 @@ def apply_fields(data, record, allow_pid=False, *, graph_type="Dataset"):
     for slot in FILE_PATTERN_SLOTS:
         if slot in record:
             data[slot] = record[slot]
+    if isinstance(record.get("highlighted"), bool):
+        data["highlighted"] = record["highlighted"]
     keys = {
         "display_label": ("display_label", "title", "name", "headline"),
         "description": ("description",),

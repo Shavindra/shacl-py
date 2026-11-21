@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/paper/v1
 name: shacl-py-paper
-version: 1.2.0
+version: 1.3.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/paper/v1/
@@ -19,6 +19,7 @@ classes:
     tree_root: true
     slots:
       - primary_author
+      - highlighted
       - source_url
       - review_status
       - local_folder
@@ -35,6 +36,7 @@ classes:
         required: false
         pattern: '\S'
 slots:
+  highlighted: {range: boolean, description: Star this record and show it first in viewer lists.}
   primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
   source_url:
     slot_uri: dcterms:source

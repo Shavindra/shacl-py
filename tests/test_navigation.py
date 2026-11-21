@@ -93,6 +93,52 @@ def test_navigation_stays_in_one_document(page, viewer_url):
     assert page.url == bookmark
 
 
+def test_sidebar_search_as_you_type(page, viewer_url):
+    page.goto(viewer_url, wait_until="domcontentloaded")
+    sidebar = page.locator(".study .layout > aside")
+    rows = sidebar.locator("a.row b")
+    search = sidebar.get_by_role("searchbox")
+    expect(rows).to_have_count(3)
+
+    search.fill("sho")
+    expect(rows).to_have_text(["Shoreline field survey"])
+    expect(search).to_be_focused()
+    page.keyboard.press("Home")
+    page.keyboard.press("ArrowRight")
+    page.keyboard.type("X")
+    expect(rows).to_have_count(0)
+    expect(search).to_have_value("sXho")
+    expect(search).to_be_focused()
+    assert search.evaluate("e => e.selectionStart") == 2
+    bookmark = page.url
+    page.go_back()
+    expect(rows).to_have_count(3)
+    page.go_forward()
+    expect(search).to_have_value("sXho")
+    page.reload(wait_until="domcontentloaded")
+    expect(rows).to_have_count(0)
+    assert page.url == bookmark
+
+    search.fill("")
+    expect(rows).to_have_count(3)
+    nested = page.get_by_role("searchbox", name="Filter datasets", exact=True)
+    nested.fill("unlisted")
+    expect(page.locator(".study .split article")).to_have_text("No matching datasets.")
+    nested.fill("READING")
+    expect(page.locator(".study .split h2")).to_have_text("Station readings")
+    expect(nested).to_be_focused()
+    page.locator(".study header").get_by_role("link", name="Datasets 3").click()
+    expect(search).to_have_attribute("placeholder", "Filter by name, PID, format")
+    sidebar.get_by_role("link", name="Starred", exact=True).click()
+    expect(rows).to_have_text(["Station readings"])
+    search.fill("unlisted")
+    expect(rows).to_have_count(0)
+    search.fill("")
+    expect(rows).to_have_text(["Station readings"])
+    sidebar.get_by_role("link", name="All", exact=True).click()
+    expect(rows).to_have_count(3)
+
+
 def test_graph_navigation_and_search(page, viewer_url):
     page.goto(viewer_url, wait_until="domcontentloaded")
     page.get_by_role("link", name="Graph", exact=True).click()

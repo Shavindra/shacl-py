@@ -160,7 +160,14 @@ def load_records(
                 )
             ):
                 concepts = record_validator("catalogue")
-                for kind in ("Thing", "Project", "Publication", "Dataset"):
+                for kind in (
+                    "Thing",
+                    "Project",
+                    "Publication",
+                    "Dataset",
+                    "LocalPublication",
+                    "LocalDataset",
+                ):
                     if not list(concepts.descend(data, concepts.schema["$defs"][kind])):
                         break
                 else:

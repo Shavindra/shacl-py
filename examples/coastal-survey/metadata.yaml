@@ -6,6 +6,7 @@ catalogue:
   publications:
     - pid: urn:example:field-paper
       title: Shoreline field survey
+      highlighted: true
       description: Station measurements at two coastal sites.
       local_folder: papers/field-survey
       dataset_links:
@@ -28,6 +29,7 @@ catalogue:
   datasets:
     - pid: urn:example:readings
       title: Station readings
+      highlighted: true
       description: Synthetic readings in metres.
       local_folder: papers/field-survey/data/raw
       file_groups:

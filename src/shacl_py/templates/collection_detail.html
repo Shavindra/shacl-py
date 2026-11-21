@@ -3,7 +3,6 @@
 {% set d = detail %}
 {% set g = d.group %}
 {% set scope = d.scope %}
-{% macro star() %}<span class="star" title="Starred" aria-label="Starred">★</span>{% endmacro %}
 {% macro reference(ref) %}
 <div class="ref-row">
   {% if ref.scope %}<small>{{ ref.scope }}</small>{% endif %}

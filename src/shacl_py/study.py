@@ -64,6 +64,12 @@ def validate_study(data, path):
         ]:
             if not isinstance(values, dict):
                 raise TypeError(f"{section}: expected a mapping")
+            if (
+                section != "study"
+                and "highlighted" in values
+                and not isinstance(values["highlighted"], bool)
+            ):
+                raise ValueError(f"{section}.highlighted: expected a boolean")
             if section.startswith("publication[") and "primary_author" in values:
                 key = values["primary_author"]
                 if not isinstance(key, str) or key not in values.get("author", []):

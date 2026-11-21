@@ -280,6 +280,63 @@ def test_primary_author_in_paper_list(tmp_path, monkeypatch):
         paper.pop("primary_author", None)
 
 
+def test_highlighted_papers_and_datasets_sort_before_their_peers(tmp_path, monkeypatch):
+    path = tmp_path / "metadata.yaml"
+    graph = {
+        "project": {"pid": "urn:project", "title": "Project"},
+        "publications": [
+            {"pid": "urn:ordinary", "title": "Ordinary paper", "highlighted": False},
+            {
+                "pid": "urn:pinned",
+                "title": "Pinned paper",
+                "highlighted": True,
+                "dataset_links": [
+                    {"dataset": "urn:ordinary-data", "role": "describes"},
+                    {"dataset": "urn:pinned-data", "role": "describes"},
+                ],
+            },
+            {
+                "pid": "urn:duplicate",
+                "source_url": "https://doi.org/10.1234/other",
+                "title": "Other paper",
+            },
+        ],
+        "datasets": [
+            {"pid": "urn:ordinary-data", "title": "Ordinary data"},
+            {"pid": "urn:pinned-data", "title": "Pinned data", "highlighted": True},
+        ],
+    }
+    path.write_text(yaml.safe_dump({"catalogue": graph}))
+    (tmp_path / ".studyminimeta.yaml").write_text(
+        "person: {}\npublication: [{title: Other paper, doi: 10.1234/other, highlighted: true}]\n"
+    )
+    assert main(["validate", str(tmp_path)]) == 0
+    page = open_viewer(tmp_path, monkeypatch)
+    side, detail = html(page).split("<main>")
+    assert (
+        side.index("Pinned paper</b>")
+        < side.index("Other paper</b>")
+        < side.index("Ordinary paper</b>")
+    )
+    assert detail.index("Pinned data</b>") < detail.index("Ordinary data</b>")
+    assert "Pinned data</h2>" in detail
+    follow(page, "Starred")
+    side = html(page).split("<main>")[0]
+    assert "Ordinary paper</b>" not in side and side.count("Other paper</b>") == 1
+    follow(page, "Open in Datasets")
+    side, detail = html(page).split("<main>")
+    assert side.index("Pinned data</b>") < side.index("Ordinary data</b>")
+    assert 'aria-label="Starred"' in detail
+    follow(page, "Starred")
+    assert "Ordinary data</b>" not in html(page).split("<main>")[0]
+
+    for kind in ("publications", "datasets"):
+        graph[kind][0]["highlighted"] = "true"
+        path.write_text(yaml.safe_dump({"catalogue": graph}))
+        assert main(["validate", str(tmp_path)]) == 1
+        del graph[kind][0]["highlighted"]
+
+
 def test_viewer_branding(tmp_path, monkeypatch):
     from shacl_py.branding import branding
 
@@ -342,7 +399,8 @@ def test_dataset_counts_after_paper_review_import(tmp_path, monkeypatch):
     folder = tmp_path / "papers" / "sample"
     (folder / "data/raw").mkdir(parents=True)
     (folder / ".studyminimeta.yaml").write_text(
-        "dataset: {name: Example measurements}\npublication: [{title: Field survey, doi: 10.1234/example}]\nperson: {}\n"
+        "dataset: {name: Example measurements, highlighted: true}\n"
+        "publication: [{title: Field survey, doi: 10.1234/example, highlighted: true}]\nperson: {}\n"
     )
     (tmp_path / ".studyminimeta.yaml").write_text(
         "dataset: {name: Whole project}\nperson: {}\n"
@@ -361,6 +419,9 @@ def test_dataset_counts_after_paper_review_import(tmp_path, monkeypatch):
         )
         == 0
     )
+    imported = yaml.safe_load((tmp_path / "metadata.yaml").read_text())["catalogue"]
+    assert imported["publications"][0]["highlighted"] is True
+    assert imported["datasets"][0]["highlighted"] is True
     page = open_viewer(tmp_path, monkeypatch)
     assert "Datasets <small>2</small>" in html(page).split("</header>")[0]
     assert "Datasets <small>1</small>" in html(page).split("<main>")[1]

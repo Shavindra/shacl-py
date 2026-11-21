@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.2.0
+version: 1.3.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -24,13 +24,13 @@ classes:
     slots: [source_url, local_folder, file_groups]
   LocalPublication:
     is_a: Publication
-    slots: [source_url, local_folder, file_groups, author_names]
+    slots: [source_url, local_folder, file_groups, author_names, highlighted]
     attributes:
       primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
   LocalDataset:
     is_a: Dataset
-    slots: [source_url, local_folder, file_groups, author_names]
+    slots: [source_url, local_folder, file_groups, author_names, highlighted]
     attributes:
       linked_files: {range: LinkedFile, multivalued: true, inlined_as_list: true}
       source_datasets:
@@ -69,6 +69,7 @@ classes:
         description: Literal files or directories relative to the record's local folder.
       section: {range: FileSection}
 slots:
+  highlighted: {range: boolean, description: Star this record and show it first in viewer lists.}
   local_folder:
     range: string
     description: Local folder relative to the project metadata file.

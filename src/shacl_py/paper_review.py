@@ -222,6 +222,9 @@ def import_paper(graph, root, folder, layout, stored=None):
         primary = person_names(people, [key])[0]
     if primary:
         paper.setdefault("primary_author", primary)
+    highlighted = fields.get("highlighted", paper_info.get("highlighted"))
+    if isinstance(highlighted, bool):
+        paper.setdefault("highlighted", highlighted)
     if description := fields.get("description"):
         paper.setdefault("description", description)
     if status := fields.get("review_status"):
@@ -252,6 +255,8 @@ def import_paper(graph, root, folder, layout, stored=None):
                     dataset, root, (file_base / layout.raw).relative_to(root).as_posix()
                 )
             datasets.append(dataset)
+        if "highlighted" in dataset_info:
+            dataset.setdefault("highlighted", dataset_info["highlighted"])
         append_link(paper, dataset, "related")
     return paper
 
