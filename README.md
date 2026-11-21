@@ -97,6 +97,80 @@ For an external dataset, pass its HTTP(S) landing page in place of the path. Add
 
 Repeating the command reuses the dataset.
 
+### Project-selected collections
+
+Register a YAML or JSON catalogue and its JSON Schema under `collections` in
+`.shacl-py/config.yaml`. Each collection gets a named tab, a searchable list
+and a detail page for each record. Record IDs keep bookmarks stable when the
+list order changes. The same schema can serve several collections.
+
+~~~yaml
+collections:
+  stations:
+    title: Survey stations
+    data: research/stations.yaml
+    schema: schemas/stations.schema.json
+    records: stations
+    id_field: code
+    label_field: name
+    field_labels:
+      code: Station ID
+      depth_m: Depth (m)
+~~~
+
+Paths are relative to the project root. `records` names the top-level list
+in the catalogue. Omit it when the whole file is a list. The ID and label
+fields default to `id` and `name`. IDs may be strings or integers and must
+be unique within a collection. Labels must be text. The viewer displays
+nested fields and keeps catalogue-level fields under **Catalogue metadata**.
+`shacl-py validate .` checks the whole document against the selected
+schema and reports field paths for invalid values.
+
+### Reuse a collection template
+
+~~~sh
+shacl-py setup . --template /path/to/stations-template --data research/stations.yaml
+shacl-py validate .
+shacl-py serve .
+~~~
+
+A station template contains this `template.yaml` manifest and the files it names.
+
+~~~yaml
+id: stations
+title: Survey stations
+schema: stations.schema.json
+linkml: stations.linkml.yaml
+example: example.yaml
+records: stations
+id_field: code
+label_field: name
+field_labels:
+  code: Station ID
+~~~
+
+The template's paths are relative to the manifest. `linkml` is an optional
+source file for schema authors. The viewer uses the supplied JSON Schema
+offline. Bundle its references in that file, as in LinkML's
+`gen-json-schema` output.
+
+Setup uses existing catalogue data or copies the example when the file is
+missing. Omitting `--data` creates `collections/<id>.<extension>` using the
+example's extension. Setup copies an external template's declared files into
+the project and registers a template already in the project in place.
+The following configuration uses one template for two catalogues.
+
+~~~yaml
+collections:
+  coastal:
+    template: templates/stations/template.yaml
+    data: research/coastal.yaml
+  inland:
+    template: templates/stations/template.yaml
+    data: research/inland.yaml
+    title: Inland stations
+~~~
+
 ## Other commands
 
 - `shacl-py validate ROOT` checks records again after you edit them.

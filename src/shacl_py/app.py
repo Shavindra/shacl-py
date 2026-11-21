@@ -30,6 +30,7 @@ from shacl_py.browser import (
     searchable,
     source_content,
 )
+from shacl_py.collection import Collection
 from shacl_py.files import scoped_path
 from shacl_py.graph import record_graph
 from shacl_py.native import declared_title
@@ -237,7 +238,7 @@ def labels(item):
     ]
 
 
-def browse(items, stored, base, brand, params):
+def browse(items, stored, base, brand, params, collections):
     papers = [i for i in items if i.is_publication]
     datasets = [i for i in items if i.is_dataset]
     keys = dataset_keys(papers, datasets)
@@ -274,28 +275,50 @@ def browse(items, stored, base, brand, params):
         ),
         None,
     )
+    collection_sections = {collection.section: collection for collection in collections}
     default = next(
         (name for name, group in sections.items() if selected_item in group),
-        next(iter(sections)),
+        next(iter(sections), next(iter(collection_sections), None)),
     )
-    section = next(
-        (name for name in sections if name.lower() == params.get("section")), default
-    )
+    requested = params.get("section")
+    section = next((name for name in sections if name.lower() == requested), default)
     q = params.get("q", "").strip().casefold()
-    if params.get("section") == "graph":
+    if requested in collection_sections:
+        section = requested
+    elif requested == "graph" and items:
         section = "Graph"
+    shared_query = None if section in collection_sections else q
     nav = [
         (
             name,
-            url({}, section=name.lower(), q=q),
+            url({}, section=name.lower(), q=shared_query),
             len({key_for(i) for i in group}),
             name == section,
         )
         for name, group in sections.items()
     ]
-    nav.append(
-        ("Graph", url({}, section="graph", q=q or None), None, section == "Graph")
+    nav.extend(
+        (
+            c.title,
+            url(
+                {},
+                section=c.section,
+                q=q if section == c.section else shared_query or None,
+            ),
+            len(c.entries),
+            section == c.section,
+        )
+        for c in collections
     )
+    if items:
+        nav.append(
+            (
+                "Graph",
+                url({}, section="graph", q=shared_query or None),
+                None,
+                section == "Graph",
+            )
+        )
     context = {
         "brand": brand,
         "params": params,
@@ -303,6 +326,24 @@ def browse(items, stored, base, brand, params):
         "url": url,
         "nav": nav,
     }
+    if section in collection_sections:
+        collection = collection_sections[section]
+        rows = {
+            key: row
+            for key, row in collection.entries.items()
+            if not q or q in searchable(row)
+        }
+        selected = params.get("entry", next(iter(rows), None))
+        st.html(
+            template.render(
+                context,
+                collection=collection,
+                rows=rows,
+                selected=selected,
+                row=rows.get(selected),
+            )
+        )
+        return
     if section == "Graph":
         graph = record_graph(
             items, key_for, selected=selected_item, label=params.get("label"), query=q
@@ -889,11 +930,11 @@ def linked_panel(owner, linked, route, paper, page=None):
 
 
 @st.fragment
-def viewer(items, stored, base, brand):
+def viewer(items, stored, base, brand, collections):
     params = current_route()
     if params is not None:
         try:
-            browse(items, stored, base, brand, params)
+            browse(items, stored, base, brand, params, collections)
         except (OSError, ValueError) as error:
             st.error(str(error))
 
@@ -913,10 +954,11 @@ def main():
     for error in errors:
         st.error(error)
     items = list(items_from(records, base))
-    if items:
+    collections = [source for source in records if isinstance(source, Collection)]
+    if items or collections:
         st.html(assets / "browser.css")
         with st.container(key="shacl_viewer"):
-            viewer(items, file_metadata(records), base, brand)
+            viewer(items, file_metadata(records), base, brand, collections)
     else:
         st.info("No metadata found.")
 

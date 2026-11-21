@@ -120,7 +120,15 @@ def main(argv=None, *, review_layout=None):
     )
     setup.add_argument("path", nargs="?", type=Path, default=Path("."))
     setup.add_argument(
-        "--template", choices=("project", "paper-review"), default="project"
+        "--template",
+        default="project",
+        metavar="NAME_OR_PATH",
+        help="project, paper-review or a local collection template directory or manifest",
+    )
+    setup.add_argument(
+        "--data",
+        metavar="FILE",
+        help="Project-relative catalogue for a collection template",
     )
     setup.add_argument("--title", help="Project title")
     setup.add_argument("--description", help="Project description")
@@ -197,6 +205,21 @@ def main(argv=None, *, review_layout=None):
             )
             return 0
         if args.command == "setup":
+            if args.template not in ("project", "paper-review"):
+                from shacl_py.collection_setup import setup_collection
+
+                if any(
+                    (args.title, args.description, args.data_folder, args.papers_folder)
+                ):
+                    parser.error(
+                        "project options apply to the project and paper-review templates"
+                    )
+                setup_collection(
+                    args.path.resolve(), Path(args.template).expanduser(), args.data
+                )
+                return 0
+            if args.data is not None:
+                parser.error("--data requires a collection template")
             from shacl_py.setup import setup_project
 
             setup_project(args, review_layout)
@@ -257,6 +280,7 @@ def main(argv=None, *, review_layout=None):
             return 1
         if args.command == "validate":
             from shacl_py.catalogue import Catalogue
+            from shacl_py.collection import Collection
             from shacl_py.metadata_io import MetadataFile
             from shacl_py.study import dataset_root, validate_study
 
@@ -268,7 +292,15 @@ def main(argv=None, *, review_layout=None):
             for path in sorted(sidecars):
                 if os.path.lexists(path):
                     validate_study(MetadataFile.read(path).data, path)
-            print(f"Checked {len(records)} metadata record(s).")
+            collections = [
+                source for source in records if isinstance(source, Collection)
+            ]
+            for collection in collections:
+                print(
+                    f"{collection.title}: checked {len(collection.entries)} record(s)."
+                )
+            if len(records) != len(collections) or not collections:
+                print(f"Checked {len(records) - len(collections)} metadata record(s).")
             return 0
         if not 1 <= args.port <= 65535:
             parser.error("--port must be between 1 and 65535")

@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 import yaml
 
 from shacl_py.catalogue import SCHEMAS, Catalogue, record_validator, validate_catalogue
+from shacl_py.collection import CONFIG, Collection, load_collections
 from shacl_py.files import (
     FILE_PATTERN_SLOTS,
     IGNORED,
@@ -84,7 +85,11 @@ def discover(root: Path, names=("metadata.yaml",)) -> list[Path]:
     found = []
     for directory, dirs, files in os.walk(root, followlinks=False):
         dirs[:] = sorted(
-            d for d in dirs if d not in IGNORED and not Path(directory, d).is_symlink()
+            d
+            for d in dirs
+            if d not in IGNORED
+            and d != ".shacl-py"
+            and not Path(directory, d).is_symlink()
         )
         found.extend(Path(directory, name) for name in set(names).intersection(files))
     return sorted(found)
@@ -99,12 +104,17 @@ def validate_file_patterns(rules: dict):
 
 def load_records(
     root: Path, *, metalad=False
-) -> tuple[list[Paper | Catalogue | MetadataSource], list[str]]:
+) -> tuple[list[Paper | Catalogue | MetadataSource | Collection], list[str]]:
     single_file = root.is_file() or (root.is_symlink() and not root.is_dir())
     if single_file:
         if metalad:
             raise ValueError("--metalad requires a dataset directory")
         path = root.parent.resolve() / root.name
+        project = next((p for p in path.parents if (p / CONFIG).is_file()), None)
+        if project is not None:
+            collections, errors, claimed = load_collections(project, only=path)
+            if path in claimed:
+                return collections, errors
         if path.name not in METADATA_FILES and path.suffix not in (".json", ".jsonl"):
             raise ValueError(f"{path}: expected a metadata file")
         paths, root = [path], path.parent
@@ -115,6 +125,10 @@ def load_records(
         paths = [] if metalad else discover(root, METADATA_FILES)
     records, errors = [], []
     if not single_file:
+        if not metalad:
+            collections, errors, claimed = load_collections(root)
+            records.extend(collections)
+            paths = [path for path in paths if path not in claimed]
         try:
             records.extend(read_store(root))
         except (OSError, TypeError, ValueError, RuntimeError) as error:

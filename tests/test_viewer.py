@@ -192,6 +192,56 @@ def test_serve_on_localhost_with_requested_port():
     assert "--server.address=127.0.0.1" in command and "--server.port=8510" in command
 
 
+def test_project_collection_navigation(tmp_path, monkeypatch):
+    shutil.copytree(EXAMPLE, tmp_path, dirs_exist_ok=True)
+    (tmp_path / ".shacl-py").mkdir()
+    (tmp_path / ".shacl-py/config.yaml").write_text(
+        "collections:\n  stations:\n    title: Survey stations\n    data: sites.yaml\n"
+        "    schema: sites.schema.json\n    records: sites\n    id_field: station_id\n"
+        "    label_field: display\n    field_labels: {depth_m: Depth (m)}\n"
+        "  empty: {title: Empty collection, data: empty.yaml, schema: sites.schema.json, records: sites}\n"
+    )
+    (tmp_path / "sites.schema.json").write_text(
+        '{"type":"object","required":["sites"]}'
+    )
+    (tmp_path / "empty.yaml").write_text("sites: []")
+    data = tmp_path / "sites.yaml"
+    rows = [
+        {"station_id": "west", "display": "Marsh"},
+        {
+            "station_id": "east & bay",
+            "display": "Harbour",
+            "measurements": [
+                {
+                    "depth_m": 0,
+                    "observed": False,
+                    "source": "https://example.org/stations",
+                }
+            ],
+        },
+    ]
+    data.write_text(yaml.safe_dump({"survey": "Autumn", "sites": rows}))
+    page = open_viewer(tmp_path, monkeypatch)
+    assert "Shoreline field survey" in html(page)
+    follow(page, "Survey stations")
+    follow(page, "Harbour")
+    body = html(page)
+    assert "Harbour</h1>" in body and "Depth (m)</dt>" in body
+    assert ">0<" in body and "false" in body and "Autumn" in body
+    assert 'href="https://example.org/stations"' in body
+    bookmark = page.session_state["fragment"]
+    data.write_text(yaml.safe_dump({"survey": "Autumn", "sites": rows[::-1]}))
+    page.run()
+    assert "Harbour</h1>" in html(page) and page.session_state["fragment"] == bookmark
+    page.session_state["fragment"] = "section=collection%2Fstations&q=Marsh"
+    page.run()
+    assert "Marsh</h1>" in html(page) and "Harbour" not in html(page)
+    follow(page, "Empty collection")
+    assert "No records in this collection." in html(page)
+    follow(page, "Papers")
+    assert "Shoreline field survey" in html(page)
+
+
 def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     shutil.copytree(EXAMPLE, tmp_path, dirs_exist_ok=True)
     raw = tmp_path / "papers/field-survey/data/raw"
