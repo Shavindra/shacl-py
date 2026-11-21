@@ -52,13 +52,13 @@
 .study .row span{color:#6b6b6b;font-size:12px}
 .study .row .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px}
 .study .row .meta small{color:#6b6b6b}
-.study .row.grid{display:grid;grid-template-columns:1fr auto;gap:3px 8px;padding:9px 16px}
+.study .row.grid{display:grid;grid-template-columns:minmax(0,1fr) auto;overflow-wrap:anywhere;gap:3px 8px;padding:9px 16px}
 .study .row.grid small{align-self:center;color:#6b6b6b}
 .study .row .byline{display:flex;align-items:baseline;gap:4px;min-width:0}
 .study .row .byline span{white-space:nowrap}
 .study .row .byline .byline-text{overflow:hidden;text-overflow:ellipsis}
 .study .row .byline .byline-text:empty{display:none}
-.study .row.grid .byline{grid-column:1/-1}
+.study .row.grid .byline,.study .row.grid .meta{grid-column:1/-1}
 .study .row.sel{background:#fff;box-shadow:inset 3px 0 0 #111,0 1px 2px rgba(0,0,0,.06)}
 
 /* Record heading */
@@ -251,6 +251,16 @@
 .study .cgroup dl{margin:0}
 .study .cgroup .ahead{padding:8px 0 2px}
 .study .cgroup .arow{grid-template-columns:minmax(0,130px) minmax(0,1fr);padding:5px 0;border:0}
+.study .unit a{color:inherit}
+.study .sideattrs{margin:0;padding:4px 16px 8px;background:#fff;border-left:3px solid #111}
+.study .split .row+.sideattrs{margin-top:-8px}
+.study .sideattrs>summary{margin:0;padding:4px 0;font-weight:500}
+.study .sideattr-list{max-height:min(36vh,24rem);overflow-y:auto}
+.study .sideattrs .cgroup{margin:0}
+.study .sideattrs .cbody{margin:0 0 6px}
+.study .sideattrs .arow{grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:8px;font-size:12px}
+.study .sideattrs dt,.study .sideattrs .glabel,.study .sideattrs .quals{overflow-wrap:anywhere}
+.study .sideattrs summary:focus-visible{outline:2px solid currentColor;outline-offset:1px}
 .study .fetch .links{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px}
 
 /* Record graph */
@@ -282,6 +292,7 @@
 .study header form{flex-basis:100%}
 .study .layout,.study .split{display:block;min-height:0}
 .study aside{max-height:240px;overflow:auto}
+.study .sideattr-list{max-height:none;overflow:visible}
 .study .heading,.study article,.study .filepage{padding:16px}
 .study .frow{grid-template-columns:1.4fr 1fr 50px 64px;gap:4px}
 .study .heading nav{gap:0 16px}

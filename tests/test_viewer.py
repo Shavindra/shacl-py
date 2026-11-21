@@ -487,6 +487,10 @@ def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeyp
   publications:
   - pid: urn:example:paper
     title: Field survey
+    primary_author: Sam Surveyor
+    author_names: [Sam Surveyor, Alex Field]
+    annotations: {record_use: template_only}
+    attributes: [{predicate: 'http://purl.org/dc/terms/issued', value: '2026-03-10'}]
     dataset_links: [{dataset: 'urn:example:measurements', role: describes}]
   datasets:
   - pid: urn:example:measurements
@@ -495,7 +499,7 @@ def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeyp
     - predicate: urn:example:duration
       display_label: Duration
       value: '20'
-      unit: ms
+      unit: http://qudt.org/vocab/unit/MilliSEC
       description: Time per reading.
       attributes:
       - predicate: urn:example:uncertainty
@@ -505,6 +509,10 @@ def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeyp
 """
     )
     page = open_viewer(tmp_path, monkeypatch)
+    sidebar, detail = html(page).split("<main>")
+    assert 'class="byline-text">Sam Surveyor</span><span>· 2026' in sidebar
+    assert "Sam Surveyor, Alex Field · 2026" in detail.replace("<i></i>", "")
+    assert 'class="anno">template only' in sidebar
     for location in ("paper", "dataset"):
         if location == "dataset":
             follow(page, "Open in Datasets")
@@ -512,10 +520,27 @@ def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeyp
         # The source qualifies the uncertainty, so it is not counted as a value.
         assert "2 attributes" in body
         assert "Attributes <small>2</small>" in body
-        assert '<span class="aval">20 <span class="unit" title="ms">ms</span>' in body
-        assert '<span class="aval">0.5 <span class="unit" title="ms">ms</span>' in body
-        assert '<li><span title="urn:example:source">Source</span> Table 1</li>' in body
-        assert "Time per reading." in body
+        panel = body.split('aria-label="Attributes for Measurements">')[1].split(
+            "</aside>"
+        )[0]
+        main_groups = body.split('<div class="agroups">')[1]
+        for section in (panel, main_groups):
+            assert '<span class="aval">20 <span class="unit"' in section
+            assert (
+                'href="http://qudt.org/vocab/unit/MilliSEC"' in section
+                and ">ms</a>" in section
+            )
+            assert (
+                '<span class="aval">0.5 <span class="unit" title="ms">ms</span>'
+                in section
+            )
+            assert (
+                '<li><span title="urn:example:source">Source</span> Table 1</li>'
+                in section
+            )
+            assert "Time per reading." in section
+        if location == "dataset":
+            assert "Surveyor et al. 2026" in body.split("<main>")[0]
         follow(page, "Files")
         assert "No files linked. This record holds metadata only." in html(page)
 

@@ -200,9 +200,17 @@ def short_authors(item):
     return names[0].split()[-1] + (" et al." if len(names) > 1 else "")
 
 
-def short_citation(item):
+def declared_year(item):
+    date = field(item, "year", "datePublished") or attribute_value(
+        item.fields, "issued", "datePublished", "date"
+    )
+    return date[:4] if date[:4].isdigit() else date
+
+
+def short_citation(item, year=None):
     """Cite a paper as 'Surname et al. Year', falling back to its title."""
-    year = field(item, "year", "datePublished")[:4]
+    if year is None:
+        year = declared_year(item)
     return " ".join(filter(None, [short_authors(item) or item.label, year]))
 
 
@@ -223,19 +231,12 @@ def browse(items, stored, base, brand, params):
 
     years = {}
     for paper in papers:
-        if year := field(paper, "year", "datePublished") or attribute_value(
-            paper.fields, "issued", "datePublished", "date"
-        ):
-            years.setdefault(key_for(paper), set()).add(
-                year[:4] if year[:4].isdigit() else year
-            )
+        if year := declared_year(paper):
+            years.setdefault(key_for(paper), set()).add(year)
 
     def publication_year(item):
-        year = field(item, "year", "datePublished") or attribute_value(
-            item.fields, "issued", "datePublished", "date"
-        )
-        if year:
-            return year[:4] if year[:4].isdigit() else year
+        if year := declared_year(item):
+            return year
         matches = years.get(key_for(item), set())
         return next(iter(matches)) if len(matches) == 1 else ""
 
@@ -406,12 +407,13 @@ def browse(items, stored, base, brand, params):
                 continue
         elif tag != "All" and tag not in (roles(i) if global_ds else labels(i)):
             continue
+        parent = next(iter(linked(i, papers)), None) if global_ds else None
         shown.append(
             {
                 "item": i,
                 "href": url(sidebar_route | i.route, tag=tag),
-                "authors": short_citation(linked(i, papers)[0])
-                if global_ds and linked(i, papers)
+                "authors": short_citation(parent, publication_year(parent))
+                if parent
                 else ""
                 if global_ds
                 else sidebar_author(i),
@@ -423,6 +425,7 @@ def browse(items, stored, base, brand, params):
                 if global_ds
                 else count_label(len(ds), "dataset"),
                 "tags": labels(i),
+                "annotations": annotation_values(i.fields),
             }
         )
     if section in ("Papers", "Datasets"):
@@ -485,6 +488,7 @@ def browse(items, stored, base, brand, params):
             dsrows.append(
                 {
                     "item": d,
+                    "annotations": annotation_values(d.fields),
                     "count": count_label(*dataset_summary(d)),
                     "role": related(item)[d],
                     "href": url(
@@ -618,6 +622,7 @@ def browse(items, stored, base, brand, params):
         item_route=item_route,
         view=view,
         tabs=tabs,
+        sidebar_groups=dataset_groups(item),
         pid=pid(item),
         folder=local_folder(item),
         authors=author_line(item, limit=10),
@@ -639,7 +644,7 @@ def browse(items, stored, base, brand, params):
         paper_rows=[
             {
                 "href": url(p.route, dataset=item.key, dataset_record=item.ref),
-                "short": short_citation(p),
+                "short": short_citation(p, publication_year(p)),
                 "title": p.label,
             }
             for p in parents

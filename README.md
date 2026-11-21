@@ -37,6 +37,10 @@ when present.
 Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.
+In the left panel, expand **Attributes** under the selected paper or dataset
+to read its measurements and sources. External datasets list the files
+declared in `linked_files`. Select a filename to open its side panel, or
+use its preview and download links.
 
 Choose **Graph** to explore relationships between the loaded records. Arrows
 show catalogue membership, dataset roles, derivation and links declared in

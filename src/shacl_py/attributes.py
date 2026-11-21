@@ -193,13 +193,15 @@ def _property(node, pad, subprops=None):
         subprops = [k for k in kids if not _is_qualifier(k)]
     quals = [k for k in kids if k not in subprops]
     defined_by = _text(node.get("defined_by"))
+    unit_iri = _text(node.get("unit"))
     return {
         "kind": "property",
         "label": label_of(node),
         "predicate": predicate_of(node),
         "value": _term(node.get("value"), defined_by if is_link(defined_by) else None),
-        "unit": unit_symbol(node.get("unit")),
-        "unit_iri": _text(node.get("unit")),
+        "unit": unit_symbol(unit_iri),
+        "unit_iri": unit_iri,
+        "unit_href": unit_iri if is_link(unit_iri) else None,
         "description": _text(node.get("description")),
         "qualifiers": _qualifiers(node, quals),
         "pad": pad,

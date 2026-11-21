@@ -21,8 +21,8 @@
 {% macro dataset_details() -%}
 {% if dataset_description or dataset_url %}<div class="dataset-details">{% if dataset_description %}<p class="lede dataset-description">{{ dataset_description }}</p>{% endif %}{% if dataset_url %}<div class="source-line"><a href="{{ dataset_url }}" target="_blank" rel="noreferrer">Open dataset source ↗</a>{% if external %}<span>Hosted on {{ host }}</span>{% endif %}</div>{% endif %}</div>{% endif %}
 {%- endmacro %}
-{% macro annos() -%}
-{% for note in annotations %}<span class="anno">{{ note }}</span>{% endfor %}
+{% macro annos(notes) -%}
+{% for note in notes %}<span class="anno">{{ note }}</span>{% endfor %}
 {%- endmacro %}
 {% macro term(t) -%}
 {% if t.href %}<a href="{{ t.href }}" target="_blank" rel="noreferrer" title="{{ t.href }}">{{ t.text }}</a>{% else %}{{ t.text }}{% endif %}
@@ -31,13 +31,31 @@
 {% if item.description %}<p class="adesc">{{ item.description }}</p>{% endif %}{% if item.qualifiers %}<ul class="quals">{% for q in item.qualifiers %}<li><span title="{{ q.predicate }}">{{ q.label }}</span> {% for t in q.terms %}{{ term(t) }}{% if not loop.last %}, {% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}
 {%- endmacro %}
 {% macro value(r) -%}
-<span class="aval">{{ term(r.value) }}{% if r.unit %} <span class="unit" title="{{ r.unit_iri }}">{{ r.unit }}</span>{% endif %}</span>{{ extras(r) }}
+<span class="aval">{{ term(r.value) }}{% if r.unit %} <span class="unit" title="{{ r.unit_iri }}">{% if r.unit_href %}<a href="{{ r.unit_href }}" target="_blank" rel="noreferrer">{{ r.unit }}</a>{% else %}{{ r.unit }}{% endif %}</span>{% endif %}</span>{{ extras(r) }}
 {%- endmacro %}
 {% macro attrrows(rows) -%}
 {% for r in rows %}{% if r.kind == 'heading' %}<div class="ahead" style="padding-left:{{ r.pad }}px"><span title="{{ r.predicate }}">{{ r.label }}</span>{{ extras(r) }}</div>{% else %}<div class="arow" style="padding-left:{{ r.pad }}px"><dt title="{{ r.predicate }}">{{ r.label }}</dt><dd>{{ value(r) }}</dd></div>{% endif %}{% endfor %}
 {%- endmacro %}
 {% macro groupbody(g) -%}
 {% if g.lead %}<div class="alead">{{ value(g.lead) }}</div>{% else %}{{ extras(g) }}{% endif %}<dl>{{ attrrows(g.rows) }}</dl>
+{%- endmacro %}
+{% macro groupdetails(g, file=false) -%}
+<details class="cgroup"{% if file and g.source == 'File' %} open{% endif %}>
+  <summary><span class="caret"></span><span class="glabel" title="{{ g.predicate }}">{{ g.label }}</span>{% if file %}<span class="src">{{ g.source }}</span>{% endif %}<small>{{ g.count }}</small></summary>
+  <div class="cbody">{{ groupbody(g) }}</div>
+</details>
+{%- endmacro %}
+{% macro sidebar_attrs(groups, label) -%}
+{% if groups %}
+<details class="sideattrs">
+  <summary aria-label="Attributes for {{ label }}">Attributes</summary>
+  <div class="sideattr-list">
+  {% for g in groups %}
+    {% if groups|length == 1 and not g.predicate %}{{ groupbody(g) }}{% else %}{{ groupdetails(g) }}{% endif %}
+  {% endfor %}
+  </div>
+</details>
+{% endif %}
 {%- endmacro %}
 {% macro attrpanel(attr) -%}
 <div class="attrs">{% if attr.derived or attr.used %}<div class="prov"><div class="cap">Provenance</div>{% if attr.derived %}<div><dfn>Derived from</dfn>{% for d in attr.derived %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}{% if attr.used %}<div><dfn>Used by</dfn>{% for d in attr.used %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}</div>{% endif %}
@@ -46,7 +64,7 @@
 {%- endmacro %}
 {% macro content(fp) -%}
 <div class="content"><div class="captop"><span class="cap">Content</span>{% if fp.content_note %}<span class="hint">{{ fp.content_note }}</span>{% endif %}</div>
-{% for g in fp.groups %}<details class="cgroup"{% if g.source == 'File' %} open{% endif %}><summary><span class="caret"></span><span class="glabel" title="{{ g.predicate }}">{{ g.label }}</span><span class="src">{{ g.source }}</span><small>{{ g.count }}</small></summary><div class="cbody">{{ groupbody(g) }}</div></details>{% else %}<span class="hint">No content attributes recorded.</span>{% endfor %}</div>
+{% for g in fp.groups %}{{ groupdetails(g, file=true) }}{% else %}<span class="hint">No content attributes recorded.</span>{% endfor %}</div>
 {%- endmacro %}
 {% macro preview(fp, tall) %}
 {% if fp.external %}<div class="fetch"><span>Hosted externally on {{ fp.host }}. Not tracked in this repository.</span><div class="links"><a href="{{ fp.download }}" download target="_blank" rel="noreferrer">Download</a><a href="{{ fp.preview_url }}" target="_blank" rel="noreferrer">Preview ↗</a>{% if fp.provider %}<a href="{{ fp.provider }}" target="_blank" rel="noreferrer">Provider page ↗</a>{% endif %}</div></div>
@@ -71,17 +89,17 @@
 <div><div class="cap">Raw metadata</div><pre>{{ fp.raw }}</pre></div></div></div>
 </main>{% else %}
 <div class="layout"><aside><div class="tools"><div class="cap">{{ 'All datasets' if global_ds else section }} <small>{{ shown|length }}</small></div>{{ search('filter','Filter by name, PID, format' if global_ds else 'Filter by title, author, PID',params) }}{{ filters(options, sidebar_route) }}</div>
-{% for row in shown %}{% if global_ds %}<a class="row grid {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b>{{ row.item.label }}</b> <small>{{ row.count }}</small> <span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span></span></a>
-{% else %}<a class="row {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b class="serif">{{ row.item.label }}</b><span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span>{% if row.year %}<span>{% if row.authors or row.venue %}· {% endif %}{{ row.year }}</span>{% endif %}</span><span class="meta"><small>{{ row.count }}</small>{% for tag in row.tags %}<em>{{ tag }}</em>{% endfor %}</span></a>{% endif %}{% endfor %}</aside>
+{% for row in shown %}{% if global_ds %}<a class="row grid {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b>{{ row.item.label }}</b> <small>{{ row.count }}</small> <span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span></span>{% if row.annotations %}<span class="meta">{{ annos(row.annotations) }}</span>{% endif %}</a>
+{% else %}<a class="row {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b class="serif">{{ row.item.label }}</b><span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span>{% if row.year %}<span>{% if row.authors or row.venue %}· {% endif %}{{ row.year }}</span>{% endif %}</span><span class="meta"><small>{{ row.count }}</small>{% for tag in row.tags %}<em>{{ tag }}</em>{% endfor %}{{ annos(row.annotations) }}</span></a>{% endif %}{% if row.item==item %}{{ sidebar_attrs(sidebar_groups, item.label) }}{% endif %}{% endfor %}</aside>
 <main>{% if item %}<section class="heading"><div class="mono muted">{{ pid }}{% if folder and not global_ds %}<span class="slash">/</span>{{ folder }}{% endif %}</div>
-{% if global_ds %}<div class="titleline"><h1>{{ item.label }}</h1>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos() }}</div>
+{% if global_ds %}<div class="titleline"><h1>{{ item.label }}</h1>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos(annotations) }}</div>
 {{ dataset_details() }}
 {{ facts([('Paper', parents[0].label if parents else '', false, url(parents[0].route,dataset=item.key,dataset_record=item.ref) if parents else none), ('Host', host, true, none) if external else ('Folder', folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
 {% else %}<h1 class="serif">{{ item.label }}</h1>
 {% if authors or venue or year %}<div class="authors">{{ authors }}{% if authors and venue %} · {% endif %}<i>{{ venue }}</i>{% if year %}{% if authors or venue %} · {% endif %}{{ year }}{% endif %}</div>{% endif %}
 <div class="inline">{% if tags %}<span class="tags">{% for tag in tags %}<em>{{ tag }}</em>{% endfor %}</span>{% endif %}{% if doi %}<span><dfn>DOI</dfn><a class="mono" href="{{ doi }}" target="_blank" rel="noreferrer">{{ doi_label }}</a></span>{% endif %}{% if keywords %}<span><dfn>Keywords</dfn>{{ keywords }}</span>{% endif %}</div>{% endif %}
 <nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}<a class="graph-link" href="{{ url(item.route,section='graph') }}" target="_self">View in graph</a></nav></section>
-{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row grid {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b> <small>{{ d.count }}</small> <span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos() }}</div>{{ dataset_details() }}{{ facts([('PID', ds_pid, true, none), ('Host', host, true, none) if external else ('Folder', ds_folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
+{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row grid {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b> <small>{{ d.count }}</small> <span class="meta">{{ d.role }} {{ annos(d.annotations) }}</span></a>{% if d.item==selected %}{{ sidebar_attrs(attr.groups, d.item.label) }}{% endif %}{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos(annotations) }}</div>{{ dataset_details() }}{{ facts([('PID', ds_pid, true, none), ('Host', host, true, none) if external else ('Folder', ds_folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
 <nav class="subtabs">{% for key,label,count in dtabs %}<a class="{{ 'on' if dtab==key }}" href="{{ url(route,dtab=key) }}" target="_self">{{ label }} <small>{{ count }}</small></a>{% endfor %}</nav>
 {% if dtab=='attributes' %}{{ attrpanel(attr) }}{% else %}{{ filetable(rows,folders) }}{% endif %}{% else %}No matching datasets.{% endif %}</article></div>
 {% elif view=='files' %}<article>{{ filetable(rows,folders) }}</article>
