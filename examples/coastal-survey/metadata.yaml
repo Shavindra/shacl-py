@@ -18,6 +18,9 @@ catalogue:
     - pid: urn:example:follow-up
       title: Comparing coastal stations
       description: A second example publication reusing the survey readings.
+      attributes:
+        - predicate: http://purl.org/dc/terms/subject
+          value: Coastal monitoring
       dataset_links:
         - {dataset: 'urn:example:readings', role: reuses}
     - pid: urn:example:protocol

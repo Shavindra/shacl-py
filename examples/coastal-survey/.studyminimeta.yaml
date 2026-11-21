@@ -3,5 +3,6 @@ study:
   purpose: A worked example of reviewing publications and reusing their datasets.
 dataset:
   name: Coastal survey
+  keyword: [Coastal monitoring]
   description: A worked example of reviewing publications and reusing their datasets.
 person: {}

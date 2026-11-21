@@ -42,12 +42,13 @@ to read its measurements and sources. External datasets list the files
 declared in `linked_files`. Select a filename to open its side panel, or
 use its preview and download links.
 
-Choose **Graph** to explore relationships between the loaded records. Arrows
-show catalogue membership, dataset roles, derivation and links declared in
-the metadata. Select a node to open its record, or choose **View in graph**
-on a record to see its direct connections. Search the graph by title, type or
-identifier. Choose a relationship such as **Derived from** to follow dataset
-lineage, or expand **List relationships** for a text view.
+Choose **Graph** to explore the network of papers, datasets and shared labels.
+Labels come from declared labels, keywords and Dublin Core subjects. Click a
+label to see which records share it, or click a paper or dataset to open it.
+Drag the background to pan, drag a node to move it and scroll to zoom at the
+pointer. **Fit** brings the whole network back into view. Search by title,
+type or identifier, filter by relationship, or expand **List relationships**.
+The viewer bundles D3.js 7.9.0 for the force layout and mouse controls.
 
 Each view has a bookmarkable URL. Links, filters and searches update the open
 viewer, and the browser's Back and Forward buttons restore previous views.

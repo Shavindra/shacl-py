@@ -288,7 +288,9 @@ def browse(items, stored, base, brand, params):
         "nav": nav,
     }
     if section == "Graph":
-        graph = record_graph(items, key_for, selected=selected_item, query=q)
+        graph = record_graph(
+            items, key_for, selected=selected_item, label=params.get("label"), query=q
+        )
         relation = params.get("relation", "")
         predicates = {predicate for _, predicate, _ in graph.edges}
         if relation:
@@ -300,8 +302,13 @@ def browse(items, stored, base, brand, params):
             )
         )
         if graph.nodes:
-            with st.container(key="graph_canvas"):
-                st.graphviz_chart(graph.dot(), width="stretch")
+            network = st.components.v2.component(
+                "shacl-py.network",
+                html=(assets.parent / "network/network.html").read_text(),
+                css="network.css",
+                js="network.js",
+            )
+            network(data=graph.network_data(), key="record_network")
         return
     scope = sections[section]
     global_ds = section == "Datasets"

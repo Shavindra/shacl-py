@@ -1,0 +1,6 @@
+[project]
+name = "shacl-py"
+
+[[tool.streamlit.component.components]]
+name = "network"
+asset_dir = "network"

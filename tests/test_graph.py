@@ -15,55 +15,76 @@ def graph_from(root, **scope):
     return record_graph(items, lambda i: keys.get(i, publication_key(i)), **scope)
 
 
-def test_direct_links_keep_predicates_and_source_local_identifiers(tmp_path):
-    for folder, title in (("one", "Ada"), ("two", "Bea")):
+def relationships(graph):
+    return {(s.label, p, t.label) for s, p, t in graph.edges}
+
+
+def test_only_papers_datasets_and_declared_labels_form_the_network(tmp_path):
+    for folder in ("one", "two"):
         path = tmp_path / folder
         path.mkdir()
-        (path / ".studyminimeta.yaml").write_text(
-            f"publication: [{{title: Paper {folder}, author: [a]}}]\n"
-            f"person: {{a: {{given_name: {title}, last_name: Lane}}}}\n"
-        )
-    (tmp_path / "project.json").write_text(
-        json.dumps(
-            {
-                "@graph": [
-                    {
-                        "@id": "urn:observation",
-                        "name": "Observation",
-                        "relations": {
-                            "urn:instrument": {"display_label": "Microscope"}
+        (path / "project.json").write_text(
+            json.dumps(
+                {
+                    "@graph": [
+                        {
+                            "@type": "ScholarlyArticle",
+                            "name": f"Paper {folder}",
+                            "isBasedOn": {"@id": "sample"},
+                            "author": [{"@id": "person"}, {"@id": "sample"}],
+                            "labels": ["Imaging", " Imaging ", ""],
+                            "schema:keywords": {"@set": [{"@value": "Live & fixed"}]},
                         },
-                        "characterized_by": [
-                            {"predicate": "ex:measuredWith", "object": "urn:instrument"}
-                        ],
-                        "ex:method": {
+                        {
+                            "@type": "Dataset",
+                            "@id": "sample",
+                            "name": f"Data {folder}",
+                            "keywords": "Imaging",
+                        },
+                        {
+                            "@type": "Person",
+                            "@id": "person",
+                            "name": "Ada Lane",
+                            "labels": "Microscopist",
+                        },
+                        {
                             "@type": "Method",
-                            "name": "Imaging",
-                            "ex:instrument": {"@id": "urn:instrument"},
+                            "name": "Microscopy",
+                            "labels": "Acquisition",
                         },
-                        "notes": "urn:unrelated",
-                    },
-                    {"@id": "urn:unrelated", "name": "Unlinked record"},
-                ]
-            }
+                    ]
+                }
+            )
         )
-    )
     graph = graph_from(tmp_path)
-    assert len(graph.nodes) == 8
-    assert {(s.label, p, t.label) for s, p, t in graph.edges} == {
-        ("Paper one", "author", "Ada Lane"),
-        ("Paper two", "author", "Bea Lane"),
-        ("Observation", "relations", "Microscope"),
-        ("Observation", "ex:measuredWith", "Microscope"),
-        ("Observation", "ex:method", "Imaging"),
-        ("Imaging", "ex:instrument", "Microscope"),
+    assert [(n.kind, n.label) for n in graph.nodes if n.kind == "Label"] == [
+        ("Label", "Imaging"),
+        ("Label", "Live & fixed"),
+    ]
+    assert len(graph.nodes) == 6
+    assert relationships(graph) == {
+        edge
+        for name in ("one", "two")
+        for edge in (
+            (f"Paper {name}", "isBasedOn", f"Data {name}"),
+            (f"Paper {name}", "Labelled", "Imaging"),
+            (f"Paper {name}", "Labelled", "Live & fixed"),
+            (f"Data {name}", "Labelled", "Imaging"),
+        )
     }
-    isolated = graph_from(tmp_path, query="UNLINKED")
-    assert [i.label for i in isolated.nodes] == ["Unlinked record"]
-    assert not isolated.edges
+    assert not graph_from(tmp_path, query="Ada Lane").nodes
+    shared = graph_from(tmp_path, label="Live & fixed")
+    assert shared.focus.label == "Live & fixed"
+    assert {node.label for node in shared.nodes} == {
+        "Live & fixed",
+        "Paper one",
+        "Paper two",
+    }
+    assert shared.focus.route == {"section": "graph", "label": "Live & fixed"}
+    assert len(shared.network_data()["edges"]) == 2
 
 
-def test_graph_unions_links_from_duplicate_publications(tmp_path):
+def test_graph_unions_links_and_keywords_from_duplicate_publications(tmp_path):
     (tmp_path / "metadata.yaml").write_text(
         "catalogue:\n"
         "  project: {pid: 'urn:root', title: Project}\n"
@@ -73,30 +94,48 @@ def test_graph_unions_links_from_duplicate_publications(tmp_path):
         "  reviews: [{publication: 'urn:paper', outputs: ['urn:data']}]\n"
     )
     (tmp_path / ".studyminimeta.yaml").write_text(
-        "publication: [{title: Second title, doi: 10.1234/example, author: [a]}]\n"
+        "publication: [{title: Second title, doi: 10.1234/example, author: [a], keyword: [Imaging]}]\n"
         "person: {a: {given_name: Ada, last_name: Lane}}\n"
     )
     (tmp_path / "project.json").write_text(
         json.dumps(
             {
-                "@type": "Note",
-                "name": "Citation note",
-                "citation": {"@id": "https://doi.org/10.1234/EXAMPLE"},
+                "@graph": [
+                    {
+                        "@type": "Note",
+                        "name": "Citation note",
+                        "citation": {"@id": "urn:paper"},
+                    },
+                    {
+                        "@type": "Article",
+                        "name": "Earlier paper",
+                        "@reverse": {
+                            "citation": {"@id": "https://doi.org/10.1234/EXAMPLE"}
+                        },
+                    },
+                    {
+                        "@type": "Dataset",
+                        "name": "Isolated dataset",
+                        "display_label": "Display text",
+                    },
+                ]
             }
         )
     )
     graph = graph_from(tmp_path, query="second title")
-    assert {i.label for i in graph.nodes} == {
-        "Project",
+    assert {n.label for n in graph.nodes} == {
         "Paper",
         "Readings",
-        "Ada Lane",
-        "Citation note",
+        "Imaging",
+        "Earlier paper",
     }
-    assert {(s.label, p, t.label) for s, p, t in graph.edges} == {
-        ("Project", "Lists", "Paper"),
+    assert relationships(graph) == {
         ("Paper", "Reuses", "Readings"),
         ("Paper", "Output", "Readings"),
-        ("Paper", "author", "Ada Lane"),
-        ("Citation note", "citation", "Paper"),
+        ("Paper", "Labelled", "Imaging"),
+        ("Paper", "citation", "Earlier paper"),
     }
+    isolated = graph_from(tmp_path, query="DISPLAY TEXT")
+    assert [n.kind for n in isolated.nodes] == ["Dataset"]
+    assert not isolated.edges
+    assert not graph_from(tmp_path, label="unknown").nodes

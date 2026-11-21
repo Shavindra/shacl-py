@@ -96,46 +96,51 @@ def test_navigation_stays_in_one_document(page, viewer_url):
 def test_graph_navigation_and_search(page, viewer_url):
     page.goto(viewer_url, wait_until="domcontentloaded")
     page.get_by_role("link", name="Graph", exact=True).click()
-    chart = page.locator(".stGraphVizChart")
+    chart = page.locator("svg.canvas")
     nodes = chart.locator(".node")
-    expect(nodes).to_have_count(8)
-    expect(chart.locator(".edge text")).to_have_count(9)
-    expect(chart.locator(".edge text", has_text="Derived from")).to_be_visible()
+    expect(nodes).to_have_count(7)
+    expect(chart.locator(".edge")).to_have_count(6)
+    expect(chart.locator(".paper")).to_have_count(3)
+    expect(chart.locator(".dataset")).to_have_count(3)
+    tag = chart.get_by_role("link", name="Label · Coastal monitoring")
+    tag.click()
+    expect(page.locator(".graph-heading h1")).to_have_text("Coastal monitoring")
+    expect(nodes).to_have_count(3)
+    expect(chart.locator(".edge.tag")).to_have_count(2)
+    page.get_by_role("combobox", name="Relationship", exact=True).select_option(
+        "Labelled"
+    )
+    expect(nodes).to_have_count(3)
+    assert "label=Coastal+monitoring" in page.url
+    page.get_by_role("link", name="Show full graph").click()
+    expect(nodes).to_have_count(7)
     full_graph = page.url
-
-    graph_svg = chart.locator("svg")
-    width = graph_svg.bounding_box()["width"]
-    page.get_by_role("button", name="Zoom in").click()
-    assert graph_svg.bounding_box()["width"] > width
-    page.get_by_role("button", name="Fit graph").click()
-    assert abs(graph_svg.bounding_box()["width"] - width) < 1
 
     page.get_by_role("combobox", name="Relationship", exact=True).select_option(
         "Derived from"
     )
     expect(nodes).to_have_count(2)
-    expect(chart.locator(".edge text")).to_have_text("Derived from")
+    expect(chart.locator(".edge title")).to_have_text("Derived from")
     page.get_by_text("List relationships", exact=True).click()
     table = page.get_by_role("table", name="Record relationships")
     expect(table.get_by_role("cell")).to_have_text(
         ["Mean reading per station", "Derived from", "Station readings"]
     )
     page.get_by_role("link", name="Show full graph").click()
-    expect(nodes).to_have_count(8)
-
-    nodes.filter(has_text="Station readings").locator("a").click()
+    expect(nodes).to_have_count(7)
+    chart.get_by_role("link", name="Dataset · Station readings").press("Enter")
     expect(
         page.get_by_role("heading", name="Station readings", exact=True)
     ).to_be_visible()
     page.go_back()
-    expect(nodes).to_have_count(8)
+    expect(nodes).to_have_count(7)
     assert page.url == full_graph
     page.go_forward()
     page.get_by_role("link", name="View in graph").click()
-    expect(nodes).to_have_count(5)
+    expect(nodes).to_have_count(4)
     focus = page.url
     page.reload(wait_until="domcontentloaded")
-    expect(chart.locator(".edge")).to_have_count(4)
+    expect(chart.locator(".edge")).to_have_count(3)
     assert page.url == focus
 
     search = page.get_by_role("searchbox", name="Find a graph record")
@@ -144,4 +149,71 @@ def test_graph_navigation_and_search(page, viewer_url):
     expect(page.locator(".graph-heading")).to_contain_text("No matching records")
     expect(chart).to_have_count(0)
     page.get_by_role("link", name="Show full graph").click()
-    expect(nodes).to_have_count(8)
+    expect(nodes).to_have_count(7)
+
+
+def test_graph_mouse_controls(page, viewer_url):
+    page.goto(viewer_url + "#section=graph", wait_until="domcontentloaded")
+    chart = page.locator("svg.canvas")
+    viewport = chart.locator(".viewport")
+    expect(chart.locator(".node")).to_have_count(7)
+    chart.scroll_into_view_if_needed()
+    box = chart.bounding_box()
+    x, y = box["x"] + 30, box["y"] + 36
+
+    def camera():
+        return viewport.evaluate(
+            "(g) => {const m = g.transform.baseVal.consolidate().matrix; return [m.a, m.e, m.f]}"
+        )
+
+    initial = camera()
+    original = viewport.get_attribute("transform")
+    page.mouse.move(x, y)
+    page.mouse.wheel(0, -180)
+    expect(viewport).not_to_have_attribute("transform", original)
+    k, tx, ty = camera()
+    assert k > initial[0]
+    assert (30 - tx) / k == pytest.approx((30 - initial[1]) / initial[0], abs=0.1)
+    assert (36 - ty) / k == pytest.approx((36 - initial[2]) / initial[0], abs=0.1)
+    page.get_by_role("button", name="Zoom out").click()
+    assert camera()[0] < k
+    page.get_by_role("button", name="Zoom in").click()
+    assert camera()[0] == pytest.approx(k)
+    page.get_by_role("button", name="Fit graph").click()
+    assert camera() == pytest.approx(initial)
+
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 70, y + 45, steps=6)
+    page.mouse.up()
+    assert camera() == pytest.approx([initial[0], initial[1] + 70, initial[2] + 45])
+    page.get_by_role("button", name="Fit graph").click()
+    assert camera() == pytest.approx(initial)
+
+    point = chart.get_by_role("link", name="Dataset · Station readings").locator(
+        ".mark"
+    )
+    mark = point.bounding_box()
+    edges = chart.locator(".edge")
+
+    def paths():
+        return edges.evaluate_all(
+            "(paths) => paths.map(path => path.getAttribute('d'))"
+        )
+
+    before = paths()
+    x = mark["x"] + mark["width"] / 2
+    y = mark["y"] + mark["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 36, y + 24, steps=6)
+    page.mouse.up()
+    assert point.bounding_box()["x"] == pytest.approx(mark["x"] + 36, abs=1)
+    assert point.bounding_box()["y"] == pytest.approx(mark["y"] + 24, abs=1)
+    assert paths() != before
+    assert camera() == pytest.approx(initial)
+    assert page.url.endswith("#section=graph")
+    point.click()
+    expect(
+        page.get_by_role("heading", name="Station readings", exact=True)
+    ).to_be_visible()

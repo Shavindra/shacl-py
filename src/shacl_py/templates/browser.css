@@ -272,21 +272,16 @@
 .study .graph-toolbar h1{overflow-wrap:anywhere}
 .study .graph-heading p{margin:4px 0 0;font-size:13px;color:#565656}
 .study .graph-filter select{max-width:min(18rem,65vw);height:34px;padding:0 6px;border:1px solid #999;background:#fff;color:#111;font:inherit}
-.study .graph-actions [role=group]{display:flex;border:1px solid #999}
-.study .graph-actions button{background:#fff;color:#111;min-width:36px;height:32px;border:0;border-radius:0;font:inherit;cursor:pointer}
-.study .graph-actions button+button{border-left:1px solid #ccc}
-.study .graph-actions button:hover{background:#eee}
+.study .graph-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:10px 0 6px;padding:0;list-style:none;font-size:13px}
+.study .graph-legend li{display:flex;align-items:center;gap:6px}
+.study .graph-legend li::before{content:"";width:10px;height:10px;display:inline-block}
+.study .graph-legend .paper::before{border-radius:50%;background:#252525}
+.study .graph-legend .dataset::before{background:#d7edeb;border:1.5px solid #22665e}
+.study .graph-legend .label::before{width:8px;height:8px;transform:rotate(45deg);background:#f7e8cc;border:1.5px solid #896429}
 .study .graph-heading details{max-width:none;margin:0}
 .study .graph-heading summary{display:list-item;width:fit-content;margin:2px 0}
 .study .graph-heading table{width:100%;margin:8px 0;border-collapse:collapse;font:inherit}
 .study .graph-heading :is(td,th){border:1px solid #ddd;padding:6px 10px;text-align:left;overflow-wrap:anywhere}
-.st-key-graph_canvas .stGraphVizChart{height:clamp(320px,70vh,900px);overflow:auto;background-color:#fafafa;background-image:radial-gradient(#d5d5d5 .8px,transparent .8px);background-size:16px 16px}
-.st-key-graph_canvas .stGraphVizChart>svg{display:block;width:auto;height:auto;max-width:100%;max-height:100%;margin:0 auto}
-.st-key-graph_canvas .stGraphVizChart>svg[data-zoom]{max-width:none;max-height:none}
-.st-key-graph_canvas .node a{cursor:pointer}
-.st-key-graph_canvas .node a:is(:hover,:focus) path{stroke:#111;stroke-width:2}
-.st-key-graph_canvas .node text:first-of-type{font-size:10px;font-weight:600}
-
 @media(max-width:760px){
 .study header{gap:4px 12px;flex-wrap:wrap;height:auto;padding:8px 16px}
 .study header nav{height:36px}
