@@ -29,35 +29,74 @@ def identifiers(fields):
     }
 
 
+REFERENCE_FIELDS = {
+    "about",
+    "at_location",
+    "author",
+    "citation",
+    "conforms_to",
+    "contributor",
+    "dataset",
+    "depends_on",
+    "depiction",
+    "hasPart",
+    "isBasedOn",
+    "isPartOf",
+    "object",
+    "part_of",
+    "parts",
+    "roles",
+    "same_as",
+    "sameAs",
+    "source_datasets",
+    "subjectOf",
+    "version_of",
+}
+
+
+def direct_references(fields):
+    """Yield the predicate and identifier or inline node for each direct link."""
+    for name, value in fields.items():
+        if not isinstance(name, str) or name.startswith("@"):
+            continue
+        if name == "relations" and isinstance(value, dict):
+            for identifier in value:
+                yield name, identifier
+            continue
+        if name == "characterized_by":
+            for statement in value if isinstance(value, list) else [value]:
+                if isinstance(statement, dict) and isinstance(
+                    predicate := statement.get("predicate"), str
+                ):
+                    yield predicate, statement.get("object")
+            continue
+        if isinstance(value, dict):
+            value = value.get("@list", value.get("@set", value))
+        for target in value if isinstance(value, list) else [value]:
+            if (
+                isinstance(target, str)
+                and name in REFERENCE_FIELDS
+                or (
+                    isinstance(target, dict)
+                    and "@value" not in target
+                    and (identifiers(target) or "@type" in target)
+                )
+            ):
+                yield name, target
+
+
 def references(fields):
-    """Read identifier-valued relationships and nested JSON-LD node references."""
+    """Collect identifiers, including links inside nested descriptions."""
     found = set()
-    relation_keys = {
-        "about",
-        "part_of",
-        "hasPart",
-        "isPartOf",
-        "citation",
-        "subjectOf",
-        "isBasedOn",
-        "dataset",
-        "source_datasets",
-        "object",
-        "author",
-        "contributor",
-    }
 
     def visit(node):
         if isinstance(node, dict):
-            for name, value in node.items():
-                if name == "relations" and isinstance(value, dict):
-                    found.update(value)
-                if name in relation_keys:
-                    for token in value if isinstance(value, list) else [value]:
-                        if isinstance(token, str):
-                            found.add(token)
-                if isinstance(value, dict):
-                    found.update(identifiers(value))
+            for _, target in direct_references(node):
+                if isinstance(target, str):
+                    found.add(target)
+                elif isinstance(target, dict):
+                    found.update(identifiers(target))
+            for value in node.values():
                 visit(value)
         elif isinstance(node, list):
             for child in node:
@@ -168,19 +207,24 @@ def items_from(records, root):
             )
 
 
+def doi_identifier(value):
+    if isinstance(value, str) and (
+        match := re.fullmatch(
+            r"(?:(?:https?://(?:dx\.)?doi\.org/|doi:\s*))?(10\.\d{4,9}/\S+)",
+            value.strip(),
+            re.IGNORECASE,
+        )
+    ):
+        return match[1].casefold()
+    return None
+
+
 def publication_key(item):
     """Use a declared DOI or global PID. Unidentified entries stay source-specific."""
     if item.is_publication:
         for field in ("doi", "source_url", "sameAs", "pid", "@id", "identifier"):
-            value = item.fields.get(field)
-            if isinstance(value, str) and (
-                match := re.fullmatch(
-                    r"(?:(?:https?://(?:dx\.)?doi\.org/|doi:\s*))?(10\.\d{4,9}/\S+)",
-                    value.strip(),
-                    re.IGNORECASE,
-                )
-            ):
-                return ("doi", match[1].casefold())
+            if doi := doi_identifier(item.fields.get(field)):
+                return ("doi", doi)
         for field in ("pid", "@id", "identifier"):
             value = item.fields.get(field)
             if isinstance(value, str) and value.startswith(
@@ -223,16 +267,18 @@ def dataset_keys(papers, datasets):
     return keys
 
 
-def dataset_links(item):
-    links = {
-        row["dataset"]: row["role"].capitalize()
-        for row in item.fields.get("dataset_links", [])
-    }
+def dataset_roles(item):
     for review in item.source.graph.get("reviews", []):
         if review["publication"] == item.key:
             for output in review.get("outputs", []):
-                links.setdefault(output, "Output")
-    return links
+                yield output, "Output"
+    for row in item.fields.get("dataset_links", []):
+        yield row["dataset"], row["role"].capitalize()
+
+
+def dataset_links(item):
+    # An explicit role takes precedence over a review output in the detail view.
+    return dict(dataset_roles(item))
 
 
 def neighbours(item, items):

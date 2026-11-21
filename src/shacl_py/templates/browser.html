@@ -58,9 +58,10 @@
 {% macro filerows(fp) -%}
 <dl class="filerows">{% for label,value,mono in fp.rows %}<div><dt>{{ label }}</dt><dd class="{{ 'mono' if mono }}">{{ value }}</dd></div>{% endfor %}</dl>
 {%- endmacro %}
-<div class="study">
-<header><strong>{% if brand.logo %}<img src="{{ brand.logo }}" alt="">{% else %}<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"></circle></svg>{% endif %}{{ brand.app_name }}</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}" href="{{ href }}" target="_self">{{ name }} <small>{{ count }}</small></a>{% endfor %}</nav>{{ search('q','Search papers, datasets, files',{}) }}</header>
-{% if fp and fp.page %}<main class="filepage">
+<div class="study{% if section=='Graph' %} graph-view{% endif %}">
+<header><strong>{% if brand.logo %}<img src="{{ brand.logo }}" alt="">{% else %}<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"></circle></svg>{% endif %}{{ brand.app_name }}</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}"{% if current %} aria-current="page"{% endif %} href="{{ href }}" target="_self">{{ name }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav>{% if section=='Graph' %}{{ search('q','Find a graph record',{'section':'graph', 'relation':relation} if relation else {'section':'graph'}) }}{% else %}{{ search('q','Search papers, datasets, files',{}) }}{% endif %}</header>
+{% if section=='Graph' %}{% include 'graph.html' %}
+{% elif fp and fp.page %}<main class="filepage">
 <div class="crumbs"><a href="{{ fp.back }}" target="_self">← Back</a><span class="bar">|</span>{% for label,href in fp.crumbs %}<a href="{{ href }}" target="_self">{{ label }}</a><span>›</span>{% endfor %}<code>{{ fp.name }}</code></div>
 <h1 class="mono">{{ fp.name }}</h1>
 <div class="filegrid"><div class="stack">{{ preview(fp, true) }}</div>
@@ -79,7 +80,7 @@
 {% else %}<h1 class="serif">{{ item.label }}</h1>
 {% if authors or venue or year %}<div class="authors">{{ authors }}{% if authors and venue %} · {% endif %}<i>{{ venue }}</i>{% if year %}{% if authors or venue %} · {% endif %}{{ year }}{% endif %}</div>{% endif %}
 <div class="inline">{% if tags %}<span class="tags">{% for tag in tags %}<em>{{ tag }}</em>{% endfor %}</span>{% endif %}{% if doi %}<span><dfn>DOI</dfn><a class="mono" href="{{ doi }}" target="_blank" rel="noreferrer">{{ doi_label }}</a></span>{% endif %}{% if keywords %}<span><dfn>Keywords</dfn>{{ keywords }}</span>{% endif %}</div>{% endif %}
-<nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav></section>
+<nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}<a class="graph-link" href="{{ url(item.route,section='graph') }}" target="_self">View in graph</a></nav></section>
 {% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row grid {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b> <small>{{ d.count }}</small> <span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos() }}</div>{{ dataset_details() }}{{ facts([('PID', ds_pid, true, none), ('Host', host, true, none) if external else ('Folder', ds_folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
 <nav class="subtabs">{% for key,label,count in dtabs %}<a class="{{ 'on' if dtab==key }}" href="{{ url(route,dtab=key) }}" target="_self">{{ label }} <small>{{ count }}</small></a>{% endfor %}</nav>
 {% if dtab=='attributes' %}{{ attrpanel(attr) }}{% else %}{{ filetable(rows,folders) }}{% endif %}{% else %}No matching datasets.{% endif %}</article></div>

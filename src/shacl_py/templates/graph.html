@@ -1,0 +1,41 @@
+<main class="graph-heading">
+  <div class="graph-toolbar">
+    <div>
+      <h1 class="serif">{{ graph.focus.label if graph.focus else 'Record graph' }}</h1>
+      <p>{{ graph.nodes|length }} record{{ 's' if graph.nodes|length != 1 }} · {{ graph.edges|length }} relationship{{ 's' if graph.edges|length != 1 }}</p>
+    </div>
+    <div class="graph-actions">
+      {% if graph.focus or params.get('q') or relation %}<a href="{{ url({}, section='graph') }}" target="_self">Show full graph</a>{% endif %}
+      {% if predicates %}
+      <form class="graph-filter" method="get" target="_self">
+        {% for key in ('section','record','entry','q') if key in params %}<input type="hidden" name="{{ key }}" value="{{ params[key] }}">{% endfor %}
+        <label>Relationship <select name="relation">
+          <option value="">All</option>
+          {% for predicate in predicates %}<option value="{{ predicate }}"{% if predicate==relation %} selected{% endif %}>{{ predicate }}</option>{% endfor %}
+        </select></label>
+      </form>
+      {% endif %}
+      {% if graph.nodes %}
+      <div role="group" aria-label="Graph zoom">
+        <button type="button" data-graph-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-graph-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" data-graph-zoom="fit" aria-label="Fit graph">Fit</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if graph.nodes %}
+  <p>{% if graph.focus %}Showing this record and its direct connections.{% elif params.get('q') %}Showing matching records and their direct connections.{% endif %} Select a record to open it.</p>
+  {% elif relation %}<p>No matching relationships.</p>{% else %}<p>No matching records.</p>{% endif %}
+  {% if graph.edges %}
+  <details>
+    <summary>List relationships</summary>
+    <table aria-label="Record relationships">
+      <thead><tr><th scope="col">From</th><th scope="col">Relationship</th><th scope="col">To</th></tr></thead>
+      <tbody>{% for source,predicate,target in graph.edges %}
+        <tr><td><a href="{{ url(source.route) }}" target="_self">{{ source.label }}</a></td><td>{{ predicate }}</td><td><a href="{{ url(target.route) }}" target="_self">{{ target.label }}</a></td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </details>
+  {% endif %}
+</main>

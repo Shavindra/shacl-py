@@ -31,6 +31,7 @@ from shacl_py.browser import (
     source_content,
 )
 from shacl_py.files import scoped_path
+from shacl_py.graph import record_graph
 from shacl_py.native import declared_title
 from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
@@ -238,7 +239,7 @@ def browse(items, stored, base, brand, params):
         matches = years.get(key_for(item), set())
         return next(iter(matches)) if len(matches) == 1 else ""
 
-    others = [i for i in items if i not in papers and i not in datasets]
+    others = [i for i in items if not i.is_publication and not i.is_dataset]
     sections = {
         name: group
         for name, group in [
@@ -263,6 +264,44 @@ def browse(items, stored, base, brand, params):
     section = next(
         (name for name in sections if name.lower() == params.get("section")), default
     )
+    q = params.get("q", "").strip().casefold()
+    if params.get("section") == "graph":
+        section = "Graph"
+    nav = [
+        (
+            name,
+            url({}, section=name.lower(), q=q),
+            len({key_for(i) for i in group}),
+            name == section,
+        )
+        for name, group in sections.items()
+    ]
+    nav.append(
+        ("Graph", url({}, section="graph", q=q or None), None, section == "Graph")
+    )
+    context = {
+        "brand": brand,
+        "params": params,
+        "section": section,
+        "url": url,
+        "nav": nav,
+    }
+    if section == "Graph":
+        graph = record_graph(items, key_for, selected=selected_item, query=q)
+        relation = params.get("relation", "")
+        predicates = {predicate for _, predicate, _ in graph.edges}
+        if relation:
+            predicates.add(relation)
+            graph = graph.with_relationship(relation)
+        st.html(
+            template.render(
+                context, graph=graph, predicates=sorted(predicates), relation=relation
+            )
+        )
+        if graph.nodes:
+            with st.container(key="graph_canvas"):
+                st.graphviz_chart(graph.dot(), width="stretch")
+        return
     scope = sections[section]
     global_ds = section == "Datasets"
 
@@ -327,7 +366,6 @@ def browse(items, stored, base, brand, params):
             for path in listing(i)[1]
         )
 
-    q = params.get("q", "").strip().casefold()
     tag = params.get("tag", "All")
     sidebar_route = {
         "section": section.lower(),
@@ -399,28 +437,16 @@ def browse(items, stored, base, brand, params):
         if any(r["item"] is selected_item for r in shown)
         else next((r["item"] for r in shown), None)
     )
-    nav = [
-        (
-            name,
-            url({}, section=name.lower(), q=q),
-            len({key_for(i) for i in group}),
-            name == section,
-        )
-        for name, group in sections.items()
-    ]
-    context = {
-        "brand": brand,
-        "params": params,
-        "section": section,
-        "url": url,
-        "shown": shown,
-        "nav": nav,
-        "global_ds": global_ds,
-        "options": options,
-        "active_filter": tag,
-        "sidebar_route": sidebar_route,
-        "item": item,
-    }
+    context.update(
+        {
+            "shown": shown,
+            "global_ds": global_ds,
+            "options": options,
+            "active_filter": tag,
+            "sidebar_route": sidebar_route,
+            "item": item,
+        }
+    )
 
     if not item:
         st.html(template.render(context))

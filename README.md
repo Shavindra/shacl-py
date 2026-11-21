@@ -38,6 +38,13 @@ Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.
 
+Choose **Graph** to explore relationships between the loaded records. Arrows
+show catalogue membership, dataset roles, derivation and links declared in
+the metadata. Select a node to open its record, or choose **View in graph**
+on a record to see its direct connections. Search the graph by title, type or
+identifier. Choose a relationship such as **Derived from** to follow dataset
+lineage, or expand **List relationships** for a text view.
+
 Each view has a bookmarkable URL. Links, filters and searches update the open
 viewer, and the browser's Back and Forward buttons restore previous views.
 Refresh the page to read changes to the project's metadata.
