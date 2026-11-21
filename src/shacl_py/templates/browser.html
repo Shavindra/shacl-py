@@ -1,5 +1,5 @@
 {% macro search(name, placeholder, args) -%}
-<form method="get" target="_self" role="search">{% for key,value in args.items() if key not in (name, 'file', 'page') %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<input type="search" name="{{ name }}" aria-label="{{ placeholder }}" placeholder="{{ placeholder }}" value="{{ params.get(name,'') }}"{% if name=='q' %} accesskey="/"{% endif %}>{% if name=='q' %}<kbd>/</kbd>{% endif %}</form>
+<form method="get" target="_self" role="search">{% for key,value in args.items() if key not in (name, 'file', 'linked', 'page') %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<input type="search" name="{{ name }}" aria-label="{{ placeholder }}" placeholder="{{ placeholder }}" value="{{ params.get(name,'') }}"{% if name=='q' %} accesskey="/"{% endif %}>{% if name=='q' %}<kbd>/</kbd>{% endif %}</form>
 {%- endmacro %}
 {% macro filters(options, route) -%}
 <div class="chips">{% for label in options %}<a class="chip {{ 'active' if label==active_filter }}" href="{{ url(route, tag=label) }}" target="_self">{{ label }}</a>{% endfor %}</div>
@@ -12,15 +12,33 @@
 <div class="frow cols"><span>Name</span><span>Path</span><span>Size</span><span>Status</span></div>
 {% if params.get('folder','.') != '.' %}<a class="folder" href="{{ up }}" target="_self">↑ Parent folder</a>{% endif %}
 {% for folder in folders %}<a class="folder" href="{{ url(route,folder=folder) }}" target="_self">{{ folder.split('/')[-1] }}/</a>{% endfor %}
-{% for f in rows if params.get('find','')|lower in f.path|lower %}{% if f.href %}<div class="frow external"><div class="external-file"><span title="{{ f.name }}">{{ f.name }}</span><div class="file-actions">{% if f.preview %}<a href="{{ f.preview }}" target="_blank" rel="noreferrer">Preview</a>{% endif %}{% if f.provider %}<a href="{{ f.provider }}" target="_blank" rel="noreferrer">Open at provider ↗</a>{% endif %}<a href="{{ f.href }}" target="_blank" rel="noreferrer" download>Download</a></div></div><span class="status remote"><i></i>External</span></div>
-{% else %}<div class="frow {{ 'sel' if f.path==params.get('file') }}"><a href="{{ url(route,file=f.path) }}" target="_self">{{ f.name }}</a><span>{{ f.parent }}</span><span>{{ f.size }}</span><span class="status {{ 'remote' if not f.local }}"><i></i>{{ 'Local' if f.local else 'Remote' }}</span></div>{% endif %}{% endfor %}
+{% for f in rows if params.get('find','')|lower in f.path|lower %}{% set head, tail = (f.name[:-22], f.name[-22:]) if f.name|length > 40 else (f.name, '') %}
+{% if f.linked %}<div class="frow {{ 'sel' if f.name==params.get('linked') }}"><a class="fname" href="{{ url(route,linked=f.name) }}" target="_self" title="{{ f.name }}"><span class="head">{{ head }}</span><span class="tail">{{ tail }}</span></a><span>{{ f.parent }}</span><span>{{ f.size }}</span><span class="status external"><i title="External"></i><a class="icon" href="{{ f.href }}" download target="_blank" rel="noreferrer" title="Download" aria-label="Download {{ f.name }}"><span aria-hidden="true">↓</span></a><a class="icon" href="{{ f.preview }}" target="_blank" rel="noreferrer" title="Preview at provider" aria-label="Preview {{ f.name }} at provider"><span aria-hidden="true">↗</span></a></span></div>
+{% else %}<div class="frow {{ 'sel' if f.path==params.get('file') }}"><a class="fname" href="{{ url(route,file=f.path) }}" target="_self" title="{{ f.name }}"><span class="head">{{ head }}</span><span class="tail">{{ tail }}</span></a><span title="{{ f.parent }}">{{ f.parent }}</span><span>{{ f.size }}</span><span class="status {{ 'remote' if not f.local }}"><i></i>{{ 'Local' if f.local else 'Remote' }}</span></div>{% endif %}{% endfor %}
+{% if not rows and not folders %}<div class="empty">No files linked. This record holds metadata only.</div>{% endif %}
 </div>
 {% endmacro %}
 {% macro dataset_details() -%}
-{% if dataset_description or dataset_url %}<div class="dataset-details">{% if dataset_description %}<p class="lede dataset-description">{{ dataset_description }}</p>{% endif %}{% if dataset_url %}<a href="{{ dataset_url }}" target="_blank" rel="noreferrer">Open dataset source ↗</a>{% endif %}</div>{% endif %}
+{% if dataset_description or dataset_url %}<div class="dataset-details">{% if dataset_description %}<p class="lede dataset-description">{{ dataset_description }}</p>{% endif %}{% if dataset_url %}<div class="source-line"><a href="{{ dataset_url }}" target="_blank" rel="noreferrer">Open dataset source ↗</a>{% if external %}<span>Hosted on {{ host }}</span>{% endif %}</div>{% endif %}</div>{% endif %}
+{%- endmacro %}
+{% macro annos() -%}
+{% for note in annotations %}<span class="anno">{{ note }}</span>{% endfor %}
+{%- endmacro %}
+{% macro attrrows(rows) -%}
+{% for r in rows %}{% if r.header %}<div class="ahead" style="padding-left:{{ r.pad }}px">{{ r.label }}</div>{% else %}<div class="arow" style="padding-left:{{ r.pad }}px"><dt title="{{ r.predicate }}">{{ r.label }}</dt><dd>{% if r.link %}<a href="{{ r.value }}" target="_blank" rel="noreferrer">{{ r.value }}</a>{% else %}{{ r.value }}{% endif %}{% if r.unit %} <span class="unit">{{ r.unit }}</span>{% endif %}</dd></div>{% endif %}{% endfor %}
+{%- endmacro %}
+{% macro attrpanel(attr) -%}
+<div class="attrs">{% if attr.derived or attr.used %}<div class="prov"><div class="cap">Provenance</div>{% if attr.derived %}<div><dfn>Derived from</dfn>{% for d in attr.derived %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}{% if attr.used %}<div><dfn>Used by</dfn>{% for d in attr.used %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}</div>{% endif %}
+{% if attr.groups %}<div class="agroups">{% for g in attr.groups %}<section><div class="agtitle"><span title="{{ g.predicate }}">{{ g.label }}</span><small>{{ g.count }}</small></div><dl>{{ attrrows(g.rows) }}</dl></section>{% endfor %}</div>
+{% else %}<div class="hint">No content attributes recorded for this dataset.</div>{% endif %}</div>
+{%- endmacro %}
+{% macro content(fp) -%}
+<div class="content"><div class="captop"><span class="cap">Content</span>{% if fp.content_note %}<span class="hint">{{ fp.content_note }}</span>{% endif %}</div>
+{% for g in fp.groups %}<details class="cgroup"{% if g.source == 'File' %} open{% endif %}><summary><span class="caret"></span><span class="glabel" title="{{ g.predicate }}">{{ g.label }}</span><span class="src">{{ g.source }}</span><small>{{ g.count }}</small></summary><dl>{{ attrrows(g.rows) }}</dl></details>{% else %}<span class="hint">No content attributes recorded.</span>{% endfor %}</div>
 {%- endmacro %}
 {% macro preview(fp, tall) %}
-{% if fp.image %}<div class="preview {{ 'tall' if tall }}"><img src="{{ fp.image }}" alt="{{ fp.name }}"></div>
+{% if fp.external %}<div class="fetch"><span>Hosted externally on {{ fp.host }}. Not tracked in this repository.</span><div class="links"><a href="{{ fp.download }}" download target="_blank" rel="noreferrer">Download</a><a href="{{ fp.preview_url }}" target="_blank" rel="noreferrer">Preview ↗</a>{% if fp.provider %}<a href="{{ fp.provider }}" target="_blank" rel="noreferrer">Provider page ↗</a>{% endif %}</div></div>
+{% elif fp.image %}<div class="preview {{ 'tall' if tall }}"><img src="{{ fp.image }}" alt="{{ fp.name }}"></div>
 {% elif fp.text is not none %}<pre class="textpreview {{ 'tall' if tall }}">{{ fp.text }}</pre>{% if fp.truncated %}<span class="hint">Showing the first 8 KiB.</span>{% endif %}
 {% elif fp.local %}<div class="nopreview">No preview for {{ fp.format }}</div>
 {% else %}<div class="fetch"><span>Not on this machine. Fetch it with:</span><code>{{ fp.fetch }}</code></div>{% endif %}
@@ -35,27 +53,31 @@
 <h1 class="mono">{{ fp.name }}</h1>
 <div class="filegrid"><div class="stack">{{ preview(fp, true) }}</div>
 <div class="stack wide"><div><div class="cap">File</div>{{ filerows(fp) }}</div>
+{{ content(fp) }}
 <div class="owner"><div class="cap">{{ fp.owner_kind }}</div><b>{{ fp.owner }}</b><p>{{ fp.owner_description }}</p></div>
 <div><div class="cap">Raw metadata</div><pre>{{ fp.raw }}</pre></div></div></div>
 </main>{% else %}
 <div class="layout"><aside><div class="tools"><div class="cap">{{ 'All datasets' if global_ds else section }} <small>{{ shown|length }}</small></div>{{ search('filter','Filter by name, PID, format' if global_ds else 'Filter by title, author, PID',params) }}{{ filters(options, sidebar_route) }}</div>
-{% for row in shown %}{% if global_ds %}<a class="row grid {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b>{{ row.item.label }}</b><small>{{ row.count }}</small><span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span></span></a>
+{% for row in shown %}{% if global_ds %}<a class="row grid {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b>{{ row.item.label }}</b> <small>{{ row.count }}</small> <span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span></span></a>
 {% else %}<a class="row {{ 'sel' if row.item==item }}" href="{{ row.href }}" target="_self"><b class="serif">{{ row.item.label }}</b><span class="byline"><span class="byline-text">{{ [row.authors, row.venue]|select|join(' · ') }}</span>{% if row.year %}<span>{% if row.authors or row.venue %}· {% endif %}{{ row.year }}</span>{% endif %}</span><span class="meta"><small>{{ row.count }}</small>{% for tag in row.tags %}<em>{{ tag }}</em>{% endfor %}</span></a>{% endif %}{% endfor %}</aside>
 <main>{% if item %}<section class="heading"><div class="mono muted">{{ pid }}{% if folder and not global_ds %}<span class="slash">/</span>{{ folder }}{% endif %}</div>
-{% if global_ds %}<div class="titleline"><h1>{{ item.label }}</h1>{% if role %}<em class="role">{{ role }}</em>{% endif %}</div>
+{% if global_ds %}<div class="titleline"><h1>{{ item.label }}</h1>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos() }}</div>
 {{ dataset_details() }}
-{{ facts([('Paper', parents[0].label if parents else '', false, url(parents[0].route,dataset=item.key,dataset_record=item.ref) if parents else none), ('Folder', folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
+{{ facts([('Paper', parents[0].label if parents else '', false, url(parents[0].route,dataset=item.key,dataset_record=item.ref) if parents else none), ('Host', host, true, none) if external else ('Folder', folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
 {% else %}<h1 class="serif">{{ item.label }}</h1>
 {% if authors or venue or year %}<div class="authors">{{ authors }}{% if authors and venue %} · {% endif %}<i>{{ venue }}</i>{% if year %}{% if authors or venue %} · {% endif %}{{ year }}{% endif %}</div>{% endif %}
 <div class="inline">{% if tags %}<span class="tags">{% for tag in tags %}<em>{{ tag }}</em>{% endfor %}</span>{% endif %}{% if doi %}<span><dfn>DOI</dfn><a class="mono" href="{{ doi }}" target="_blank" rel="noreferrer">{{ doi_label }}</a></span>{% endif %}{% if keywords %}<span><dfn>Keywords</dfn>{{ keywords }}</span>{% endif %}</div>{% endif %}
 <nav>{% for key,label,count in tabs %}<a class="{{ 'on' if view==key }}" href="{{ url(item_route,view=key) }}" target="_self">{{ label }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav></section>
-{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row grid {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b><small>{{ d.count }}</small><span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a>{% if role %}<em class="role">{{ role }}</em>{% endif %}</div>{{ dataset_details() }}{{ facts([('PID', ds_pid, true, none), ('Folder', ds_folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}{{ filetable(rows,folders) }}{% else %}No matching datasets.{% endif %}</article></div>
+{% if view=='datasets' %}<div class="split"><aside>{{ search('dsfilter','Filter datasets',params) }}{% for d in dsrows %}<a class="row grid {{ 'sel' if d.item==selected }}" href="{{ d.href }}" target="_self"><b>{{ d.item.label }}</b> <small>{{ d.count }}</small> <span>{{ d.role }}</span></a>{% endfor %}</aside><article>{% if selected %}<div class="dshead"><h2>{{ selected.label }}</h2><a href="{{ url(selected.route,section='datasets') }}" target="_self">Open in Datasets →</a>{% if role %}<em class="role">{{ role }}</em>{% endif %}{{ annos() }}</div>{{ dataset_details() }}{{ facts([('PID', ds_pid, true, none), ('Host', host, true, none) if external else ('Folder', ds_folder, true, none), ('Available', availability, false, none), ('Format', format, false, none)]) }}
+<nav class="subtabs">{% for key,label,count in dtabs %}<a class="{{ 'on' if dtab==key }}" href="{{ url(route,dtab=key) }}" target="_self">{{ label }} <small>{{ count }}</small></a>{% endfor %}</nav>
+{% if dtab=='attributes' %}{{ attrpanel(attr) }}{% else %}{{ filetable(rows,folders) }}{% endif %}{% else %}No matching datasets.{% endif %}</article></div>
 {% elif view=='files' %}<article>{{ filetable(rows,folders) }}</article>
+{% elif view=='attributes' %}<article>{{ attrpanel(attr) }}</article>
 {% elif view=='abstract' %}<article class="abstract serif">{{ abstract }}</article>
 {% elif view=='notes' %}<article class="narrow">{% if folder %}<div class="mono muted">{{ folder }}/README.md</div>{% endif %}<div class="notes">{{ notes }}</div></article>
 {% elif view=='source' %}<article>{% if alternate_sources %}<div class="sources">{% for other in alternate_sources %}<a href="{{ url(other.route,view='source') }}" target="_self">{{ other.ref }}</a> {% endfor %}</div>{% endif %}<pre>{{ raw }}</pre>{% if source!=raw %}<details><summary>Full source metadata</summary><pre>{{ source }}</pre></details>{% endif %}</article>
 {% elif view=='paper' %}<article class="papers">{% for p in paper_rows %}<a class="prow" href="{{ p.href }}" target="_self"><span>{{ p.short }}</span><span>{{ p.title }}</span><span>›</span></a>{% else %}No linked papers.{% endfor %}</article>{% endif %}
 {% else %}<article>No matching records.</article>{% endif %}</main></div>
 {% if fp %}<a class="scrim" href="{{ fp.back }}" target="_self" aria-label="Close file"></a><aside class="drawer"><div class="drawerbar"><code>{{ fp.name }}</code><a class="button" href="{{ fp.open }}" target="_self">Open page ↗</a><a class="close" href="{{ fp.back }}" target="_self" aria-label="Close">×</a></div>
-<div class="drawerbody">{{ preview(fp, false) }}{{ filerows(fp) }}<div class="owner"><div class="cap">{{ fp.owner_kind }}</div><b>{{ fp.owner }}</b>{% if fp.paper %}<span>{{ fp.paper }}</span>{% endif %}</div></div></aside>{% endif %}
+<div class="drawerbody">{{ preview(fp, false) }}<div><div class="cap">File</div>{{ filerows(fp) }}</div>{{ content(fp) }}<div class="owner"><div class="cap">{{ fp.owner_kind }}</div><b>{{ fp.owner }}</b>{% if fp.paper %}<span>{{ fp.paper }}</span>{% endif %}</div></div></aside>{% endif %}
 {% endif %}</div>

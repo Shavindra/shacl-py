@@ -389,3 +389,129 @@ def test_header_metadata_and_dataset_description(tmp_path, monkeypatch):
     assert " · 2023" in body and "Depth at each station." in body
     follow(page, "Open in Datasets")
     assert "Depth at each station." in html(page).split("<main>")[1]
+
+
+def test_attribute_groups_and_annotations():
+    from shacl_py.attributes import annotation_values, attribute_groups, metadata_groups
+
+    nodes = [
+        {"predicate": "urn:x:property:note", "value": "loose"},
+        {
+            "predicate": "urn:x:property:microscope",
+            "display_label": "Microscope",
+            "attributes": [
+                {"display_label": "Pixel size", "value": "0.065", "unit": "µm"},
+                {
+                    "display_label": "Channel",
+                    "attributes": [{"display_label": "Exposure", "value": "20"}],
+                },
+                {
+                    "display_label": "Term",
+                    "value": "http://purl.obolibrary.org/obo/GO_1",
+                },
+            ],
+        },
+    ]
+    general, microscope = attribute_groups(nodes)
+    assert (general["label"], general["rows"][0]["label"]) == ("General", "note")
+    assert microscope["count"] == 3
+    rows = microscope["rows"]
+    assert rows[0]["unit"] == "µm" and rows[1]["header"] and rows[2]["pad"] == 14
+    assert rows[3]["link"] and not rows[0]["link"]
+    assert annotation_values({"annotations": {"record_use": "template_only"}}) == [
+        "template only"
+    ]
+    assert annotation_values(
+        {"annotations": [{"annotation_tag": "a", "annotation_value": "b"}]}
+    ) == ["b"]
+    (group,) = metadata_groups(
+        [{"extractor_name": "tags", "extracted_metadata": {"units": "metres"}}]
+    )
+    assert (group["source"], group["rows"][0]["value"]) == ("File", "metres")
+
+
+def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
+    source = "https://open.quiltdata.com/b/allencell/packages/example"
+    long_name = "6677e50cfb7370eb6dbbcee4865563d5604a7dc5_Scene-1-P24-E06.ome.tiff"
+    first, second = "urn:example:acquisition", "urn:example:model"
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data/settings.yaml").write_text("exposure: 20\n")
+    graph = {
+        "project": {"pid": "urn:example:dummy", "title": "Dummy"},
+        "publications": [
+            {
+                "pid": "urn:example:paper",
+                "title": "Reference records",
+                "dataset_links": [
+                    {"dataset": d, "role": "describes"}
+                    for d in (first, second, "urn:example:external")
+                ],
+            }
+        ],
+        "datasets": [
+            {
+                "pid": first,
+                "title": "Acquisition",
+                "local_folder": "data",
+                "annotations": {"record_use": "template_only"},
+                "file_groups": [{"label": "Files", "paths": ["settings.yaml"]}],
+                "attributes": [
+                    {
+                        "predicate": "urn:example:property:microscope",
+                        "display_label": "Microscope",
+                        "attributes": [
+                            {
+                                "predicate": "urn:example:property:pixel-size",
+                                "display_label": "Pixel size",
+                                "value": "0.065",
+                                "unit": "µm",
+                            }
+                        ],
+                    }
+                ],
+            },
+            {"pid": second, "title": "Model", "source_datasets": [first]},
+            {
+                "pid": "urn:example:external",
+                "title": "External images",
+                "source_url": source,
+                "linked_files": [
+                    {
+                        "name": long_name,
+                        "url": "https://example.org/files/" + long_name,
+                        "preview_url": "https://example.org/preview/" + long_name,
+                    }
+                ],
+            },
+        ],
+    }
+    (tmp_path / "metadata.yaml").write_text(yaml.safe_dump({"catalogue": graph}))
+    assert main(["validate", str(tmp_path)]) == 0
+    page = open_viewer(tmp_path, monkeypatch)
+    follow(page, "Datasets 3")
+    follow(page, "Acquisition")
+    body = html(page).split("<main>")[1]
+    assert '<span class="anno">template only</span>' in body
+    follow(page, "Attributes")
+    body = html(page).split("<main>")[1]
+    assert "Microscope" in body and '<span class="unit">µm</span>' in body
+    assert "Used by" in body and ">Model</a>" in body
+    follow(page, "Files")
+    follow(page, "settings.yaml")
+    drawer = opened_file(page)
+    assert (
+        "1 group inherited from the dataset" in drawer and ">Dataset</span>" in drawer
+    )
+    follow(page, "Model")
+    assert "No files linked. This record holds metadata only." in html(page)
+    assert "Metadata only" in html(page).split("<main>")[1]
+    follow(page, "External images")
+    body = html(page).split("<main>")[1]
+    assert (
+        "Hosted on open.quiltdata.com" in body
+        and "External · 0 of 1 files local" in body
+    )
+    follow(page, long_name)
+    drawer = opened_file(page)
+    assert "Hosted externally on open.quiltdata.com" in drawer
+    assert "Provider page ↗" in drawer and "Availability" in drawer

@@ -7,11 +7,18 @@ import re
 import shlex
 from functools import cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import streamlit as st
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from shacl_py.attributes import (
+    annotation_values,
+    attribute_groups,
+    count_leaves,
+    metadata_groups,
+)
 from shacl_py.branding import branding
 from shacl_py.browser import (
     dataset_keys,
@@ -341,7 +348,9 @@ def browse(items, stored, base, brand, params):
                 "href": url(sidebar_route | i.route, tag=tag),
                 "authors": short_citation(linked(i, papers)[0])
                 if global_ds and linked(i, papers)
-                else "" if global_ds else sidebar_author(i),
+                else ""
+                if global_ds
+                else sidebar_author(i),
                 "venue": field(i, "format", "encodingFormat", "media_type")
                 if global_ds
                 else field(i, "venue", "journal"),
@@ -392,7 +401,15 @@ def browse(items, stored, base, brand, params):
     ds = linked(item, datasets)
     parents = list({publication_key(p): p for p in linked(item, papers)}.values())
     tabs = (
-        [("files", "Files", file_count(item)), ("paper", "Paper", None)]
+        [
+            ("files", "Files", file_count(item)),
+            (
+                "attributes",
+                "Attributes",
+                count_leaves(item.fields.get("attributes") or []),
+            ),
+            ("paper", "Paper", None),
+        ]
         if global_ds
         else [
             ("datasets", "Datasets", len(ds)),
@@ -463,6 +480,7 @@ def browse(items, stored, base, brand, params):
                 "parent": str(Path(path).parent),
                 "size": size,
                 "local": local,
+                "linked": False,
             }
         )
     if owner and directory == "." and view in ("datasets", "files"):
@@ -470,9 +488,9 @@ def browse(items, stored, base, brand, params):
             {
                 "name": f["name"],
                 "path": f["name"],
+                "linked": True,
                 "href": f["url"],
-                "preview": f.get("preview_url"),
-                "provider": f.get("provider_url"),
+                "preview": f.get("preview_url") or f["url"],
                 "parent": "",
                 "size": "",
                 "local": False,
@@ -484,6 +502,39 @@ def browse(items, stored, base, brand, params):
         dataset_url = source_url(field(dataset_owner, "source_url", "url"))
     except ValueError:
         dataset_url = None
+    external = bool(dataset_url and dataset_owner and not dataset_owner.has_folder)
+    local_count = sum(f["local"] for f in rows)
+    if not rows and not folders:
+        availability = "Metadata only"
+    elif external:
+        availability = f"External · {local_count} of {len(rows)} files local"
+    else:
+        availability = f"{local_count} of {len(rows)} files local"
+
+    def dataset_link(d):
+        return {
+            "label": d.label,
+            "href": url({"section": "datasets"} | d.route, view="attributes"),
+        }
+
+    def provenance(d):
+        if not d or not d.is_dataset:
+            return [], []
+        own = d.fields.get("source_datasets") or []
+        derived = {key_for(x): x for x in datasets if x.key in own}
+        used = {
+            key_for(x): x
+            for x in datasets
+            if d.key in (x.fields.get("source_datasets") or [])
+        }
+        return list(map(dataset_link, derived.values())), list(
+            map(dataset_link, used.values())
+        )
+
+    derived_from, used_by = provenance(dataset_owner)
+    dtab = params.get("dtab", "files")
+    if dtab not in ("files", "attributes"):
+        dtab = "files"
     doi_label = field(item, "doi", "source_url", "url", "sameAs")
     try:
         doi = source_url(doi_label)
@@ -525,7 +576,28 @@ def browse(items, stored, base, brand, params):
             }
             for p in parents
         ],
-        availability=f"{sum(f['local'] for f in rows)} of {len(rows)} files local",
+        availability=availability,
+        external=external,
+        host=urlsplit(dataset_url).netloc if dataset_url else "",
+        annotations=annotation_values(dataset_owner.fields) if dataset_owner else [],
+        dtab=dtab,
+        dtabs=[
+            ("files", "Files", file_count(selected) if selected else 0),
+            (
+                "attributes",
+                "Attributes",
+                count_leaves(selected.fields.get("attributes") or [])
+                if selected
+                else 0,
+            ),
+        ],
+        attr={
+            "groups": attribute_groups(
+                dataset_owner.fields.get("attributes") if dataset_owner else []
+            ),
+            "derived": derived_from,
+            "used": used_by,
+        },
         format=field(owner, "format", "encodingFormat", "media_type"),
         parents=parents,
         route=route,
@@ -549,7 +621,18 @@ def browse(items, stored, base, brand, params):
         context["source"] = yaml.safe_dump(
             source_content(item.source), allow_unicode=True, sort_keys=False
         )
-    if "file" in params and owner:
+    if "linked" in params and owner:
+        linked = next(
+            (f for f in owner.linked_files if f["name"] == params["linked"]), None
+        )
+        if linked:
+            paper = item if item.is_publication else next(iter(parents), None)
+            context["fp"] = linked_panel(
+                owner, linked, route, paper, page=params.get("page")
+            )
+        else:
+            st.warning("This file is outside the current selection.")
+    elif "file" in params and owner:
         if row := files.get(params["file"]):
             paper = item if item.is_publication else next(iter(parents), None)
             context["fp"] = file_panel(
@@ -594,7 +677,8 @@ def file_panel(owner, row, route, stored, base, paper, page=None):
     }
     if paper and paper is not owner:
         raw["paper"] = field(paper, "pid", "@id") or paper.label
-    if entries := stored.get(path):
+    entries = stored.get(path)
+    if entries:
         raw["metadata"] = json.loads(json.dumps(entries, default=str))
     crumbs = []
     if paper:
@@ -608,7 +692,9 @@ def file_panel(owner, row, route, stored, base, paper, page=None):
         "format": kind,
         "rows": rows,
         "fetch": "datalad get " + shlex.quote(shown_path),
-        "owner_kind": "Dataset" if owner.is_dataset else "Paper"
+        "owner_kind": "Dataset"
+        if owner.is_dataset
+        else "Paper"
         if owner.is_publication
         else "Record",
         "owner": owner.label,
@@ -623,7 +709,88 @@ def file_panel(owner, row, route, stored, base, paper, page=None):
             sort_keys=False,
             default_flow_style=False,
         ),
+        **content_groups(metadata_groups(entries), owner),
         **(file_preview(path, base) if local else {"image": None, "text": None}),
+    }
+
+
+def content_groups(file_groups, owner):
+    """Combine a file's own attributes with those it inherits from its dataset."""
+    inherited = (
+        attribute_groups(owner.fields.get("attributes"), "Dataset")
+        if owner.is_dataset
+        else []
+    )
+    count = len(inherited)
+    return {
+        "groups": file_groups + inherited,
+        "content_note": f"{count} group{'s' if count != 1 else ''} inherited from the dataset"
+        if count
+        else "",
+    }
+
+
+def linked_panel(owner, linked, route, paper, page=None):
+    """Describe one externally hosted file linked from a dataset record."""
+    try:
+        provider = source_url(
+            linked.get("provider_url") or field(owner, "source_url", "url")
+        )
+    except ValueError:
+        provider = None
+    download = linked["url"]
+    preview = linked.get("preview_url") or download
+    host = urlsplit(provider or download).netloc
+    kind = file_format(linked["name"])
+    rows = [
+        ("Download", download, True),
+        ("Preview", linked.get("preview_url") or "—", True),
+        ("Provider", provider or "—", True),
+        ("Format", kind, False),
+        ("Availability", "External", False),
+    ]
+    raw = {
+        "name": linked["name"],
+        "url": download,
+        "preview_url": linked.get("preview_url"),
+        "provider_url": linked.get("provider_url"),
+        "format": kind,
+        "external": True,
+        "dataset": field(owner, "pid", "@id") or owner.label,
+    }
+    if paper and paper is not owner:
+        raw["paper"] = field(paper, "pid", "@id") or paper.label
+    crumbs = []
+    if paper:
+        crumbs.append((short_citation(paper), url(paper.route, view="abstract")))
+    if owner is not paper:
+        crumbs.append((owner.label, url(route)))
+    return {
+        "name": linked["name"],
+        "page": page == "file",
+        "local": False,
+        "external": True,
+        "host": host,
+        "download": download,
+        "preview_url": preview,
+        "provider": provider,
+        "format": kind,
+        "rows": rows,
+        "owner_kind": "Dataset",
+        "owner": owner.label,
+        "owner_description": field(owner, "description"),
+        "paper": short_citation(paper) if paper and paper is not owner else "",
+        "crumbs": crumbs,
+        "back": url(route),
+        "open": url(route, linked=linked["name"], page="file"),
+        "raw": yaml.safe_dump(
+            {k: v for k, v in raw.items() if v is not None},
+            allow_unicode=True,
+            sort_keys=False,
+        ),
+        **content_groups([], owner),
+        "image": None,
+        "text": None,
     }
 
 

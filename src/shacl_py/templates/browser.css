@@ -122,7 +122,7 @@
 .study .filebar small{font-size:11.5px;color:#6b6b6b;margin-left:4px}
 .study .filebar form{flex:0 1 200px}
 .study .filebar input[type=search]{height:26px;font-size:12px;padding:0 9px}
-.study .frow{position:relative;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;align-items:center;gap:12px;padding:0 14px;height:40px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.study .frow{position:relative;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;align-items:center;gap:12px;padding:6px 14px;min-height:40px;border-bottom:1px solid #f0f0f0;font-size:13px}
 .study .frow>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .study .frow>a,.study .frow>span:nth-child(2),.study .frow>span:nth-child(3){font:12px 'IBM Plex Mono',monospace}
 .study .frow>a{text-decoration:none;color:#111}
@@ -188,6 +188,60 @@
 .study .stack.wide>div{display:flex;flex-direction:column;gap:6px}
 .study .stack.wide .owner b{font-size:13.5px}
 .study .stack pre{padding:14px 16px;font-size:12px}
+
+/* Long file names keep their distinctive ending visible */
+.study .frow>a.fname{display:flex;min-width:0}
+.study .fname .head{flex:0 1 auto;min-width:1ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.study .fname .tail{flex:none;white-space:nowrap}
+.study .status.external i{background:transparent;border:1px dashed #6b6b6b}
+.study .status .icon{position:relative;z-index:1;width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dcdcdc;background:#fff;color:#111;text-decoration:none}
+.study .status .icon span{font:13px/1 'IBM Plex Sans',sans-serif}
+.study .status .icon:hover{border-color:#111;text-decoration:none}
+.study .filebox .empty{padding:18px 14px;font-size:12.5px;color:#6b6b6b}
+
+/* Dataset annotations, source host and sub-tabs */
+.study .anno{font-size:12px;color:#111;border:1px solid #111;padding:1px 7px;white-space:nowrap}
+.study .source-line{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px}
+.study .source-line span{color:#6b6b6b}
+.study .subtabs{display:flex;flex-wrap:wrap;gap:0 22px;border-bottom:1px solid #e4e4e4;margin-top:6px}
+.study .subtabs a{display:flex;gap:6px;align-items:center;padding:6px 0 9px;margin-bottom:-1px;font-size:13px;font-weight:500;color:#6b6b6b;text-decoration:none;border-bottom:2px solid transparent}
+.study .subtabs a:hover{color:#111;text-decoration:none}
+.study .subtabs a.on{color:#111;border-color:#111}
+.study .split article .subtabs+.filebox,.study .split article .subtabs+.attrs{margin-top:8px}
+
+/* Attribute groups */
+.study .attrs{display:flex;flex-direction:column;gap:22px}
+.study .prov{display:flex;flex-direction:column;gap:6px;padding-bottom:16px;border-bottom:1px solid #e4e4e4;font-size:12.5px}
+.study .prov>div:not(.cap){display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline}
+.study .prov dfn{width:96px;flex:none;color:#8c8c8c}
+.study .agroups{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start}
+.study .agroups section{display:flex;flex-direction:column;min-width:0}
+.study .agtitle{display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111}
+.study .agtitle span{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111}
+.study .agroups dl,.study .cgroup dl{display:flex;flex-direction:column;font-size:12.5px}
+.study .ahead{padding:10px 0 4px;font-size:12px;font-weight:600;color:#444}
+.study .arow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid #f0f0f0}
+.study .arow dt{color:#6b6b6b;min-width:0}
+.study .arow dd{color:#111;min-width:0;overflow-wrap:anywhere;text-wrap:pretty}
+.study .unit{color:#6b6b6b}
+
+/* File content: own and inherited attribute groups */
+.study .content{display:flex;flex-direction:column;gap:4px}
+.study .captop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.study .captop .hint{color:#8c8c8c}
+.study .cgroup{border-bottom:1px solid #f0f0f0}
+.study .cgroup summary{display:flex;align-items:center;gap:8px;padding:8px 0;margin:0;cursor:pointer;list-style:none;font-size:12.5px;font-weight:500;color:#111}
+.study .cgroup summary::-webkit-details-marker{display:none}
+.study .cgroup .caret{width:10px;color:#6b6b6b}
+.study .cgroup .caret:before{content:'▸'}
+.study .cgroup[open] .caret:before{content:'▾'}
+.study .cgroup .glabel{flex:1;min-width:0}
+.study .cgroup .src{font-size:11px;font-weight:400;color:#444;border:1px solid #dcdcdc;padding:0 6px}
+.study .cgroup summary small{min-width:18px;text-align:right}
+.study .cgroup dl{margin:0 0 8px 18px}
+.study .cgroup .ahead{padding:8px 0 2px}
+.study .cgroup .arow{grid-template-columns:minmax(0,130px) minmax(0,1fr);padding:5px 0;border:0}
+.study .fetch .links{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px}
 
 @media(max-width:760px){
 .study header{gap:4px 12px;flex-wrap:wrap;height:auto;padding:8px 16px}
