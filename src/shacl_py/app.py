@@ -16,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 from shacl_py.attributes import (
     annotation_values,
     attribute_groups,
+    attribute_value,
     metadata_groups,
 )
 from shacl_py.branding import branding
@@ -221,13 +222,17 @@ def browse(items, stored, base, brand, params):
 
     years = {}
     for paper in papers:
-        if year := field(paper, "year", "datePublished"):
+        if year := field(paper, "year", "datePublished") or attribute_value(
+            paper.fields, "issued", "datePublished", "date"
+        ):
             years.setdefault(key_for(paper), set()).add(
                 year[:4] if year[:4].isdigit() else year
             )
 
     def publication_year(item):
-        year = field(item, "year", "datePublished")
+        year = field(item, "year", "datePublished") or attribute_value(
+            item.fields, "issued", "datePublished", "date"
+        )
         if year:
             return year[:4] if year[:4].isdigit() else year
         matches = years.get(key_for(item), set())
@@ -441,6 +446,8 @@ def browse(items, stored, base, brand, params):
             ("files", "Other files", None),
         ]
     )
+    if not global_ds and (count := attribute_count(item)):
+        tabs.append(("attributes", "Attributes", count))
     tabs.append(("source", "Raw metadata", None))
     default_view = default_dataset_tab(item) if global_ds else tabs[0][0]
     view = params.get("view", default_view)
@@ -625,7 +632,11 @@ def browse(items, stored, base, brand, params):
             ),
         ],
         attr={
-            "groups": dataset_groups(dataset_owner) if dataset_owner else [],
+            "groups": attribute_groups(item.fields.get("attributes"), "Paper")
+            if view == "attributes" and not global_ds
+            else dataset_groups(dataset_owner)
+            if dataset_owner
+            else [],
             "derived": derived_from,
             "used": used_by,
         },

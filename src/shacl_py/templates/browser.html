@@ -24,20 +24,29 @@
 {% macro annos() -%}
 {% for note in annotations %}<span class="anno">{{ note }}</span>{% endfor %}
 {%- endmacro %}
-{% macro attrnote(description) -%}
-{% if description %}<p class="attr-note">{{ description }}</p>{% endif %}
+{% macro term(t) -%}
+{% if t.href %}<a href="{{ t.href }}" target="_blank" rel="noreferrer" title="{{ t.href }}">{{ t.text }}</a>{% else %}{{ t.text }}{% endif %}
+{%- endmacro %}
+{% macro extras(item) -%}
+{% if item.description %}<p class="adesc">{{ item.description }}</p>{% endif %}{% if item.qualifiers %}<ul class="quals">{% for q in item.qualifiers %}<li><span title="{{ q.predicate }}">{{ q.label }}</span> {% for t in q.terms %}{{ term(t) }}{% if not loop.last %}, {% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}
+{%- endmacro %}
+{% macro value(r) -%}
+<span class="aval">{{ term(r.value) }}{% if r.unit %} <span class="unit" title="{{ r.unit_iri }}">{{ r.unit }}</span>{% endif %}</span>{{ extras(r) }}
 {%- endmacro %}
 {% macro attrrows(rows) -%}
-{% for r in rows %}{% if r.header %}<div class="ahead" style="padding-left:{{ r.pad }}px">{{ r.label }}{{ attrnote(r.description) }}</div>{% else %}<div class="arow" style="padding-left:{{ r.pad }}px"><dt title="{{ r.predicate }}">{{ r.label }}</dt><dd>{% if r.link %}<a href="{{ r.value }}" target="_blank" rel="noreferrer">{{ r.value }}</a>{% else %}{{ r.value }}{% endif %}{% if r.unit %} <span class="unit">{{ r.unit }}</span>{% endif %}{{ attrnote(r.description) }}</dd></div>{% endif %}{% endfor %}
+{% for r in rows %}{% if r.kind == 'heading' %}<div class="ahead" style="padding-left:{{ r.pad }}px"><span title="{{ r.predicate }}">{{ r.label }}</span>{{ extras(r) }}</div>{% else %}<div class="arow" style="padding-left:{{ r.pad }}px"><dt title="{{ r.predicate }}">{{ r.label }}</dt><dd>{{ value(r) }}</dd></div>{% endif %}{% endfor %}
+{%- endmacro %}
+{% macro groupbody(g) -%}
+{% if g.lead %}<div class="alead">{{ value(g.lead) }}</div>{% else %}{{ extras(g) }}{% endif %}<dl>{{ attrrows(g.rows) }}</dl>
 {%- endmacro %}
 {% macro attrpanel(attr) -%}
 <div class="attrs">{% if attr.derived or attr.used %}<div class="prov"><div class="cap">Provenance</div>{% if attr.derived %}<div><dfn>Derived from</dfn>{% for d in attr.derived %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}{% if attr.used %}<div><dfn>Used by</dfn>{% for d in attr.used %}<a href="{{ d.href }}" target="_self">{{ d.label }}</a>{% endfor %}</div>{% endif %}</div>{% endif %}
-{% if attr.groups %}<div class="agroups">{% for g in attr.groups %}<section><div class="agtitle"><span title="{{ g.predicate }}">{{ g.label }}</span><small>{{ g.count }}</small></div>{{ attrnote(g.description) }}<dl>{{ attrrows(g.rows) }}</dl></section>{% endfor %}</div>
+{% if attr.groups %}<div class="agroups">{% for g in attr.groups %}<section><div class="agtitle"><span title="{{ g.predicate }}">{{ g.label }}</span><small>{{ g.count }}</small></div>{{ groupbody(g) }}</section>{% endfor %}</div>
 {% else %}<div class="hint">No content attributes recorded for this dataset.</div>{% endif %}</div>
 {%- endmacro %}
 {% macro content(fp) -%}
 <div class="content"><div class="captop"><span class="cap">Content</span>{% if fp.content_note %}<span class="hint">{{ fp.content_note }}</span>{% endif %}</div>
-{% for g in fp.groups %}<details class="cgroup"{% if g.source == 'File' %} open{% endif %}><summary><span class="caret"></span><span class="glabel" title="{{ g.predicate }}">{{ g.label }}</span><span class="src">{{ g.source }}</span><small>{{ g.count }}</small></summary>{{ attrnote(g.description) }}<dl>{{ attrrows(g.rows) }}</dl></details>{% else %}<span class="hint">No content attributes recorded.</span>{% endfor %}</div>
+{% for g in fp.groups %}<details class="cgroup"{% if g.source == 'File' %} open{% endif %}><summary><span class="caret"></span><span class="glabel" title="{{ g.predicate }}">{{ g.label }}</span><span class="src">{{ g.source }}</span><small>{{ g.count }}</small></summary><div class="cbody">{{ groupbody(g) }}</div></details>{% else %}<span class="hint">No content attributes recorded.</span>{% endfor %}</div>
 {%- endmacro %}
 {% macro preview(fp, tall) %}
 {% if fp.external %}<div class="fetch"><span>Hosted externally on {{ fp.host }}. Not tracked in this repository.</span><div class="links"><a href="{{ fp.download }}" download target="_blank" rel="noreferrer">Download</a><a href="{{ fp.preview_url }}" target="_blank" rel="noreferrer">Preview ↗</a>{% if fp.provider %}<a href="{{ fp.provider }}" target="_blank" rel="noreferrer">Provider page ↗</a>{% endif %}</div></div>

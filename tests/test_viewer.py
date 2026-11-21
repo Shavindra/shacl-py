@@ -392,32 +392,82 @@ def test_header_metadata_and_dataset_description(tmp_path, monkeypatch):
 
 
 def test_attribute_groups_and_annotations():
-    from shacl_py.attributes import annotation_values, attribute_groups, metadata_groups
+    from shacl_py.attributes import (
+        annotation_values,
+        attribute_groups,
+        count_leaves,
+        metadata_groups,
+        unit_symbol,
+    )
 
+    qudt = "http://qudt.org/vocab/unit/"
+    exposure = {
+        "predicate": "urn:x:attributes",
+        "display_label": "Exposure",
+        "value": "15",
+        "unit": qudt + "MilliSEC",
+        "attributes": [
+            {"predicate": "https://schema.org/propertyID", "value": "OME Plane"},
+            {
+                "predicate": "http://qudt.org/schema/qudt/hasQuantityKind",
+                "value": "http://qudt.org/vocab/quantitykind/Time",
+            },
+        ],
+    }
     nodes = [
         {"predicate": "urn:x:property:note", "value": "loose"},
         {
-            "predicate": "urn:x:property:microscope",
-            "display_label": "Microscope",
+            "predicate": "https://schema.org/measurementTechnique",
+            "display_label": "Brightfield channel",
+            "value": "bright-field microscopy",
+            "defined_by": "http://purl.obolibrary.org/obo/FBbi_00000243",
+            "attributes": [exposure],
+        },
+        {
+            "predicate": "urn:x:attributes",
+            "display_label": "Specimen",
             "attributes": [
-                {"display_label": "Pixel size", "value": "0.065", "unit": "µm"},
                 {
-                    "display_label": "Channel",
-                    "attributes": [{"display_label": "Exposure", "value": "20"}],
+                    "predicate": "urn:x:attributes",
+                    "display_label": "Field of view",
+                    "attributes": [
+                        {
+                            "predicate": "http://purl.org/dc/terms/identifier",
+                            "value": "f1",
+                        }
+                    ],
                 },
                 {
-                    "display_label": "Term",
-                    "value": "http://purl.obolibrary.org/obo/GO_1",
+                    "predicate": "urn:x:attributes",
+                    "display_label": "Area",
+                    "value": "3.0",
+                    "unit": qudt + "MicroM2",
+                    "about": ["http://purl.obolibrary.org/obo/GO_0005773"],
                 },
             ],
         },
     ]
-    general, microscope = attribute_groups(nodes)
-    assert (general["label"], general["rows"][0]["label"]) == ("General", "note")
-    assert microscope["count"] == 3
-    rows = microscope["rows"]
-    assert rows[0]["unit"] == "µm" and rows[1]["header"] and rows[2]["pad"] == 14
-    assert rows[3]["link"] and not rows[0]["link"]
+    general, channel, specimen = attribute_groups(nodes)
+    assert (general["label"], general["rows"][0]["label"]) == ("General", "Note")
+    # A value with sub-properties leads its own group; qualifiers are not rows.
+    lead = channel["lead"]
+    assert lead["value"] == {
+        "text": "bright-field microscopy",
+        "href": "http://purl.obolibrary.org/obo/FBbi_00000243",
+    }
+    (row,) = channel["rows"]
+    assert (row["label"], row["value"]["text"], row["unit"]) == ("Exposure", "15", "ms")
+    assert [q["label"] for q in row["qualifiers"]] == ["Property ID", "Quantity kind"]
+    assert row["qualifiers"][1]["terms"][0]["text"] == "Time"
+    # A label naming a single identifier collapses to one row.
+    view, area = specimen["rows"]
+    assert (view["label"], view["value"]["text"]) == ("Field of view", "f1")
+    assert area["unit"] == "µm²" and area["qualifiers"][0]["terms"][0]["text"] == (
+        "GO:0005773"
+    )
+    assert count_leaves(nodes) == 5
+    assert unit_symbol(qudt + "UNITLESS") == "" and unit_symbol("µm") == "µm"
+    assert unit_symbol(qudt + "DEG_C") == "°C"
     assert annotation_values({"annotations": {"record_use": "template_only"}}) == [
         "template only"
     ]
@@ -427,7 +477,7 @@ def test_attribute_groups_and_annotations():
     (group,) = metadata_groups(
         [{"extractor_name": "tags", "extracted_metadata": {"units": "metres"}}]
     )
-    assert (group["source"], group["rows"][0]["value"]) == ("File", "metres")
+    assert (group["source"], group["rows"][0]["value"]["text"]) == ("File", "metres")
 
 
 def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeypatch):
@@ -459,11 +509,13 @@ def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeyp
         if location == "dataset":
             follow(page, "Open in Datasets")
         body = html(page)
-        assert "3 attributes" in body
-        assert "Attributes <small>3</small>" in body
-        assert '<dd>20 <span class="unit">ms</span>' in body
-        assert '<dd>0.5 <span class="unit">ms</span>' in body
-        assert "Table 1" in body and "Time per reading." in body
+        # The source qualifies the uncertainty, so it is not counted as a value.
+        assert "2 attributes" in body
+        assert "Attributes <small>2</small>" in body
+        assert '<span class="aval">20 <span class="unit" title="ms">ms</span>' in body
+        assert '<span class="aval">0.5 <span class="unit" title="ms">ms</span>' in body
+        assert '<li><span title="urn:example:source">Source</span> Table 1</li>' in body
+        assert "Time per reading." in body
         follow(page, "Files")
         assert "No files linked. This record holds metadata only." in html(page)
 
@@ -532,7 +584,7 @@ def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
     assert '<span class="anno">template only</span>' in body
     follow(page, "Attributes")
     body = html(page).split("<main>")[1]
-    assert "Microscope" in body and '<span class="unit">µm</span>' in body
+    assert "Microscope" in body and '">µm</span>' in body
     assert "1 of 1 files local" in body
     assert "Used by" in body and ">Model</a>" in body
     follow(page, "Files")

@@ -223,8 +223,16 @@
 .study .arow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .study .arow dt{color:#6b6b6b;min-width:0}
 .study .arow dd{color:#111;min-width:0;overflow-wrap:anywhere;text-wrap:pretty}
-.study .attr-note{margin:4px 0 0;font-size:12px;font-weight:400;color:#555;overflow-wrap:anywhere}
 .study .unit{color:#6b6b6b}
+.study .aval{display:block}
+.study .adesc{margin:3px 0 0;font-size:12px;line-height:1.5;color:#6b6b6b;text-wrap:pretty}
+.study .quals{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:#444}
+.study .quals li>span:first-child{color:#8c8c8c;margin-right:6px}
+.study .quals a,.study .aval a{overflow-wrap:anywhere}
+.study .ahead .adesc,.study .ahead .quals{font-weight:400}
+.study .alead{padding:8px 0 10px;border-bottom:1px solid #f0f0f0;font-size:13px}
+.study .alead .aval{font-weight:500}
+.study .agroups section>.adesc,.study .agroups section>.quals{margin:6px 0 4px}
 
 /* File content: own and inherited attribute groups */
 .study .content{display:flex;flex-direction:column;gap:4px}
@@ -239,7 +247,8 @@
 .study .cgroup .glabel{flex:1;min-width:0}
 .study .cgroup .src{font-size:11px;font-weight:400;color:#444;border:1px solid #dcdcdc;padding:0 6px}
 .study .cgroup summary small{min-width:18px;text-align:right}
-.study .cgroup dl{margin:0 0 8px 18px}
+.study .cgroup .cbody{margin:0 0 8px 18px}
+.study .cgroup dl{margin:0}
 .study .cgroup .ahead{padding:8px 0 2px}
 .study .cgroup .arow{grid-template-columns:minmax(0,130px) minmax(0,1fr);padding:5px 0;border:0}
 .study .fetch .links{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px}
