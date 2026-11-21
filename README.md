@@ -39,8 +39,9 @@ attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.
 In the left panel, expand **Attributes** under the selected paper or dataset
 to read its measurements and sources. External datasets list the files
-declared in `linked_files`. Select a filename to open its side panel, or
-use its preview and download links.
+declared in `linked_files`. Select a filename to see its own attributes and
+the groups inherited from its dataset, in the side panel or the full file
+page. Preview and download open at the provider.
 
 Choose **Graph** to explore the network of papers, datasets and shared labels.
 Labels come from declared labels, keywords and Dublin Core subjects. Click a

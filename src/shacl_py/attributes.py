@@ -46,6 +46,8 @@ UNIT_SYMBOLS = {
     "RAD": "rad",
     "REV": "rev",
     "PIXEL": "px",
+    "PIXEL_COUNT": "px",
+    "BYTE": "B",
     "PERCENT": "%",
     "J": "J",
     "W": "W",

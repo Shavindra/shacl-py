@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.1.0
+version: 1.2.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -41,6 +41,7 @@ classes:
         range: string
         description: Project-relative path to the notebook used to produce this dataset.
   LinkedFile:
+    slots: [attributes]
     attributes:
       name: {range: string, required: true, pattern: '\S'}
       url: {range: uri, required: true, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$'}

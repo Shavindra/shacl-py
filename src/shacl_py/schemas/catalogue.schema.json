@@ -1922,6 +1922,13 @@
       "additionalProperties": false,
       "description": "",
       "properties": {
+        "attributes": {
+          "description": "Declares a relation that associates a `Thing` (or another attribute) with an attribute, where an attribute is an intrinsic characteristic, such as a quality, capability, disposition, function, or is an externally derived attribute determined from some descriptor (e.g. a quantity, position, label/identifier). Technically, this declaration is done via an `AttributeSpecification` that combines a `predicate` with a value declaration and the attribute-related slots of a `Thing`. Importantly, such attributes are declared inline, because they do not have a unique identifier. If an identifier is available, a `Thing` declaration (see `relation`), and a qualification of that relationship via a `Statement` (see `characterized_by`) should be preferred.",
+          "items": {
+            "$ref": "#/$defs/AttributeSpecification"
+          },
+          "type": "array"
+        },
         "name": {
           "pattern": "\\S",
           "type": "string"
@@ -6414,5 +6421,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

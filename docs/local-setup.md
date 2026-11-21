@@ -192,3 +192,32 @@ Omit `--linked-file` for a dataset landing page alone. Repeat it for more files.
 After the download URL, optionally supply a preview URL and a provider page URL.
 The viewer shows each supplied link as a separate action. Opening a catalogue
 entry never fetches the linked file.
+
+Put shared scientific properties in the dataset's `attributes`. Put properties
+of an individual file in that `linked_files` entry's `attributes`. Both accept
+the Concepts `AttributeSpecification` fields, including nested attributes.
+The file list also shows the size when the file declares a byte count with
+`http://www.w3.org/ns/dcat#byteSize`.
+This example records a shared compartment and the width of one image.
+
+```yaml
+# Within one catalogue.datasets entry
+attributes:
+  - predicate: http://purl.org/dc/terms/subject
+    display_label: Compartment
+    value: vacuole
+    defined_by: http://purl.obolibrary.org/obo/GO_0005773
+linked_files:
+  - name: field-01.tif
+    url: https://example.org/files/field-01.tif
+    preview_url: https://example.org/preview/field-01
+    attributes:
+      - predicate: http://www.w3.org/2003/12/exif/ns#imageWidth
+        display_label: Image width
+        value: '1024'
+        unit: http://qudt.org/vocab/unit/PIXEL_COUNT
+```
+
+In the file inspector, **File** identifies the image width and **Dataset**
+identifies the compartment. The side panel and full file page show the
+same groups. Files with only a URL and name also inherit the dataset groups.

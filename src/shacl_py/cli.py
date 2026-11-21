@@ -140,8 +140,11 @@ def main(argv=None, *, review_layout=None):
     )
     add = commands.add_parser(
         "add-datasets",
-        help="Link local datasets to a catalogued paper",
-        description="Link one or more local datasets to an existing paper in the project catalogue.",
+        help="Link local or external datasets to a catalogued paper",
+        description=(
+            "Link local or external datasets to an existing paper. "
+            "In metadata.yaml, use attributes on a dataset or linked file to record scientific properties."
+        ),
         epilog='Example: shacl-py add-datasets --paper papers/survey --dataset "Station readings" papers/survey/data/raw',
     )
     add.add_argument(

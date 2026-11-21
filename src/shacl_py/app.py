@@ -86,6 +86,22 @@ def human_size(n):
     return f"{n / 1048576:.1f} MiB"
 
 
+def linked_size(attributes):
+    """Use a declared DCAT byte count for the external file's Size column."""
+    for node in attributes or []:
+        value = node.get("value")
+        if node.get("predicate") == "http://www.w3.org/ns/dcat#byteSize":
+            try:
+                count = int(value)
+                if count >= 0:
+                    return human_size(count)
+            except TypeError, ValueError, OverflowError:
+                continue
+        elif value is None and (size := linked_size(node.get("attributes"))):
+            return size
+    return ""
+
+
 def file_format(name):
     lower = name.casefold()
     suffix = next((s for s in FORMATS if lower.endswith(s)), "")
@@ -560,7 +576,7 @@ def browse(items, stored, base, brand, params):
                 "href": f["url"],
                 "preview": f.get("preview_url") or f["url"],
                 "parent": "",
-                "size": "",
+                "size": linked_size(f.get("attributes")),
                 "local": False,
             }
             for f in owner.linked_files
@@ -824,17 +840,14 @@ def linked_panel(owner, linked, route, paper, page=None):
     host = urlsplit(provider or download).netloc
     kind = file_format(linked["name"])
     rows = [
-        ("Download", download, True),
-        ("Preview", linked.get("preview_url") or "—", True),
-        ("Provider", provider or "—", True),
+        ("Host", host, True),
         ("Format", kind, False),
         ("Availability", "External", False),
     ]
+    if size := linked_size(linked.get("attributes")):
+        rows.insert(1, ("Size", size, False))
     raw = {
-        "name": linked["name"],
-        "url": download,
-        "preview_url": linked.get("preview_url"),
-        "provider_url": linked.get("provider_url"),
+        **linked,
         "format": kind,
         "external": True,
         "dataset": field(owner, "pid", "@id") or owner.label,
@@ -869,7 +882,7 @@ def linked_panel(owner, linked, route, paper, page=None):
             allow_unicode=True,
             sort_keys=False,
         ),
-        **content_groups([], owner),
+        **content_groups(attribute_groups(linked.get("attributes"), "File"), owner),
         "image": None,
         "text": None,
     }

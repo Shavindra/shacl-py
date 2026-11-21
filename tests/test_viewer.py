@@ -633,3 +633,70 @@ def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
     assert "Provider page ↗" in drawer and "Availability" in drawer
     follow(page, "Attributes")
     assert "External · 0 of 1 files local" in html(page).split("<main>")[1]
+
+
+def test_linked_files_show_their_own_and_inherited_attributes(tmp_path, monkeypatch):
+    path = tmp_path / "metadata.yaml"
+    path.write_text(
+        """catalogue:
+  project: {pid: 'urn:example:project'}
+  publications:
+  - pid: urn:example:paper
+    title: Example paper
+    dataset_links: [{dataset: 'urn:example:dataset', role: related}]
+  datasets:
+  - pid: urn:example:dataset
+    title: External comparison
+    source_url: https://example.org/source
+    attributes:
+    - predicate: urn:example:specimen
+      display_label: Specimen
+      attributes: [{predicate: 'urn:example:compartment', value: vacuole}]
+    linked_files:
+    - name: image.tif
+      url: https://example.org/image.tif
+      attributes:
+      - predicate: urn:example:acquisition
+        display_label: Acquisition
+        attributes:
+        - predicate: urn:example:exposure
+          value: '20'
+          unit: http://qudt.org/vocab/unit/MilliSEC
+          attributes: [{predicate: 'urn:example:evidence', value: illustrative}]
+        - {predicate: 'http://www.w3.org/ns/dcat#byteSize', value: '1024'}
+    - {name: centres.txt, url: 'https://example.org/centres.txt'}
+"""
+    )
+    assert main(["validate", str(tmp_path)]) == 0
+    page = open_viewer(tmp_path, monkeypatch)
+    for location in ("paper", "datasets"):
+        if location == "datasets":
+            follow(page, "Open in Datasets")
+        assert "1.0 KiB" in html(page)
+        follow(page, "image.tif")
+        for view in ("drawer", "full page"):
+            if view == "full page":
+                follow(page, "Open page")
+            panel = opened_file(page)
+            assert "1 group inherited from the dataset" in panel
+            assert ">File</span>" in panel and ">Dataset</span>" in panel
+            assert ">Acquisition</span>" in panel and ">Specimen</span>" in panel
+            assert ">20 " in panel and ">ms</a>" in panel
+            assert "1.0 KiB" in panel
+            assert "illustrative" in panel and "vacuole" in panel
+        assert "predicate: urn:example:exposure" in opened_file(page)
+        follow(page, "← Back")
+        follow(page, "centres.txt")
+        panel = opened_file(page)
+        assert "vacuole" in panel
+        assert all(
+            text not in panel for text in ("Acquisition", "illustrative", "1.0 KiB")
+        )
+        follow(page, "×")
+
+    graph = yaml.safe_load(path.read_text())
+    graph["catalogue"]["datasets"][0]["linked_files"][0]["attributes"] = [
+        {"value": "20"}
+    ]
+    path.write_text(yaml.safe_dump(graph))
+    assert main(["validate", str(tmp_path)]) == 1
