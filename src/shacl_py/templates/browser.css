@@ -223,6 +223,7 @@
 .study .arow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .study .arow dt{color:#6b6b6b;min-width:0}
 .study .arow dd{color:#111;min-width:0;overflow-wrap:anywhere;text-wrap:pretty}
+.study .attr-note{margin:4px 0 0;font-size:12px;font-weight:400;color:#555;overflow-wrap:anywhere}
 .study .unit{color:#6b6b6b}
 
 /* File content: own and inherited attribute groups */

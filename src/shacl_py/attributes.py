@@ -1,9 +1,7 @@
 """Shape Concepts attributes and annotations for display.
 
-An attribute is a Concepts ``AttributeSpecification``: a ``predicate`` with
-either a literal ``value`` (and optional ``unit``) or nested ``attributes``.
-Top-level attributes with children become groups; loose top-level values are
-collected in a leading "General" group.
+A Concepts ``AttributeSpecification`` can carry both a literal value and
+nested attributes that qualify it. Top-level containers become groups.
 """
 
 import re
@@ -31,7 +29,10 @@ def label_of(node):
 
 
 def is_link(value):
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return False
     return parts.scheme in ("http", "https") and bool(parts.netloc)
 
 
@@ -48,14 +49,22 @@ def count_leaves(nodes):
     )
 
 
+def _is_group(node):
+    return node.get("value") is None and bool(_children(node))
+
+
 def _rows(nodes, depth=0):
     for node in nodes:
         if not isinstance(node, dict):
             continue
         pad = depth * INDENT
-        if kids := _children(node):
-            yield {"header": True, "label": label_of(node), "pad": pad}
-            yield from _rows(kids, depth + 1)
+        if _is_group(node):
+            yield {
+                "header": True,
+                "label": label_of(node),
+                "description": node.get("description"),
+                "pad": pad,
+            }
         else:
             value = node.get("value")
             if isinstance(value, list):
@@ -68,28 +77,33 @@ def _rows(nodes, depth=0):
                 "value": value,
                 "unit": _text(node.get("unit")),
                 "link": is_link(value),
+                "description": node.get("description"),
                 "pad": pad,
             }
+        if kids := _children(node):
+            yield from _rows(kids, depth + 1)
 
 
 def attribute_groups(nodes, source="Dataset"):
     """Group attribute specifications by their top-level parent."""
     nodes = [n for n in nodes or [] if isinstance(n, dict)]
-    loose = [n for n in nodes if not _children(n)]
-    groups = [("General", "", loose)] if loose else []
-    groups += [
-        (label_of(n), predicate_of(n), _children(n)) for n in nodes if _children(n)
-    ]
-    return [
-        {
-            "label": label,
-            "predicate": predicate,
-            "count": count_leaves(members),
-            "rows": list(_rows(members)),
-            "source": source,
-        }
-        for label, predicate, members in groups
-    ]
+    loose = [n for n in nodes if not _is_group(n)]
+    sections = [({"display_label": "General"}, loose)] if loose else []
+    sections.extend((n, _children(n)) for n in nodes if _is_group(n))
+    groups = []
+    for parent, members in sections:
+        rows = list(_rows(members))
+        groups.append(
+            {
+                "label": label_of(parent),
+                "predicate": predicate_of(parent),
+                "description": parent.get("description"),
+                "count": sum(not row["header"] for row in rows),
+                "rows": rows,
+                "source": source,
+            }
+        )
+    return groups
 
 
 def _as_attributes(value, label=None):

@@ -430,6 +430,44 @@ def test_attribute_groups_and_annotations():
     assert (group["source"], group["rows"][0]["value"]) == ("File", "metres")
 
 
+def test_metadata_only_dataset_displays_values_with_qualifiers(tmp_path, monkeypatch):
+    (tmp_path / "metadata.yaml").write_text(
+        """catalogue:
+  project: {pid: 'urn:example:project'}
+  publications:
+  - pid: urn:example:paper
+    title: Field survey
+    dataset_links: [{dataset: 'urn:example:measurements', role: describes}]
+  datasets:
+  - pid: urn:example:measurements
+    title: Measurements
+    attributes:
+    - predicate: urn:example:duration
+      display_label: Duration
+      value: '20'
+      unit: ms
+      description: Time per reading.
+      attributes:
+      - predicate: urn:example:uncertainty
+        value: '0.5'
+        unit: ms
+        attributes: [{predicate: 'urn:example:source', value: Table 1}]
+"""
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    for location in ("paper", "dataset"):
+        if location == "dataset":
+            follow(page, "Open in Datasets")
+        body = html(page)
+        assert "3 attributes" in body
+        assert "Attributes <small>3</small>" in body
+        assert '<dd>20 <span class="unit">ms</span>' in body
+        assert '<dd>0.5 <span class="unit">ms</span>' in body
+        assert "Table 1" in body and "Time per reading." in body
+        follow(page, "Files")
+        assert "No files linked. This record holds metadata only." in html(page)
+
+
 def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
     source = "https://open.quiltdata.com/b/allencell/packages/example"
     long_name = "6677e50cfb7370eb6dbbcee4865563d5604a7dc5_Scene-1-P24-E06.ome.tiff"
@@ -495,6 +533,7 @@ def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
     follow(page, "Attributes")
     body = html(page).split("<main>")[1]
     assert "Microscope" in body and '<span class="unit">µm</span>' in body
+    assert "1 of 1 files local" in body
     assert "Used by" in body and ">Model</a>" in body
     follow(page, "Files")
     follow(page, "settings.yaml")
@@ -515,3 +554,5 @@ def test_dataset_attributes_and_external_files(tmp_path, monkeypatch):
     drawer = opened_file(page)
     assert "Hosted externally on open.quiltdata.com" in drawer
     assert "Provider page ↗" in drawer and "Availability" in drawer
+    follow(page, "Attributes")
+    assert "External · 0 of 1 files local" in html(page).split("<main>")[1]

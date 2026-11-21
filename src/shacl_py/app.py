@@ -16,7 +16,6 @@ from jinja2 import Environment, FileSystemLoader
 from shacl_py.attributes import (
     annotation_values,
     attribute_groups,
-    count_leaves,
     metadata_groups,
 )
 from shacl_py.branding import branding
@@ -276,6 +275,29 @@ def browse(items, stored, base, brand, params):
     def file_count(i):
         return len(listing(i)[1]) + len(i.linked_files)
 
+    @cache
+    def dataset_groups(i):
+        return attribute_groups(i.fields.get("attributes"))
+
+    def attribute_count(i):
+        return sum(group["count"] for group in dataset_groups(i))
+
+    @cache
+    def dataset_summary(i):
+        if count := file_count(i):
+            return count, "file"
+        if folders := listing(i)[0]:
+            return len(folders), "folder"
+        if count := attribute_count(i):
+            return count, "attribute"
+        return 0, "file"
+
+    def default_dataset_tab(i):
+        return "attributes" if dataset_summary(i)[1] == "attribute" else "files"
+
+    def count_label(count, noun):
+        return f"{count} {noun}{'s' if count != 1 else ''}"
+
     def linked(i, group):
         unique = {}
         for j in related(i):
@@ -341,7 +363,6 @@ def browse(items, stored, base, brand, params):
                 continue
         elif tag != "All" and tag not in (roles(i) if global_ds else labels(i)):
             continue
-        count = file_count(i) if global_ds else len(ds)
         shown.append(
             {
                 "item": i,
@@ -355,7 +376,9 @@ def browse(items, stored, base, brand, params):
                 if global_ds
                 else field(i, "venue", "journal"),
                 "year": "" if global_ds else publication_year(i),
-                "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
+                "count": count_label(*dataset_summary(i))
+                if global_ds
+                else count_label(len(ds), "dataset"),
                 "tags": labels(i),
             }
         )
@@ -406,7 +429,7 @@ def browse(items, stored, base, brand, params):
             (
                 "attributes",
                 "Attributes",
-                count_leaves(item.fields.get("attributes") or []),
+                attribute_count(item),
             ),
             ("paper", "Paper", None),
         ]
@@ -419,16 +442,17 @@ def browse(items, stored, base, brand, params):
         ]
     )
     tabs.append(("source", "Raw metadata", None))
-    view = params.get("view", tabs[0][0])
+    default_view = default_dataset_tab(item) if global_ds else tabs[0][0]
+    view = params.get("view", default_view)
     if view not in {k for k, _, _ in tabs}:
-        view = tabs[0][0]
+        view = default_view
     dsrows = []
     for d in ds:
         if params.get("dsfilter", "").casefold() in searchable(d.fields):
             dsrows.append(
                 {
                     "item": d,
-                    "count": file_count(d),
+                    "count": count_label(*dataset_summary(d)),
                     "role": related(item)[d],
                     "href": url(
                         item_route,
@@ -503,13 +527,23 @@ def browse(items, stored, base, brand, params):
     except ValueError:
         dataset_url = None
     external = bool(dataset_url and dataset_owner and not dataset_owner.has_folder)
-    local_count = sum(f["local"] for f in rows)
-    if not rows and not folders:
-        availability = "Metadata only"
-    elif external:
-        availability = f"External · {local_count} of {len(rows)} files local"
-    else:
-        availability = f"{local_count} of {len(rows)} files local"
+    availability = ""
+    if dataset_owner:
+        root_folders, root_files = listing(dataset_owner)
+        total = file_count(dataset_owner)
+        if total:
+            local_count = sum(
+                r["Availability"] == "Available" for r in root_files.values()
+            )
+            availability = f"{local_count} of {total} files local"
+            if external:
+                availability = f"External · {availability}"
+        elif root_folders:
+            availability = count_label(len(root_folders), "folder")
+        elif external:
+            availability = "External source"
+        else:
+            availability = "0 files" if dataset_owner.has_folder else "Metadata only"
 
     def dataset_link(d):
         return {
@@ -532,9 +566,10 @@ def browse(items, stored, base, brand, params):
         )
 
     derived_from, used_by = provenance(dataset_owner)
-    dtab = params.get("dtab", "files")
+    default_dtab = default_dataset_tab(selected) if selected else "files"
+    dtab = params.get("dtab", default_dtab)
     if dtab not in ("files", "attributes"):
-        dtab = "files"
+        dtab = default_dtab
     doi_label = field(item, "doi", "source_url", "url", "sameAs")
     try:
         doi = source_url(doi_label)
@@ -586,21 +621,18 @@ def browse(items, stored, base, brand, params):
             (
                 "attributes",
                 "Attributes",
-                count_leaves(selected.fields.get("attributes") or [])
-                if selected
-                else 0,
+                attribute_count(selected) if selected else 0,
             ),
         ],
         attr={
-            "groups": attribute_groups(
-                dataset_owner.fields.get("attributes") if dataset_owner else []
-            ),
+            "groups": dataset_groups(dataset_owner) if dataset_owner else [],
             "derived": derived_from,
             "used": used_by,
         },
         format=field(owner, "format", "encodingFormat", "media_type"),
         parents=parents,
         route=route,
+        file_owner=owner,
         rows=rows,
         folders=folders,
         up=up,

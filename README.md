@@ -34,6 +34,10 @@ top bar to browse datasets across papers. Select a filename to inspect its
 availability and any file metadata. **Records** lists other metadata types
 when present.
 
+Datasets with files or folders open on **Files**. A dataset that holds only
+attributes opens on **Attributes**, where each value appears with its unit
+and any nested details, such as a measurement method or source.
+
 Each view has a bookmarkable URL. Links, filters and searches update the open
 viewer, and the browser's Back and Forward buttons restore previous views.
 Refresh the page to read changes to the project's metadata.
