@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Paper and dataset layout studies</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#f0eee9;font-family:'Kalam',cursive;color:#222}a{color:#2a5bd7}a:hover{color:#163c99}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}</style></helmet>
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Global menu: Papers | Datasets · browsing all datasets</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="6a"><div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>Datasets view, mirrors <a class="dv-oid" href="#5a">5a</a>: list on the left, dataset with tabs on the right</div>
+<div class="dv-card" style="width:960px;padding:22px;display:flex;flex-direction:column;gap:14px">
+  <div style="border:2px solid #222;border-radius:6px;display:flex;flex-direction:column;min-height:580px">
+    <div style="display:flex;align-items:center;gap:22px;padding:8px 14px;border-bottom:2px solid #222;font-size:15px">
+      <span style="font-weight:700">shacl-py</span>
+      <span style="color:#666">Papers (9)</span>
+      <span style="font-weight:700;border-bottom:4px solid #2a5bd7">Datasets (23)</span>
+      <div style="flex:1"></div>
+      <span style="border:2px solid #222;border-radius:4px;padding:1px 10px;color:#888;font-size:13px">🔍 search everything</span>
+    </div>
+    <div style="display:grid;grid-template-columns:240px 1fr;flex:1">
+      <div style="border-right:2px solid #222;padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="border:2px solid #222;border-radius:4px;padding:4px 8px;color:#888;font-size:13px">🔍 filter datasets</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;font-size:11px"><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px;background:#222;color:#fff">all</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">Important</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">derived</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">not local</span></div>
+        <div style="font-size:11px;color:#888">sort: name ▾</div>
+        <div style="padding:6px 8px;font-size:14px">Cell images<div style="font-size:11px;color:#666">24 files · Imaging group 2023</div></div>
+        <div style="background:#e6edfb;border:2px solid #2a5bd7;border-radius:4px;padding:6px 8px;font-size:14px">Feature tables<div style="font-size:11px;color:#666">8 files · 2 papers</div></div>
+        <div style="padding:6px 8px;font-size:14px">STED images<div style="font-size:11px;color:#666">12 files · Survey group 2025</div></div>
+        <div style="padding:6px 8px;font-size:14px">Tomograms<div style="font-size:11px;color:#666">310 files · Atlas group 2019</div></div>
+        <div style="padding:6px 8px;font-size:14px">Mean reading per station<div style="font-size:11px;color:#666">derived · 1 file</div></div>
+        <div style="padding:6px 8px;font-size:14px;color:#aaa">…</div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="font-size:20px;font-weight:700">Feature tables</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;align-items:center"><span style="background:#eee;padding:0 6px">Important ×</span><span style="color:#2a5bd7;white-space:nowrap">🏷 add label</span></div>
+          <div style="display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:3px 12px"><span style="color:#888">PID</span><span>urn:…:features</span><span style="color:#888">Folder</span><span>papers/imaging_2023/data/raw</span><span style="color:#888">Files</span><span>8 · 7 local</span><span style="color:#888">Papers</span><span><span style="color:#2a5bd7;text-decoration:underline">Imaging group 2023</span>, <span style="color:#2a5bd7;text-decoration:underline">Atlas group 2019</span></span></div>
+          <div style="display:flex;gap:22px;font-size:14px;border-bottom:2px solid #222;margin-top:8px">
+            <span style="border-bottom:4px solid #2a5bd7;font-weight:700;padding-bottom:2px;margin-bottom:-2px">Files (8)</span>
+            <span style="color:#666">Papers (2)</span>
+            <span style="color:#666">Sources &amp; derived</span>
+            <span style="color:#666">Raw metadata</span>
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+          <div style="display:flex;gap:8px;align-items:center"><span style="border:1.5px solid #222;border-radius:4px;padding:0 8px;color:#888;flex:1">🔍 file</span><span style="border:1.5px solid #222;border-radius:4px;padding:0 8px">local only ☐</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 80px 60px;border-bottom:1.5px solid #222;font-weight:700"><span>File</span><span>Path</span><span>Size</span><span>Local</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 80px 60px"><span>…MOESM10_ESM.xlsx</span><span>data/raw</span><span>1.2 MB</span><span>●</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 80px 60px"><span>…MOESM11_ESM.xlsx</span><span>data/raw</span><span>0.8 MB</span><span>○</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 80px 60px"><span>…MOESM12_ESM.xlsx</span><span>data/raw</span><span>2.4 MB</span><span>●</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 80px 60px"><span>README.md</span><span>.</span><span>4 KB</span><span>●</span></div>
+          <div style="color:#aaa">…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="font:500 17px Caveat;color:#c0392b">paper names link across to the Papers view; in <a class="dv-oid" href="#5a">5a</a> a dataset name links here. Same top menu on both.</div>
+</div></div>
+</div>
+<p class="dv-next">Try next: "show the Papers tab of a dataset" · "add the top menu to <a class="dv-oid" href="#5a">5a</a>" · "make it clickable"</p>
+</section>
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname"><a class="dv-oid" href="#4a">4a</a> with tabs under the paper header</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Datasets is one tab; its list and detail sit below the tab bar</div>
+<div class="dv-card" style="width:960px;padding:22px;display:flex;flex-direction:column;gap:14px">
+  <div style="border:2px solid #222;border-radius:6px;display:grid;grid-template-columns:230px 1fr;min-height:540px">
+    <div style="border-right:2px solid #222;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="border:2px solid #222;border-radius:4px;padding:4px 8px;color:#888;font-size:13px">🔍 search</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;font-size:11px"><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px;background:#222;color:#fff">all</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">Important</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">Imaging</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">+</span></div>
+      <div style="background:#e6edfb;border:2px solid #2a5bd7;border-radius:4px;padding:6px 8px;font-size:14px">Imaging group 2023<div style="font-size:11px;color:#666">6 datasets · Important</div></div>
+      <div style="padding:6px 8px;font-size:14px">Survey group 2025<div style="font-size:11px;color:#666">1 dataset · Imaging</div></div>
+      <div style="padding:6px 8px;font-size:14px">Atlas group 2019<div style="font-size:11px;color:#666">3 datasets</div></div>
+      <div style="padding:6px 8px;font-size:14px;color:#aaa">…</div>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div style="font-size:20px;font-weight:700;line-height:1.2">Cell morphology in a microscopy dataset</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;align-items:center"><span style="color:#2e7d32;font-size:13px;margin-right:6px">Imaging group · Example journal 2023</span><span style="background:#eee;padding:0 6px">Important ×</span><span style="background:#eee;padding:0 6px">Imaging ×</span><span style="color:#2a5bd7;white-space:nowrap">🏷 add label</span></div>
+        <div style="display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:3px 12px"><span style="color:#888">PID</span><span>imaging_2023</span><span style="color:#888">DOI</span><span style="color:#2a5bd7;text-decoration:underline">10.0000/example.1</span><span style="color:#888">Keywords</span><span>hiPSC, organelles, imaging</span><span style="color:#888">Folder</span><span>papers/imaging_2023</span></div>
+        <div style="display:flex;gap:22px;font-size:14px;border-bottom:2px solid #222;margin-top:8px">
+          <span style="border-bottom:4px solid #2a5bd7;font-weight:700;padding-bottom:2px;margin-bottom:-2px">Datasets (6)</span>
+          <span style="color:#666">Abstract</span>
+          <span style="color:#666">Notes</span>
+          <span style="color:#666">Other files</span>
+          <span style="color:#666">Raw metadata</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:220px 1fr;flex:1">
+        <div style="border-right:2px solid #222;padding:12px;display:flex;flex-direction:column;gap:8px">
+          <div style="border:1.5px solid #222;border-radius:4px;padding:3px 6px;font-size:12px;color:#888">filter datasets…</div>
+          <div style="display:flex;flex-direction:column;font-size:13px">
+            <div style="padding:4px 6px;display:flex;justify-content:space-between"><span>Cell images</span><span style="color:#888">24</span></div>
+            <div style="padding:4px 6px;display:flex;justify-content:space-between;background:#e6edfb;border-left:3px solid #2a5bd7"><span>Feature tables</span><span style="color:#888">8</span></div>
+            <div style="padding:4px 6px;display:flex;justify-content:space-between"><span>Segmentations</span><span style="color:#888">120</span></div>
+            <div style="padding:4px 6px;display:flex;justify-content:space-between"><span>Gene edits</span><span style="color:#888">4</span></div>
+            <div style="padding:4px 6px;display:flex;justify-content:space-between"><span>Cell lines</span><span style="color:#888">2</span></div>
+            <div style="padding:4px 6px;display:flex;justify-content:space-between"><span>Shape modes</span><span style="color:#888">56</span></div>
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="font-size:17px;font-weight:700">Feature tables</div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:3px 12px"><span style="color:#888">PID</span><span>urn:…:features</span><span style="color:#888">Role</span><span>describes</span><span style="color:#888">Folder</span><span>data/raw</span></div>
+          <div style="color:#2a5bd7">▸ all dataset fields</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1.5px dashed #999;padding-top:8px"><span style="font-weight:700">Files (8)</span><span style="border:1.5px solid #222;border-radius:4px;padding:0 8px;color:#888">🔍 file</span></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><div style="display:grid;grid-template-columns:1fr 1fr 60px;border-bottom:1.5px solid #222;font-weight:700"><span>File</span><span>Path</span><span>Local</span></div><div style="display:grid;grid-template-columns:1fr 1fr 60px"><span>…MOESM10_ESM.xlsx</span><span>data/raw</span><span>●</span></div><div style="display:grid;grid-template-columns:1fr 1fr 60px"><span>…MOESM11_ESM.xlsx</span><span>data/raw</span><span>○</span></div><div style="display:grid;grid-template-columns:1fr 1fr 60px"><span>…MOESM12_ESM.xlsx</span><span>data/raw</span><span>●</span></div><div style="color:#aaa">…</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="font:500 17px Caveat;color:#c0392b">other tabs (Abstract, Notes…) use the full width below the tab bar.</div>
+</div></div>
+</div>
+<p class="dv-next">Try next: "show what the Notes tab looks like" · "show a paper with only 1 dataset" · "make it clickable"</p>
+</section>
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Previous: two columns</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Paper header spans the right column; datasets and files sit side by side under it</div>
+<div class="dv-card" style="width:960px;padding:22px;display:flex;flex-direction:column;gap:14px">
+  <div style="border:2px solid #222;border-radius:6px;display:grid;grid-template-columns:230px 1fr;min-height:520px">
+    <div style="border-right:2px solid #222;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="border:2px solid #222;border-radius:4px;padding:4px 8px;color:#888;font-size:13px">🔍 search</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;font-size:11px"><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px;background:#222;color:#fff">all</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">Important</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">Imaging</span><span style="border:1.5px solid #222;border-radius:8px;padding:0 6px">+</span></div>
+      <div style="background:#e6edfb;border:2px solid #2a5bd7;border-radius:4px;padding:6px 8px;font-size:14px">Imaging group 2023<div style="font-size:11px;color:#666">6 datasets · Important</div></div>
+      <div style="padding:6px 8px;font-size:14px">Survey group 2025<div style="font-size:11px;color:#666">1 dataset · Imaging</div></div>
+      <div style="padding:6px 8px;font-size:14px">Atlas group 2019<div style="font-size:11px;color:#666">3 datasets</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px;border-bottom:2px dashed #999">
+        <div style="font-size:20px;font-weight:700;line-height:1.2">Cell morphology in a microscopy dataset</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;align-items:center"><span style="color:#2e7d32;font-size:13px;margin-right:6px">Imaging group · Example journal 2023</span><span style="background:#eee;padding:0 6px">Important ×</span><span style="background:#eee;padding:0 6px">Imaging ×</span><span style="color:#2a5bd7;white-space:nowrap">🏷 add label</span></div>
+        <div style="display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:3px 12px"><span style="color:#888">PID</span><span>imaging_2023</span><span style="color:#888">DOI</span><span style="color:#2a5bd7;text-decoration:underline">10.0000/example.1</span><span style="color:#888">Keywords</span><span>hiPSC, organelles, imaging</span><span style="color:#888">Folder</span><span>papers/imaging_2023</span></div>
+        <div style="color:#2a5bd7">▸ abstract, notes, all fields</div>
+      </div>
+      <div style="display:grid;grid-template-columns:220px 1fr;flex:1">
+        <div style="border-right:2px solid #222;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="font-weight:700;font-size:14px">Datasets (6)</div>
+          <div style="padding:4px 6px">Cell images</div>
+          <div style="padding:4px 6px;background:#e6edfb;border-left:3px solid #2a5bd7">Feature tables</div>
+          <div style="padding:4px 6px">Segmentations</div>
+          <div style="padding:4px 6px;color:#aaa">…</div>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="font-size:17px;font-weight:700">Feature tables</div>
+          <div style="color:#2a5bd7">▸ all dataset fields</div>
+          <div style="font-weight:700;border-top:1.5px dashed #999;padding-top:8px">Files (8)</div>
+          <div style="display:flex;flex-direction:column;gap:5px"><span>…MOESM10_ESM.xlsx ●</span><span>…MOESM11_ESM.xlsx ○</span><span style="color:#aaa">…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>
