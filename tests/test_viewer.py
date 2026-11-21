@@ -66,6 +66,16 @@ def follow(page, label):
     return page
 
 
+def opened_file(page):
+    """Return the open file drawer, or the full file page, from the rendered HTML."""
+    body = html(page)
+    start = body.find('<aside class="drawer">')
+    if start < 0:
+        start = body.find('<main class="filepage">')
+    assert start >= 0
+    return body[start:]
+
+
 def test_view_metadata_file(tmp_path, monkeypatch):
     paper = tmp_path / "collection"
     paper.mkdir()
@@ -83,7 +93,11 @@ def test_view_metadata_file(tmp_path, monkeypatch):
     assert "In this metadata source" in html(page)
     follow(page, "data/")
     follow(page, "measurements")
-    assert page.title[-1].value == "measurements" and "Available" in html(page)
+    drawer = opened_file(page)
+    assert "<code>measurements</code>" in drawer and "Local" in drawer
+    assert "value\n42" in drawer
+    follow(page, "Open page ↗")
+    assert '<h1 class="mono">measurements</h1>' in opened_file(page)
     assert not list(tmp_path.rglob("metadata.yaml"))
 
 
@@ -127,7 +141,10 @@ def test_view_metalad_store_read_only(tmp_path, monkeypatch):
     assert "Stored observations</h1>" in html(page)
     follow(page, "Files")
     follow(page, "observations.tsv")
-    assert page.title[-1].value == "observations.tsv" and "metres" in html(page)
+    drawer = opened_file(page)
+    assert "<code>observations.tsv</code>" in drawer
+    follow(page, "Open page ↗")
+    assert "metres" in opened_file(page)
     assert contents() == before
 
 
@@ -184,13 +201,16 @@ def test_example_homepage_and_annex_files(tmp_path, monkeypatch):
     follow(page, "Datasets 2")
     assert "Station readings" in html(page)
     follow(page, "readings.csv")
-    assert page.title[-1].value == "readings.csv" and "Available" in html(page)
+    drawer = opened_file(page)
+    assert "<code>readings.csv</code>" in drawer and "Local" in drawer
     follow(page, "Papers")
     follow(page, "Notes")
     assert "comparison of station means" in html(page)
     follow(page, "Other files")
     follow(page, "missing.csv")
-    assert "Unavailable" in html(page) and not page.button
+    drawer = opened_file(page)
+    assert "Remote (annexed)" in drawer and "datalad get" in drawer
+    assert not page.button
 
 
 def test_primary_author_in_paper_list(tmp_path, monkeypatch):

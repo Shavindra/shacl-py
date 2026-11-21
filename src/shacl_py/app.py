@@ -1,8 +1,11 @@
 """Read-only shaclpy viewer backed by Concepts and MetaLad records."""
 
+import base64
+import json
 import os
+import re
+import shlex
 from functools import cache
-from html import escape
 from pathlib import Path
 
 import streamlit as st
@@ -33,62 +36,97 @@ template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_tem
 )
 
 
-def link(label, route):
-    st.html(f'<a href="{escape(url(route))}" target="_self">{escape(label)}</a>')
+FORMATS = {
+    ".ome.tif": "OME-TIFF",
+    ".ome.tiff": "OME-TIFF",
+    ".tif": "TIFF",
+    ".tiff": "TIFF",
+    ".png": "PNG image",
+    ".jpg": "JPEG image",
+    ".jpeg": "JPEG image",
+    ".gif": "GIF image",
+    ".webp": "WebP image",
+    ".xlsx": "Excel workbook",
+    ".csv": "CSV",
+    ".tsv": "TSV",
+    ".parquet": "Parquet",
+    ".mrc": "MRC volume",
+    ".json": "JSON",
+    ".yaml": "YAML",
+    ".yml": "YAML",
+    ".md": "Markdown",
+    ".ipynb": "Jupyter notebook",
+    ".pdf": "PDF",
+    ".txt": "Text",
+}
+IMAGES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
+PREVIEW_BYTES = 8192
+IMAGE_BYTES = 5 * 1048576
 
 
-def metadata(fields):
-    flat, nested = [], {}
-    for key, value in fields.items():
-        if isinstance(value, list) and value and all(isinstance(v, str) for v in value):
-            value = "\n".join(value)
-        if isinstance(value, (dict, list)):
-            nested[key] = value
-        else:
-            field = escape(str(key).replace("_", " ").removeprefix("@").capitalize())
-            flat.append(f"<dt>{field}</dt><dd>{escape(str(value))}</dd>")
-    if flat:
-        st.html('<dl class="metadata">' + "".join(flat) + "</dl>")
-    if nested:
-        st.json(nested, expanded=2)
+def human_size(n):
+    if n < 1024:
+        return f"{n:,} B"
+    if n < 1048576:
+        return f"{n / 1024:.1f} KiB"
+    return f"{n / 1048576:.1f} MiB"
 
 
-def file_page(item, row, route, stored):
-    link(f"← Files · {item.label}", route)
-    path = scoped_path(item.folder, row["Relative path"])
-    st.title(path.name, anchor=False)
-    metadata(
-        {"Relative path": row["Relative path"], "Availability": row["Availability"]}
-    )
-    entries = stored.get(path, [])
-    if entries:
-        st.subheader("File metadata", anchor=False)
-        for entry in entries:
-            if extractor := entry.get("extractor_name"):
-                st.caption(str(extractor))
-            fields = entry.get("extracted_metadata")
-            if isinstance(fields, dict):
-                metadata(fields)
-            else:
-                st.json(fields)
-        with st.expander("Extractor records"):
-            st.json(entries, expanded=2)
-    else:
-        st.caption("No file-level metadata supplied.")
-    if (
-        row["Availability"] == "Available"
-        and not path.is_symlink()
-        and st.button("Preview text")
-    ):
+def file_format(name):
+    lower = name.casefold()
+    suffix = next((s for s in FORMATS if lower.endswith(s)), "")
+    if suffix:
+        return FORMATS[suffix]
+    return Path(name).suffix.removeprefix(".").upper() or "File"
+
+
+def annex_key(path):
+    """Name the git-annex key behind a symlinked or unlocked file, if any."""
+    try:
+        if path.is_symlink():
+            target = os.readlink(path)
+            return Path(target).name if "/annex/objects/" in target else ""
+        if path.is_file() and path.stat().st_size <= 1024:
+            first = path.read_bytes().split(b"\n", 1)[0].decode(errors="replace")
+            if first.startswith("/annex/objects/"):
+                return first.rsplit("/", 1)[-1]
+    except OSError:
+        pass
+    return ""
+
+
+def file_preview(path, base):
+    """Return an inline image or the leading text of a local file.
+
+    Symlinks are followed only when they resolve inside the project, as
+    present git-annex files do.
+    """
+    preview = {"image": None, "text": None, "truncated": False}
+    try:
+        if not path.is_file() or (
+            path.is_symlink() and not path.resolve().is_relative_to(base)
+        ):
+            return preview
+        if mime := IMAGES.get(path.suffix.casefold()):
+            if path.stat().st_size <= IMAGE_BYTES:
+                encoded = base64.b64encode(path.read_bytes()).decode()
+                preview["image"] = f"data:{mime};base64,{encoded}"
+            return preview
         with path.open("rb") as stream:
-            data = stream.read(8193)
-        text = data[:8192].decode("utf-8", errors="replace")
-        if "\x00" in text or "\ufffd" in text.rstrip("\ufffd"):
-            st.caption("A text preview is unavailable for this file.")
-        else:
-            st.code(text, language=None)
-            if len(data) > 8192:
-                st.caption("Showing the first 8 KiB.")
+            data = stream.read(PREVIEW_BYTES + 1)
+    except OSError:
+        return preview
+    text = data[:PREVIEW_BYTES].decode("utf-8", errors="replace")
+    if "\x00" not in text and "\ufffd" not in text.rstrip("\ufffd"):
+        preview["text"] = text
+        preview["truncated"] = len(data) > PREVIEW_BYTES
+    return preview
 
 
 def display(value):
@@ -144,6 +182,20 @@ def sidebar_author(item):
     if isinstance(source, dict) and isinstance(source.get("person"), dict):
         return person_names(source["person"], [primary])[0]
     return primary
+
+
+def short_authors(item):
+    """Abbreviate the author list as 'Surname et al.'."""
+    names = [n.strip() for n in author_line(item).split(",") if n.strip()]
+    if not names:
+        return ""
+    return names[0].split()[-1] + (" et al." if len(names) > 1 else "")
+
+
+def short_citation(item):
+    """Cite a paper as 'Surname et al. Year', falling back to its title."""
+    year = field(item, "year", "datePublished")[:4]
+    return " ".join(filter(None, [short_authors(item) or item.label, year]))
 
 
 def labels(item):
@@ -287,9 +339,13 @@ def browse(items, stored, base, brand, params):
             {
                 "item": i,
                 "href": url(sidebar_route | i.route, tag=tag),
-                "authors": sidebar_author(i),
-                "venue": field(i, "venue", "journal"),
-                "year": publication_year(i),
+                "authors": short_citation(linked(i, papers)[0])
+                if global_ds and linked(i, papers)
+                else "" if global_ds else sidebar_author(i),
+                "venue": field(i, "format", "encodingFormat", "media_type")
+                if global_ds
+                else field(i, "venue", "journal"),
+                "year": "" if global_ds else publication_year(i),
                 "count": f"{count} {'file' if global_ds else 'dataset'}{'s' if count != 1 else ''}",
                 "tags": labels(i),
             }
@@ -397,14 +453,7 @@ def browse(items, stored, base, brand, params):
         size = ""
         if local:
             try:
-                n = (owner.folder / path).stat().st_size
-                size = (
-                    f"{n:,} B"
-                    if n < 1024
-                    else f"{n / 1024:.1f} KiB"
-                    if n < 1048576
-                    else f"{n / 1048576:.1f} MiB"
-                )
+                size = human_size((owner.folder / path).stat().st_size)
             except OSError:
                 pass
         rows.append(
@@ -465,7 +514,17 @@ def browse(items, stored, base, brand, params):
         dataset_url=dataset_url,
         dataset_description=field(dataset_owner, "description"),
         ds_folder=local_folder(selected),
-        role=related(item).get(selected, ""),
+        role=", ".join(dict.fromkeys(roles(item)))
+        if global_ds
+        else related(item).get(selected, ""),
+        paper_rows=[
+            {
+                "href": url(p.route, dataset=item.key, dataset_record=item.ref),
+                "short": short_citation(p),
+                "title": p.label,
+            }
+            for p in parents
+        ],
         availability=f"{sum(f['local'] for f in rows)} of {len(rows)} files local",
         format=field(owner, "format", "encodingFormat", "media_type"),
         parents=parents,
@@ -490,12 +549,82 @@ def browse(items, stored, base, brand, params):
         context["source"] = yaml.safe_dump(
             source_content(item.source), allow_unicode=True, sort_keys=False
         )
-    st.html(template.render(context))
     if "file" in params and owner:
         if row := files.get(params["file"]):
-            file_page(owner, row, route, stored)
+            paper = item if item.is_publication else next(iter(parents), None)
+            context["fp"] = file_panel(
+                owner, row, route, stored, base, paper, page=params.get("page")
+            )
         else:
             st.warning("This file is outside the current selection.")
+    st.html(template.render(context))
+
+
+def file_panel(owner, row, route, stored, base, paper, page=None):
+    """Describe one listed file for the side drawer and its full page."""
+    relative = row["Relative path"]
+    path = scoped_path(owner.folder, relative)
+    local = row["Availability"] == "Available"
+    key = annex_key(path)
+    size = ""
+    if local:
+        try:
+            size = human_size(path.stat().st_size)
+        except OSError:
+            pass
+    if not size and (match := re.search(r"-s(\d+)--", key)):
+        size = human_size(int(match.group(1)))
+    shown_path = os.path.relpath(path, base)
+    kind = file_format(path.name)
+    rows = [("Path", shown_path, True), ("Size", size or "—", False)]
+    rows += [
+        ("Format", kind, False),
+        ("Availability", "Local" if local else "Remote (annexed)", False),
+    ]
+    if key:
+        rows.append(("Annex key", key, True))
+    raw = {
+        "path": shown_path,
+        "size": size or None,
+        "format": kind,
+        "annex_key": key or None,
+        "present": local,
+        "dataset" if owner.is_dataset else "record": field(owner, "pid", "@id")
+        or owner.label,
+    }
+    if paper and paper is not owner:
+        raw["paper"] = field(paper, "pid", "@id") or paper.label
+    if entries := stored.get(path):
+        raw["metadata"] = json.loads(json.dumps(entries, default=str))
+    crumbs = []
+    if paper:
+        crumbs.append((short_citation(paper), url(paper.route, view="abstract")))
+    if owner is not paper:
+        crumbs.append((owner.label, url(route)))
+    return {
+        "name": path.name,
+        "page": page == "file",
+        "local": local,
+        "format": kind,
+        "rows": rows,
+        "fetch": "datalad get " + shlex.quote(shown_path),
+        "owner_kind": "Dataset" if owner.is_dataset else "Paper"
+        if owner.is_publication
+        else "Record",
+        "owner": owner.label,
+        "owner_description": field(owner, "description"),
+        "paper": short_citation(paper) if paper and paper is not owner else "",
+        "crumbs": crumbs,
+        "back": url(route),
+        "open": url(route, file=relative, page="file"),
+        "raw": yaml.safe_dump(
+            {k: v for k, v in raw.items() if v is not None},
+            allow_unicode=True,
+            sort_keys=False,
+            default_flow_style=False,
+        ),
+        **(file_preview(path, base) if local else {"image": None, "text": None}),
+    }
 
 
 @st.fragment
