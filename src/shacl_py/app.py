@@ -279,13 +279,27 @@ def browse(items, stored, base, brand, params, collections):
         next(iter(sections), next(iter(collection_sections), None)),
     )
     requested = params.get("section")
-    section = next((name for name in sections if name.lower() == requested), default)
+    routes = {name.lower(): name for name in sections}
+    if items:
+        routes["graph"] = "Graph"
+    for c in collections:
+        routes[c.section] = c.section
+        routes.setdefault(c.key, c.section)
+    section = routes.get(requested) if requested else default
+    collection = collection_sections.get(section)
+    if (
+        collection
+        and params.get("record")
+        and params.get("entry") not in collection.entries
+    ):
+        # Ignore a selection carried over from a paper or dataset.
+        params = {
+            k: v
+            for k, v in params.items()
+            if k not in ("record", "entry", "variant", "view")
+        }
     q = params.get("q", "").strip().casefold()
-    if requested in collection_sections:
-        section = requested
-    elif requested == "graph" and items:
-        section = "Graph"
-    shared_query = None if section in collection_sections else q
+    shared_query = None if collection else q
     nav = [
         (
             name,
@@ -327,8 +341,10 @@ def browse(items, stored, base, brand, params, collections):
         "url": url,
         "nav": nav,
     }
-    if section in collection_sections:
-        collection = collection_sections[section]
+    if section is None:
+        st.html(template.render(context))
+        return
+    if collection:
         if collection.presentation:
             st.html(
                 template.render(

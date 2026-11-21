@@ -235,6 +235,24 @@ def test_project_collection_navigation(tmp_path, monkeypatch):
     page.session_state["fragment"] = "section=collection%2Fstations&q=Marsh"
     page.run()
     assert "Marsh</h1>" in html(page) and "Harbour" not in html(page)
+    page.session_state["fragment"] = "section=stations&entry=west"
+    page.run()
+    assert "Marsh</h1>" in html(page)
+    for section in ("stations", "collection%2Fstations"):
+        page.session_state["fragment"] = (
+            f"section={section}&record=metadata.yaml&entry=urn:example:field-paper&view=attributes"
+        )
+        page.run()
+        body = html(page)
+        assert "Harbour</h1>" in body
+        assert "Shoreline field survey" not in body
+    page.session_state["fragment"] = (
+        "section=collection%2Fmissing&record=metadata.yaml&entry=urn:example:field-paper"
+    )
+    page.run()
+    body = html(page)
+    assert "This section is unavailable" in body
+    assert "Shoreline field survey" not in body
     follow(page, "Empty collection")
     assert "No records in this collection." in html(page)
     follow(page, "Papers")

@@ -82,7 +82,8 @@
 {%- endmacro %}
 <div class="study{% if section=='Graph' %} graph-view{% endif %}">
 <header><strong>{% if brand.logo %}<img src="{{ brand.logo }}" alt="">{% else %}<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"></circle></svg>{% endif %}{{ brand.app_name }}</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}"{% if current %} aria-current="page"{% endif %} href="{{ href }}" target="_self">{{ name }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav>{% if section=='Graph' %}{{ search('q','Find a graph record',{'section':'graph', 'relation':relation} if relation else {'section':'graph'}) }}{% elif collection %}{{ search('q','Search ' ~ collection.title,{'section':section}) }}{% else %}{{ search('q','Search papers, datasets, files',{}) }}{% endif %}</header>
-{% if section=='Graph' %}{% include 'graph.html' %}
+{% if section is none %}<main><article>This section is unavailable in this project.</article></main>
+{% elif section=='Graph' %}{% include 'graph.html' %}
 {% elif detail is defined %}{% include 'collection_detail.html' %}
 {% elif collection %}{% include 'collection.html' %}
 {% elif fp and fp.page %}<main class="filepage">
