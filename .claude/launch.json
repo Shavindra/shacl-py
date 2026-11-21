@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "viewer-example",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)\" && SHACL_PY_ROOT=examples/coastal-survey PYTHONPATH=src /opt/miniconda3-pbe/envs/cellsim/bin/python -m streamlit run src/shacl_py/app.py --server.address=127.0.0.1 --server.port=8510 --server.headless=true"
+      ],
+      "port": 8510
+    }
+  ]
+}
