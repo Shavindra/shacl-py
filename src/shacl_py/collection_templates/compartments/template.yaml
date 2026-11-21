@@ -1,0 +1,83 @@
+id: compartments
+title: Compartments
+schema: compartments.schema.json
+linkml: compartments.linkml.yaml
+example: example.yaml
+records: compartments
+id_field: id
+label_field: name
+field_labels:
+  id: ID
+  name: Name
+  description: Description
+  composition: Composition
+  shape: Shape
+  references: References
+  microscopy_notes: Microscopy notes
+  organism: Organism
+  source: Source
+  title: Title
+  url: URL
+  doi: DOI
+  citation: Citation
+  notes: Notes
+  sheet: Sheet
+  range: Range
+  modified_at: Last modified
+  imported_on: Date imported
+  unassigned_references: Unassigned references
+  highlighted: Highlighted
+  go_terms: GO terms
+  go_description: GO definition
+  source_labels: Source labels
+  overviews: Overviews
+  overview_structure: Structure overview
+  overview_composition: Composition overview
+  overview_shape: Shape overview
+  source_label: Source label
+  organisms: Organism records
+  taxon_id: Taxon
+  cell_type: Cell type
+  morphology: Morphology
+  images: Images
+  path: Path
+  figure: Figure
+  panel: Panel
+  dataset_id: Dataset ID
+  modality: Modality
+  source_reference: Source reference
+  measurements: Measurements
+  property: Property
+  value: Value
+  unit: Unit
+  method: Method
+  conditions: Conditions
+  wavelength: Wavelength
+  medium: Medium
+  grouped_note_ids: Grouped notes
+  grouped_research_notes: Grouped research notes
+  unselected_compartments: Unselected compartments
+  ontology: Ontology
+  provider: Provider
+  aspect: Aspect
+  release: Release
+presentation:
+  starred: highlighted
+  overview: [description, go_description, composition, shape, microscopy_notes]
+  terms:
+    field: go_terms
+    label: GO term
+    definition: go_description
+    url: https://www.ebi.ac.uk/QuickGO/term/{id}
+    provider: EMBL-EBI QuickGO
+    licence: CC BY 4.0
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+  variants: {field: organisms, id_field: id, group_field: taxon_id, label_field: name, label: Organism, plural: organisms}
+  images: images
+  references: references
+  unassigned_references: unassigned_references
+  source: source
+  sections:
+  - {field: measurements, label: Measurements, scope: variant}
+  - {field: overviews, label: Source overviews}
+  - {field: grouped_note_ids, label: Grouped research notes, lookup: {table: grouped_research_notes, id_field: id}}

@@ -123,7 +123,7 @@ def main(argv=None, *, review_layout=None):
         "--template",
         default="project",
         metavar="NAME_OR_PATH",
-        help="project, paper-review or a local collection template directory or manifest",
+        help="project, paper-review, a bundled collection template (compartments) or a local collection template directory or manifest",
     )
     setup.add_argument(
         "--data",
@@ -206,6 +206,7 @@ def main(argv=None, *, review_layout=None):
             return 0
         if args.command == "setup":
             if args.template not in ("project", "paper-review"):
+                from shacl_py.collection import resolve_template
                 from shacl_py.collection_setup import setup_collection
 
                 if any(
@@ -215,7 +216,7 @@ def main(argv=None, *, review_layout=None):
                         "project options apply to the project and paper-review templates"
                     )
                 setup_collection(
-                    args.path.resolve(), Path(args.template).expanduser(), args.data
+                    args.path.resolve(), resolve_template(args.template), args.data
                 )
                 return 0
             if args.data is not None:

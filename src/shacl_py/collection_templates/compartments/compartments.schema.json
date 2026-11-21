@@ -1,0 +1,700 @@
+{
+  "$defs": {
+    "Any": {
+      "additionalProperties": true,
+      "description": "",
+      "title": "Any",
+      "type": [
+        "null",
+        "boolean",
+        "object",
+        "number",
+        "string"
+      ]
+    },
+    "CatalogueSource": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "imported_on": {
+          "format": "date",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified_at": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sheet": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "CatalogueSource",
+      "type": "object"
+    },
+    "Compartment": {
+      "additionalProperties": false,
+      "description": "A selected compartment, including fields generated from the selection and GO.",
+      "properties": {
+        "description": {
+          "description": "General description. Takes precedence over the GO definition in the preview.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "go_description": {
+          "description": "GO definition from QuickGO.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "go_terms": {
+          "description": "GO cellular-component IDs.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "grouped_note_ids": {
+          "description": "IDs of grouped research notes that apply to this compartment.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "highlighted": {
+          "description": "Featured in the viewer.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "images": {
+          "description": "General illustrations of the compartment.",
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "organisms": {
+          "items": {
+            "$ref": "#/$defs/OrganismRecord"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "overviews": {
+          "items": {
+            "$ref": "#/$defs/Overview"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "source_labels": {
+          "description": "Labels used in the source selection.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "id"
+      ],
+      "title": "Compartment",
+      "type": "object"
+    },
+    "CompartmentCatalogue": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "compartments": {
+          "items": {
+            "$ref": "#/$defs/Compartment"
+          },
+          "type": "array"
+        },
+        "grouped_research_notes": {
+          "description": "Shared evidence that applies to several compartments.",
+          "items": {
+            "$ref": "#/$defs/GroupedNote"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ontology": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OntologySource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CatalogueSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unassigned_references": {
+          "description": "References awaiting assignment to a compartment.",
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "unselected_compartments": {
+          "description": "Curated records that are not currently selected.",
+          "items": {
+            "$ref": "#/$defs/CuratedCompartment"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "compartments"
+      ],
+      "title": "CompartmentCatalogue",
+      "type": "object"
+    },
+    "CuratedCompartment": {
+      "additionalProperties": false,
+      "description": "Hand-curated fields of a compartment record.",
+      "properties": {
+        "description": {
+          "description": "General description. Takes precedence over the GO definition in the preview.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grouped_note_ids": {
+          "description": "IDs of grouped research notes that apply to this compartment.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "images": {
+          "description": "General illustrations of the compartment.",
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "organisms": {
+          "items": {
+            "$ref": "#/$defs/OrganismRecord"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "CuratedCompartment",
+      "type": "object"
+    },
+    "GroupedNote": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "composition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "microscopy_notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "shape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxon_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "GroupedNote",
+      "type": "object"
+    },
+    "Image": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "dataset_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "figure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modality": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "panel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_reference": {
+          "description": "DOI, dataset ID or bibliographic reference.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "Image",
+      "type": "object"
+    },
+    "Measurement": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "conditions": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "medium": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "description": "DOI, dataset ID or bibliographic reference.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Any"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wavelength": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "Measurement",
+      "type": "object"
+    },
+    "OntologySource": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "aspect": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "release": {
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "OntologySource",
+      "type": "object"
+    },
+    "OrganismRecord": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "cell_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "composition": {
+          "description": "Chemical or molecular constituents.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "Structural description.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "description": "Permanent unique ID that model parameters can refer to.",
+          "type": "string"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "measurements": {
+          "items": {
+            "$ref": "#/$defs/Measurement"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "microscopy_notes": {
+          "description": "Observations and limits of the imaging method.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "morphology": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "description": "Organism name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "references": {
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "shape": {
+          "description": "Observed morphology.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taxon_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "taxon_id"
+      ],
+      "title": "OrganismRecord",
+      "type": "object"
+    },
+    "Overview": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "overview_composition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "overview_shape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "overview_structure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "Overview",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "citation": {
+          "type": "string"
+        },
+        "doi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "format": "uri",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "citation"
+      ],
+      "title": "Reference",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Shavindra/shacl-py/blob/main/src/shacl_py/collection_templates/compartments/compartments.linkml.yaml",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "additionalProperties": false,
+  "description": "",
+  "metamodel_version": "1.12.0",
+  "properties": {
+    "compartments": {
+      "items": {
+        "$ref": "#/$defs/Compartment"
+      },
+      "type": "array"
+    },
+    "grouped_research_notes": {
+      "description": "Shared evidence that applies to several compartments.",
+      "items": {
+        "$ref": "#/$defs/GroupedNote"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "ontology": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OntologySource"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CatalogueSource"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "unassigned_references": {
+      "description": "References awaiting assignment to a compartment.",
+      "items": {
+        "$ref": "#/$defs/Reference"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "unselected_compartments": {
+      "description": "Curated records that are not currently selected.",
+      "items": {
+        "$ref": "#/$defs/CuratedCompartment"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "compartments"
+  ],
+  "title": "compartments",
+  "type": "object",
+  "version": null
+}

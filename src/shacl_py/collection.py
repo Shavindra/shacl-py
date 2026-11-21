@@ -17,6 +17,19 @@ from shacl_py.catalogue import record_validator
 from shacl_py.files import read_metadata, scoped_path
 
 CONFIG = ".shacl-py/config.yaml"
+BUNDLED_TEMPLATES = Path(__file__).with_name("collection_templates")
+
+
+def bundled_templates():
+    return sorted(p.parent.name for p in BUNDLED_TEMPLATES.glob("*/template.yaml"))
+
+
+def resolve_template(name_or_path):
+    """Return a bundled template's directory for its name, otherwise the given path."""
+    path = Path(name_or_path).expanduser()
+    if not path.exists() and name_or_path in bundled_templates():
+        return BUNDLED_TEMPLATES / name_or_path
+    return path
 
 
 class CatalogueConstructor(SafeConstructor):

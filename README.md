@@ -147,6 +147,26 @@ stored definition. Records with the same set of mapped terms share a sidebar
 entry. `sections` can display additional fields or look up shared notes by ID.
 **Raw metadata** shows the complete source record. [Presentation settings](src/shacl_py/schemas/collection-view.schema.json)
 
+### Bundled collection templates
+
+shacl-py ships a **compartments** template for catalogues of cellular
+compartments: GO cellular-component terms, per-organism records with
+references, images and measurements, and shared research notes. Install it by
+name and point it at existing data.
+
+~~~sh
+shacl-py setup . --template compartments --data research/compartments/compartments.yaml
+shacl-py validate .
+~~~
+
+Its source is in [src/shacl_py/collection_templates/compartments](src/shacl_py/collection_templates/compartments).
+After editing the LinkML definition, regenerate the JSON Schema from that
+directory. Optional fields accept `null`.
+
+~~~sh
+gen-json-schema --indent 2 compartments.linkml.yaml | sed '/^$/d' > compartments.schema.json
+~~~
+
 ### Reuse a collection template
 
 ~~~sh

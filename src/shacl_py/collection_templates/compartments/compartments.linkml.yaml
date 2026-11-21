@@ -1,0 +1,149 @@
+id: https://github.com/Shavindra/shacl-py/blob/main/src/shacl_py/collection_templates/compartments/compartments.linkml.yaml
+name: compartments
+description: >-
+  Catalogue of cellular compartments with GO cellular-component terms, per-organism
+  evidence (descriptions, references, images, measurements) and shared research notes.
+prefixes:
+  linkml: https://w3id.org/linkml/
+  compartments: https://github.com/Shavindra/shacl-py/compartments#
+default_prefix: compartments
+imports: [linkml:types]
+default_range: string
+
+classes:
+  CompartmentCatalogue:
+    tree_root: true
+    attributes:
+      source: {range: CatalogueSource, inlined: true}
+      ontology: {range: OntologySource, inlined: true}
+      compartments:
+        range: Compartment
+        required: true
+        multivalued: true
+        inlined_as_list: true
+      grouped_research_notes:
+        description: Shared evidence that applies to several compartments.
+        range: GroupedNote
+        multivalued: true
+        inlined_as_list: true
+      unselected_compartments:
+        description: Curated records that are not currently selected.
+        range: CuratedCompartment
+        multivalued: true
+        inlined_as_list: true
+      unassigned_references:
+        description: References awaiting assignment to a compartment.
+        range: Reference
+        multivalued: true
+        inlined_as_list: true
+
+  CuratedCompartment:
+    description: Hand-curated fields of a compartment record.
+    attributes:
+      id: {identifier: true, required: true}
+      description: {description: General description. Takes precedence over the GO definition in the preview.}
+      organisms:
+        range: OrganismRecord
+        multivalued: true
+        inlined_as_list: true
+      images:
+        description: General illustrations of the compartment.
+        range: Image
+        multivalued: true
+        inlined_as_list: true
+      grouped_note_ids:
+        description: IDs of grouped research notes that apply to this compartment.
+        multivalued: true
+
+  Compartment:
+    is_a: CuratedCompartment
+    description: A selected compartment, including fields generated from the selection and GO.
+    attributes:
+      name: {required: true}
+      highlighted: {range: boolean, description: Featured in the viewer.}
+      go_terms: {multivalued: true, description: GO cellular-component IDs.}
+      go_description: {description: GO definition from QuickGO.}
+      source_labels: {multivalued: true, description: Labels used in the source selection.}
+      overviews:
+        range: Overview
+        multivalued: true
+        inlined_as_list: true
+
+  OrganismRecord:
+    attributes:
+      id: {required: true, description: Permanent unique ID that model parameters can refer to.}
+      taxon_id: {required: true}
+      name: {description: Organism name.}
+      cell_type: {}
+      description: {description: Structural description.}
+      composition: {description: Chemical or molecular constituents.}
+      shape: {description: Observed morphology.}
+      morphology: {}
+      microscopy_notes: {description: Observations and limits of the imaging method.}
+      references: {range: Reference, multivalued: true, inlined_as_list: true}
+      images: {range: Image, multivalued: true, inlined_as_list: true}
+      measurements: {range: Measurement, multivalued: true, inlined_as_list: true}
+
+  GroupedNote:
+    attributes:
+      id: {required: true}
+      name: {required: true}
+      taxon_id: {}
+      description: {}
+      composition: {}
+      shape: {}
+      microscopy_notes: {}
+      references: {range: Reference, multivalued: true, inlined_as_list: true}
+
+  Overview:
+    attributes:
+      source_label: {}
+      overview_structure: {}
+      overview_composition: {}
+      overview_shape: {}
+
+  Image:
+    attributes:
+      path: {}
+      url: {}
+      figure: {}
+      panel: {}
+      dataset_id: {}
+      modality: {}
+      source_reference: {description: 'DOI, dataset ID or bibliographic reference.'}
+
+  Measurement:
+    attributes:
+      property: {}
+      value: {range: Any}
+      unit: {}
+      method: {}
+      conditions: {}
+      wavelength: {}
+      medium: {}
+      source: {description: 'DOI, dataset ID or bibliographic reference.'}
+
+  Any:
+    class_uri: linkml:Any
+
+  Reference:
+    attributes:
+      citation: {required: true}
+      doi: {range: string}
+      url: {range: uri}
+      notes: {range: string}
+
+  CatalogueSource:
+    attributes:
+      title: {range: string}
+      url: {range: uri}
+      sheet: {range: string}
+      range: {range: string}
+      modified_at: {range: datetime}
+      imported_on: {range: date}
+
+  OntologySource:
+    attributes:
+      provider: {}
+      aspect: {}
+      release: {range: uri}

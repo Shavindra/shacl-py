@@ -142,3 +142,17 @@ def test_direct_schema_and_partial_failure(tmp_path):
         '{"$ref":"https://example.invalid/unknown.json"}'
     )
     assert main(["validate", str(tmp_path / "project.json")]) == 1
+
+
+def test_bundled_compartments_template_installs_by_name(tmp_path):
+    from shacl_py.collection import bundled_templates
+
+    assert "compartments" in bundled_templates()
+    project = tmp_path / "project"
+    project.mkdir()
+    assert main(["setup", str(project), "--template", "compartments"]) == 0
+    installed = project / ".shacl-py/templates/compartments"
+    assert (installed / "template.yaml").is_file()
+    assert (installed / "compartments.schema.json").is_file()
+    assert (project / "collections/compartments.yaml").is_file()
+    assert main(["validate", str(project)]) == 0

@@ -1,0 +1,37 @@
+source:
+  title: Cell compartments
+  imported_on: '2026-11-21'
+ontology:
+  provider: EMBL-EBI QuickGO
+  aspect: cellular_component
+compartments:
+- id: vacuole
+  name: vacuole
+  highlighted: true
+  go_terms:
+  - GO:0005773
+  organisms:
+  - id: vacuole__4932
+    taxon_id: NCBITaxon:4932
+    name: Saccharomyces cerevisiae
+    description: A single membrane separates the lumen from the cytosol.
+    references:
+    - doi: 10.1016/j.bbamcr.2008.08.003
+      url: https://doi.org/10.1016/j.bbamcr.2008.08.003
+      citation: 'Li, S. C. & Kane, P. M. (2009). The yeast lysosome-like vacuole: endpoint
+        and crossroads. Biochimica et Biophysica Acta, 1793, 650-663.'
+    images: []
+    measurements:
+    - property: vacuole volume
+      value: null
+      unit: µm³
+      source: null
+- id: nucleus
+  name: nucleus
+  highlighted: false
+  go_terms:
+  - GO:0005634
+  organisms: []
+grouped_research_notes: []
+unselected_compartments: []
+unassigned_references: []
