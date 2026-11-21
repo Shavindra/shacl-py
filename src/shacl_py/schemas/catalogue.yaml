@@ -44,6 +44,8 @@ classes:
     attributes:
       name: {range: string, required: true, pattern: '\S'}
       url: {range: uri, required: true, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$'}
+      preview_url: {range: uri, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$'}
+      provider_url: {range: uri, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$'}
   DatasetLink:
     attributes:
       dataset: {range: LocalDataset, required: true}

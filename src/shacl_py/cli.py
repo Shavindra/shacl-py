@@ -165,11 +165,11 @@ def main(argv=None, *, review_layout=None):
     )
     add.add_argument(
         "--linked-file",
-        nargs=3,
+        nargs="+",
         action="append",
         default=[],
-        metavar=("DATASET_URL", "FILENAME", "FILE_URL"),
-        help="List a remote file on the named dataset (repeatable)",
+        metavar="VALUE",
+        help="DATASET_URL FILENAME DOWNLOAD_URL [PREVIEW_URL [PROVIDER_URL]] (repeatable)",
     )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"

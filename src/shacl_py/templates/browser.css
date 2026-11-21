@@ -32,3 +32,8 @@
 .study .dataset-facts dd, .study .dataset-facts code { margin: 0; overflow-wrap: anywhere; }
 .study .dshead h2 { min-width: 0; overflow-wrap: anywhere; }
 @media(max-width:760px){.study header{gap:4px;flex-wrap:wrap;height:auto;padding:8px}.study header form{width:100%}.study .layout,.study .split{display:block;min-height:0}.study aside{max-height:240px;overflow:auto}.study .heading,.study article{padding:16px}.study .frow{grid-template-columns:1.4fr 1fr 50px 58px;gap:4px}.study nav{gap:12px}}
+
+.study .external-file { grid-column: span 3; min-width: 0; padding: 6px 0; }
+.study .external-file > span { display: block; overflow: hidden; text-overflow: ellipsis; }
+.study .file-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.study .file-actions a { text-decoration: underline; }

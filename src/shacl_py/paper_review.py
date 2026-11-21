@@ -131,7 +131,12 @@ def add_datasets(root, selector, entries, linked_files=()):
             link["dataset"] == dataset["pid"] for link in paper.get("dataset_links", [])
         ):
             append_link(paper, dataset, "related")
-    for dataset_url, filename, file_url in linked_files:
+    for values in linked_files:
+        if not 3 <= len(values) <= 5:
+            raise ValueError(
+                "--linked-file expects DATASET_URL FILENAME DOWNLOAD_URL [PREVIEW_URL [PROVIDER_URL]]"
+            )
+        dataset_url, filename, file_url, *optional = values
         matches = [
             d
             for d in datasets
@@ -146,8 +151,15 @@ def add_datasets(root, selector, entries, linked_files=()):
             )
         files = matches[0].setdefault("linked_files", [])
         entry = {"name": filename, "url": source_url(file_url)}
-        if entry not in files:
+        existing = next(
+            (f for f in files if f["name"] == filename and f["url"] == entry["url"]),
+            None,
+        )
+        if existing is None:
             files.append(entry)
+            existing = entry
+        for key, value in zip(("preview_url", "provider_url"), optional):
+            existing[key] = source_url(value)
     validate_catalogue(graph, root)
     changed = save_metadata(document)
     print(f"{'Updated' if changed else 'Kept'} {document.path}")

@@ -422,6 +422,8 @@ def browse(items, stored, base, brand, params):
                 "name": f["name"],
                 "path": f["name"],
                 "href": f["url"],
+                "preview": f.get("preview_url"),
+                "provider": f.get("provider_url"),
                 "parent": "",
                 "size": "",
                 "local": False,

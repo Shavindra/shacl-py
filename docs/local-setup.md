@@ -188,3 +188,7 @@ shacl-py add-datasets --paper papers/survey \
 ```
 
 Omit `--linked-file` for a dataset landing page alone. Repeat it for more files.
+
+After the download URL, optionally supply a preview URL and a provider page URL.
+The viewer shows each supplied link as a separate action. Opening a catalogue
+entry never fetches the linked file.

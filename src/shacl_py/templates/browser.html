@@ -9,7 +9,13 @@
 <div class="frow cols"><span>Name</span><span>Path</span><span>Size</span><span>Status</span></div>
 {% if params.get('folder','.') != '.' %}<a class="folder" href="{{ up }}" target="_self">↑ Parent folder</a>{% endif %}
 {% for folder in folders %}<a class="folder" href="{{ url(route,folder=folder) }}" target="_self">{{ folder.split('/')[-1] }}/</a>{% endfor %}
-{% for f in rows if params.get('find','')|lower in f.path|lower %}<div class="frow">{% if f.href %}<a href="{{ f.href }}" target="_blank" rel="noreferrer">{{ f.name }}</a>{% else %}<a href="{{ url(route,file=f.path) }}" target="_self">{{ f.name }}</a>{% endif %}<span>{{ f.parent }}</span><span>{{ f.size }}</span><span class="status {{ 'remote' if not f.local }}">{{ 'External' if f.href else 'Local' if f.local else 'Remote' }}</span></div>{% endfor %}
+{% for f in rows if params.get('find','')|lower in f.path|lower %}<div class="frow">{% if f.href %}
+<div class="external-file"><span title="{{ f.name }}">{{ f.name }}</span><div class="file-actions">
+{% if f.preview %}<a href="{{ f.preview }}" target="_blank" rel="noreferrer">Preview</a>{% endif %}
+{% if f.provider %}<a href="{{ f.provider }}" target="_blank" rel="noreferrer">Open at provider ↗</a>{% endif %}
+<a href="{{ f.href }}" target="_blank" rel="noreferrer" download>Download</a>
+</div></div>
+{% else %}<a href="{{ url(route,file=f.path) }}" target="_self">{{ f.name }}</a><span>{{ f.parent }}</span><span>{{ f.size }}</span>{% endif %}<span class="status {{ 'remote' if not f.local }}">{{ 'External' if f.href else 'Local' if f.local else 'Remote' }}</span></div>{% endfor %}
 </div>
 {% endmacro %}
 {% macro dataset_details() -%}

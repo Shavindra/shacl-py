@@ -1926,6 +1926,16 @@
           "pattern": "\\S",
           "type": "string"
         },
+        "preview_url": {
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        },
+        "provider_url": {
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        },
         "url": {
           "format": "uri",
           "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
