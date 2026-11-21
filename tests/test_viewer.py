@@ -9,6 +9,7 @@ import yaml
 from datalad.api import create, meta_add
 from streamlit.testing.v1 import AppTest
 
+from shacl_py.browser import linked_file_selection
 from shacl_py.cli import main
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples/coastal-survey"
@@ -748,3 +749,133 @@ def test_linked_files_show_their_own_and_inherited_attributes(tmp_path, monkeypa
     ]
     path.write_text(yaml.safe_dump(graph))
     assert main(["validate", str(tmp_path)]) == 1
+
+
+def test_external_file_folders_preserve_links_and_navigation(tmp_path, monkeypatch):
+    linked = [
+        {"name": "summary.txt", "url": "https://example.org/summary.txt"},
+        {
+            "name": "sample_a/image.tif",
+            "url": "https://example.org/a/image.tif?version=1",
+            "preview_url": "https://example.org/a/preview.png",
+            "provider_url": "https://example.org/a/provider",
+            "attributes": [{"predicate": "urn:example:marker", "value": "Marker A"}],
+        },
+        {"name": "sample_a/masks/mask.tif", "url": "https://example.org/a/mask.tif"},
+        {
+            "name": "sample_a/masks/nuclei/nucleus.tif",
+            "url": "https://example.org/a/nucleus.tif",
+        },
+        {"name": "sample_b/image.tif", "url": "https://example.org/b/image.tif"},
+        {"name": "../legacy.tif", "url": "https://example.org/legacy.tif"},
+    ]
+    graph = {
+        "project": {"pid": "urn:example:project"},
+        "publications": [
+            {
+                "pid": "urn:example:paper",
+                "title": "Example paper",
+                "dataset_links": [{"dataset": "urn:example:data", "role": "describes"}],
+            }
+        ],
+        "datasets": [
+            {
+                "pid": "urn:example:data",
+                "title": "External images",
+                "source_url": "https://example.org/source",
+                "linked_files": linked,
+                "attributes": [{"predicate": "urn:example:specimen", "value": "Cells"}],
+            }
+        ],
+    }
+    (tmp_path / "metadata.yaml").write_text(yaml.safe_dump({"catalogue": graph}))
+    assert main(["validate", str(tmp_path)]) == 0
+    page = open_viewer(tmp_path, monkeypatch)
+    body = html(page)
+    assert "External · 0 of 6 files local" in body
+    assert ">sample_a/</a>" in body and ">sample_b/</a>" in body
+    assert ">summary.txt</span>" in body and ">../legacy.tif</span>" in body
+    assert ">image.tif</span>" not in body and ">mask.tif</span>" not in body
+
+    follow(page, "sample_a/")
+    assert "folder=sample_a" in page.session_state["fragment"]
+    assert ">masks/</a>" in html(page) and ">summary.txt</span>" not in html(page)
+    follow(page, "image.tif")
+    assert "linked=sample_a%2Fimage.tif" in page.session_state["fragment"]
+    panel = opened_file(page)
+    for value in (
+        "https://example.org/a/image.tif?version=1",
+        "https://example.org/a/preview.png",
+        "https://example.org/a/provider",
+        "sample_a/image.tif",
+        "Marker A",
+        "Cells",
+    ):
+        assert value in panel
+    assert "https://example.org/b/image.tif" not in panel
+    follow(page, "Open page")
+    assert "sample_a/image.tif" in opened_file(page)
+    follow(page, "← Back")
+    follow(page, "masks/")
+    assert "folder=sample_a%2Fmasks" in page.session_state["fragment"]
+    assert ">mask.tif</span>" in html(page) and ">image.tif</span>" not in html(page)
+    follow(page, "nuclei/")
+    assert "folder=sample_a%2Fmasks%2Fnuclei" in page.session_state["fragment"]
+    assert ">nucleus.tif</span>" in html(page)
+    follow(page, "↑ Parent folder")
+    assert "folder=sample_a%2Fmasks" in page.session_state["fragment"]
+    assert ">mask.tif</span>" in html(page) and ">nuclei/</a>" in html(page)
+    follow(page, "↑ Parent folder")
+    assert "folder=sample_a" in page.session_state["fragment"]
+    follow(page, "↑ Parent folder")
+    follow(page, "sample_b/")
+    follow(page, "image.tif")
+    assert "linked=sample_b%2Fimage.tif" in page.session_state["fragment"]
+    assert "https://example.org/b/image.tif" in opened_file(page)
+    assert "Marker A" not in opened_file(page)
+    follow(page, "×")
+    follow(page, "↑ Parent folder")
+    follow(page, "../legacy.tif")
+    assert "https://example.org/legacy.tif" in opened_file(page)
+
+
+def test_virtual_folders_can_coexist_with_local_files(tmp_path, monkeypatch):
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data/local.txt").write_text("Local file\n")
+    (tmp_path / "metadata.yaml").write_text(
+        """catalogue:
+  project: {pid: 'urn:example:project'}
+  datasets:
+  - pid: urn:example:data
+    title: Mixed files
+    local_folder: data
+    linked_files:
+    - {name: 'remote/image.tif', url: 'https://example.org/image.tif'}
+"""
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    follow(page, "Datasets 1")
+    assert ">local.txt</span>" in html(page)
+    follow(page, "remote/")
+    assert ">image.tif</span>" in html(page) and ">local.txt</span>" not in html(page)
+    follow(page, "↑ Parent folder")
+    assert ">local.txt</span>" in html(page)
+
+
+def test_unusual_linked_names_stay_literal_at_root():
+    names = [
+        "/absolute/image.tif",
+        "../image.tif",
+        "sample/../image.tif",
+        "sample/./image.tif",
+        "sample//image.tif",
+        "C:/sample/image.tif",
+        r"sample\image.tif",
+    ]
+    linked = [{"name": name, "url": "https://example.org/image.tif"} for name in names]
+    folders, rows = linked_file_selection(linked)
+    assert folders == []
+    assert [row["name"] for row in rows] == names
+    assert all(row["parent"] == "" for row in rows)
+    assert linked_file_selection(linked, "sample") == ([], [])
+    assert linked_file_selection(linked, "../sample") == ([], [])

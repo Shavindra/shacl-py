@@ -4,6 +4,7 @@ import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import PureWindowsPath
 
 from shacl_py.catalogue import Catalogue
 from shacl_py.collection import Collection
@@ -337,6 +338,43 @@ def file_metadata(records):
             for path, rows in record.file_records.items():
                 result[record.folder / path].extend(rows)
     return result
+
+
+def linked_file_parts(name):
+    """Split a relative virtual path; retain unusual legacy names as root labels."""
+    parts = tuple(name.split("/"))
+    if (
+        "\\" in name
+        or "\x00" in name
+        or PureWindowsPath(name).drive
+        or any(part in ("", ".", "..") for part in parts)
+    ):
+        return (name,)
+    return parts
+
+
+def linked_file_selection(files, directory="."):
+    """List direct children of a virtual folder without accessing the filesystem."""
+    parent = () if directory == "." else tuple(directory.split("/"))
+    if parent and linked_file_parts(directory) != parent:
+        return [], []
+    folders, rows = set(), []
+    for linked in files:
+        parts = linked_file_parts(linked["name"])
+        if parts[: len(parent)] != parent or len(parts) <= len(parent):
+            continue
+        if len(parts) > len(parent) + 1:
+            folders.add("/".join(parts[: len(parent) + 1]))
+        else:
+            rows.append(
+                {
+                    "name": parts[-1],
+                    "path": linked["name"],
+                    "parent": "/".join(parts[:-1]),
+                    "file": linked,
+                }
+            )
+    return sorted(folders, key=str.casefold), rows
 
 
 def file_selection(item, directory, *, folder_mode=False):

@@ -5,7 +5,7 @@ import os
 import re
 import shlex
 from functools import cache
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
 import streamlit as st
@@ -24,6 +24,8 @@ from shacl_py.browser import (
     file_metadata,
     file_selection,
     items_from,
+    linked_file_parts,
+    linked_file_selection,
     neighbours,
     publication_key,
     searchable,
@@ -580,15 +582,27 @@ def browse(items, stored, base, brand, params, collections):
     if view == "datasets" and selected:
         route.update(dataset=selected.key, dataset_record=selected.ref)
     directory = params.get("folder", ".")
-    folders, files = (
-        listing(owner, directory)
+    linked_folders, linked_rows = (
+        linked_file_selection(owner.linked_files, directory)
         if owner and view in ("datasets", "files")
-        else ([], {})
+        else ([], [])
     )
+    try:
+        folders, files = (
+            listing(owner, directory)
+            if owner and view in ("datasets", "files")
+            else ([], {})
+        )
+    except ValueError:
+        if directory == "." or not (linked_folders or linked_rows):
+            raise
+        # A virtual folder need not also exist in a dataset's local folder.
+        folders, files = [], {}
+    folders = sorted(set(folders) | set(linked_folders), key=str.casefold)
     if item.is_publication and view == "files":
         excluded = {d.folder / path for d in ds for path in listing(d)[1]}
         files = {p: r for p, r in files.items() if item.folder / p not in excluded}
-    up = url(route, folder=str(Path(directory).parent))
+    up = url(route, folder=str(PurePosixPath(directory).parent))
     if directory != ".":
         route["folder"] = directory
     rows = []
@@ -610,19 +624,19 @@ def browse(items, stored, base, brand, params, collections):
                 "linked": False,
             }
         )
-    if owner and directory == "." and view in ("datasets", "files"):
-        rows.extend(
+    for row in linked_rows:
+        linked = row["file"]
+        rows.append(
             {
-                "name": f["name"],
-                "path": f["name"],
+                "name": row["name"],
+                "path": row["path"],
                 "linked": True,
-                "href": f["url"],
-                "preview": f.get("preview_url") or f["url"],
-                "parent": "",
-                "size": linked_size(f.get("attributes")),
+                "href": linked["url"],
+                "preview": linked.get("preview_url") or linked["url"],
+                "parent": row["parent"],
+                "size": linked_size(linked.get("attributes")),
                 "local": False,
             }
-            for f in owner.linked_files
         )
     dataset_owner = item if global_ds else selected if view == "datasets" else None
     try:
@@ -887,6 +901,9 @@ def linked_panel(owner, linked, route, paper, page=None):
         ("Format", kind, False),
         ("Availability", "External", False),
     ]
+    parts = linked_file_parts(linked["name"])
+    if len(parts) > 1:
+        rows.insert(0, ("Path", linked["name"], True))
     if size := linked_size(linked.get("attributes")):
         rows.insert(1, ("Size", size, False))
     raw = {
@@ -903,7 +920,7 @@ def linked_panel(owner, linked, route, paper, page=None):
     if owner is not paper:
         crumbs.append((owner.label, url(route)))
     return {
-        "name": linked["name"],
+        "name": parts[-1],
         "page": page == "file",
         "local": False,
         "external": True,

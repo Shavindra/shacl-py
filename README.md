@@ -43,6 +43,14 @@ declared in `linked_files`. Select a filename to see its own attributes and
 the groups inherited from its dataset, in the side panel or the full file
 page. Preview and download open at the provider.
 
+Group related external files by giving their `name` a relative path, such as
+`sample_01/image.ome.tif` and `sample_01/segmentation.ome.tif`. The viewer shows
+one `sample_01/` folder and keeps each file's download URL, preview and attributes.
+Use `/` between folders. Flat names still appear at the root. Absolute paths,
+backslashes and empty, `.` or `..` path components remain literal root labels
+for compatibility; they never access local folders. Local `file_groups` retain
+their recursive file selection.
+
 Choose **Graph** to explore the network of papers, datasets and shared labels.
 Labels come from declared labels, keywords and Dublin Core subjects. Click a
 label to see which records share it, or click a paper or dataset to open it.
