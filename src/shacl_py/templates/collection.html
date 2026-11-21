@@ -1,0 +1,33 @@
+{% macro fields(record) -%}
+<dl class="collection-fields">
+  {% for key, value in record.items() %}
+  <div><dt>{{ collection.field_labels.get(key, key) }}</dt><dd>{{ field_value(value) }}</dd></div>
+  {% endfor %}
+</dl>
+{%- endmacro %}
+
+{% macro field_value(value) -%}
+  {% if value is mapping %}{{ fields(value) if value else '{}' }}
+  {% elif value is string %}
+    {% if value.startswith(('https://', 'http://')) %}<a href="{{ value }}" target="_blank" rel="noreferrer">{{ value }}</a>{% else %}{{ value }}{% endif %}
+  {% elif value is sequence and value %}<ul>{% for child in value %}<li>{{ field_value(child) }}</li>{% endfor %}</ul>
+  {% elif value is none %}<code>null</code>
+  {% else %}{{ value | tojson }}{% endif %}
+{%- endmacro %}
+
+<div class="layout"><aside>
+  <div class="tools"><div class="cap">{{ collection.title }} <small>{{ rows|length }}</small></div></div>
+  {% for key, record in rows.items() %}
+  <a class="row {{ 'sel' if key==selected }}" href="{{ url({'section':section}, entry=key, q=params.get('q') or none) }}" target="_self"{% if key==selected %} aria-current="true"{% endif %}>
+    <b>{{ record[collection.label_field] }}</b> <small>{{ key }}</small>
+  </a>
+  {% endfor %}
+</aside><main>
+  {% if row %}
+  <section class="heading"><h1 class="serif">{{ row[collection.label_field] }}</h1></section>
+  <article>{{ fields(row) }}</article>
+  {% elif params.get('q') %}<article>No matching records.</article>
+  {% elif params.get('entry') %}<article>Record not found.</article>
+  {% else %}<article>No records in this collection.</article>{% endif %}
+  {% if collection.context %}<article><details><summary>Catalogue metadata</summary>{{ fields(collection.context) }}</details></article>{% endif %}
+</main></div>

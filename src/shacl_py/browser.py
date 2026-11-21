@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from shacl_py.catalogue import Catalogue
+from shacl_py.collection import Collection
 from shacl_py.files import (
     _file_row,
     folder_listing,
@@ -182,6 +183,8 @@ def source_content(source):
 
 def items_from(records, root):
     for source in records:
+        if isinstance(source, Collection):
+            continue
         if isinstance(source, MetadataSource):
             for i, (kind, fields) in enumerate(source.entries):
                 yield Item(source, source.reference, str(i), kind, fields)
