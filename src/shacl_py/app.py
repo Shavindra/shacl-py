@@ -35,6 +35,17 @@ from shacl_py.collection import Collection
 from shacl_py.collection_view import detail_view
 from shacl_py.files import IMAGE_TYPES, inline_image, scoped_path
 from shacl_py.graph import record_graph
+from shacl_py.methods import (
+    MethodIndex,
+    declared_file_records,
+    file_attributes,
+    local_file_id,
+    method_view,
+    techniques,
+)
+from shacl_py.methods import (
+    annotations as method_annotations,
+)
 from shacl_py.native import declared_title
 from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
@@ -300,10 +311,17 @@ def browse(items, stored, base, brand, params, collections):
         }
     q = params.get("q", "").strip().casefold()
     shared_query = None if collection else q
+    facet_route = {
+        key: params[key] for key in ("technique", "compartment") if params.get(key)
+    }
     nav = [
         (
             name,
-            url({}, section=name.lower(), q=shared_query),
+            url(
+                facet_route if name in ("Papers", "Datasets") else {},
+                section=name.lower(),
+                q=shared_query,
+            ),
             len({key_for(i) for i in group}),
             name == section,
         )
@@ -414,6 +432,10 @@ def browse(items, stored, base, brand, params, collections):
     def dataset_groups(i):
         return attribute_groups(i.fields.get("attributes"))
 
+    @cache
+    def record_methods(i):
+        return list(techniques(i.fields.get("attributes")))
+
     def attribute_count(i):
         return sum(group["count"] for group in dataset_groups(i))
 
@@ -425,15 +447,19 @@ def browse(items, stored, base, brand, params, collections):
             return len(folders), "folder"
         if count := attribute_count(i):
             return count, "attribute"
+        if record_methods(i):
+            return len(record_methods(i)), "method"
         return 0, "file"
 
     def default_dataset_tab(i):
-        return "attributes" if dataset_summary(i)[1] == "attribute" else "files"
+        return {"attribute": "attributes", "method": "methods"}.get(
+            dataset_summary(i)[1], "files"
+        )
 
     def count_label(count, noun):
         return f"{count} {noun}{'s' if count != 1 else ''}"
 
-    def linked(i, group):
+    def linked_items(i, group):
         unique = {}
         for j in related(i):
             if j in group:
@@ -463,6 +489,86 @@ def browse(items, stored, base, brand, params, collections):
         text = searchable([i.label, i.key, i.ref, i.fields, author_line(i), extra])
         return all(word in text for word in words)
 
+    index = MethodIndex(
+        collections,
+        {
+            ns
+            for project in items
+            if project.is_project
+            if (ns := method_annotations(project.fields).get("identifier_namespace"))
+        },
+    )
+    technique = facet_route.get("technique", "")
+    compartment = facet_route.get("compartment", "")
+
+    @cache
+    def record_facets(i):
+        return index.facets(i.fields)
+
+    @cache
+    def file_records(i):
+        return declared_file_records(i)
+
+    def listed_path(i, relative):
+        if relative in listing(i)[1]:
+            return "."
+        parts = linked_file_parts(relative)
+        if len(parts) > 1:
+            directory = "/".join(parts[:-1])
+            if (i.folder / directory).is_dir() and relative in listing(i, directory)[1]:
+                return directory
+        return None
+
+    @cache
+    def file_facets(i):
+        records = dict(file_records(i))
+        for f in i.linked_files:
+            claimed = records.get(f["url"], {})
+            records[f["url"]] = {
+                **claimed,
+                **f,
+                "attributes": [
+                    *claimed.get("attributes", []),
+                    *f.get("attributes", []),
+                ],
+            }
+        if stored and i.has_folder:
+            for path, entries in stored.items():
+                if (
+                    path.is_relative_to(i.folder)
+                    and listed_path(i, path.relative_to(i.folder).as_posix())
+                    is not None
+                ):
+                    key = local_file_id(i, path) or path
+                    claimed = records.get(key, {})
+                    records[key] = {
+                        **claimed,
+                        "attributes": [
+                            *claimed.get("attributes", []),
+                            *file_attributes(entries),
+                        ],
+                    }
+        return [index.facets(record) for record in records.values()]
+
+    def matches_facets(i):
+        own = record_facets(i)
+        if own.matches(technique, compartment):
+            return True
+        # Both selected facets must belong to this record or to the same file.
+        return any(
+            f.matches(
+                "" if technique in own.acquisition else technique,
+                "" if compartment in own.subjects else compartment,
+            )
+            for f in file_facets(i)
+        )
+
+    if section in ("Papers", "Datasets"):
+        for member in [*papers, *datasets]:
+            record_facets(member)
+        for member in [*papers, *datasets]:
+            file_facets(member)
+
     tag = params.get("tag", "All")
     can_star = section in ("Papers", "Datasets") or any(is_starred(i) for i in scope)
     starred_only = can_star and params.get("starred") == "1"
@@ -471,6 +577,7 @@ def browse(items, stored, base, brand, params, collections):
         "section": section.lower(),
         "q": q,
         "filter": params.get("filter", ""),
+        **facet_route,
     }
     if starred_only:
         sidebar_route["starred"] = "1"
@@ -487,7 +594,14 @@ def browse(items, stored, base, brand, params, collections):
     for i in scope:
         if starred_only and not is_starred(i):
             continue
-        ds = linked(i, datasets)
+        ds = linked_items(i, datasets)
+        if (
+            facet_route
+            and section in ("Papers", "Datasets")
+            and not matches_facets(i)
+            and (not i.is_publication or not any(matches_facets(d) for d in ds))
+        ):
+            continue
         if (
             q
             and q not in searchable([i.ref, i.fields])
@@ -507,7 +621,7 @@ def browse(items, stored, base, brand, params, collections):
         elif tag != "All" and tag not in (roles(i) if global_ds else labels(i)):
             continue
         if global_ds:
-            parent = next(iter(linked(i, papers)), None)
+            parent = next(iter(linked_items(i, papers)), None)
             byline = short_citation(parent, publication_year(parent)) if parent else ""
             year = ""
         else:
@@ -517,7 +631,14 @@ def browse(items, stored, base, brand, params, collections):
         shown.append(
             {
                 "item": i,
-                "href": url(sidebar_route | i.route, tag=tag),
+                "href": url(
+                    sidebar_route | i.route,
+                    tag=tag,
+                    view="methods"
+                    if params.get("view") == "methods"
+                    and section in ("Papers", "Datasets")
+                    else None,
+                ),
                 "starred": is_starred(i),
                 "authors": byline,
                 "venue": field(i, "format", "encodingFormat", "media_type")
@@ -548,6 +669,32 @@ def browse(items, stored, base, brand, params, collections):
         {
             "shown": shown,
             "global_ds": global_ds,
+            "techniques": sorted(
+                index.acquisition.items(), key=lambda pair: pair[1].casefold()
+            ),
+            "compartments": sorted(
+                index.compartments.items(), key=lambda pair: pair[1].casefold()
+            ),
+            "facet_route": facet_route,
+            "show_facets": section in ("Papers", "Datasets")
+            and bool(index.acquisition or index.compartments or facet_route),
+            "facet_args": {
+                **sidebar_route,
+                "tag": tag,
+                **{
+                    k: params[k]
+                    for k in (
+                        "record",
+                        "entry",
+                        "view",
+                        "dataset",
+                        "dataset_record",
+                        "dtab",
+                        "dsfilter",
+                    )
+                    if k in params
+                },
+            },
             "options": options,
             "active_filter": tag,
             "can_star": can_star,
@@ -562,8 +709,8 @@ def browse(items, stored, base, brand, params, collections):
         st.html(template.render(context))
         return
     item_route = sidebar_route | item.route | {"tag": tag}
-    ds = sorted(linked(item, datasets), key=lambda d: not is_starred(d))
-    parents = list({publication_key(p): p for p in linked(item, papers)}.values())
+    ds = sorted(linked_items(item, datasets), key=lambda d: not is_starred(d))
+    parents = list({publication_key(p): p for p in linked_items(item, papers)}.values())
     tabs = (
         [
             ("files", "Files", file_count(item)),
@@ -572,6 +719,7 @@ def browse(items, stored, base, brand, params, collections):
                 "Attributes",
                 attribute_count(item),
             ),
+            ("methods", "Methods", len(record_methods(item))),
             ("paper", "Paper", None),
         ]
         if global_ds
@@ -582,6 +730,8 @@ def browse(items, stored, base, brand, params, collections):
             ("files", "Other files", None),
         ]
     )
+    if item.is_publication:
+        tabs.insert(2, ("methods", "Methods", len(record_methods(item))))
     if not global_ds and (count := attribute_count(item)):
         tabs.append(("attributes", "Attributes", count))
     tabs.append(("source", "Raw metadata", None))
@@ -724,10 +874,65 @@ def browse(items, stored, base, brand, params, collections):
             map(dataset_link, used.values())
         )
 
+    def resolve_resource(ref):
+        # Dataset PIDs are exact. A file name is only a link when it identifies
+        # one visible file in the record's dataset or its paper's datasets.
+        direct = {key_for(d): d for d in datasets if d.key == ref}
+        if len(direct) == 1:
+            return url(
+                next(iter(direct.values())).route, section="datasets", view="files"
+            )
+
+        def file_links(d):
+            target = d.route | {
+                "section": "datasets" if d.is_dataset else "papers",
+                "view": "files",
+            }
+            found = []
+            for f in d.linked_files:
+                name = f["name"]
+                parts = linked_file_parts(name)
+                if ref in (name, parts[-1], f["url"]):
+                    found.append(
+                        url(target, linked=name, folder="/".join(parts[:-1]) or None)
+                    )
+            if d.has_folder:
+                candidates = listing(d)[1]
+                for path in candidates:
+                    if ref in (
+                        local_file_id(d, d.folder / path),
+                        path,
+                        PurePosixPath(path).name,
+                        (d.folder / path).relative_to(base).as_posix(),
+                    ):
+                        found.append(url(target, file=path))
+                # Ordinary folders are browsed one level at a time.
+                if (
+                    ref not in candidates
+                    and (directory := listed_path(d, ref)) is not None
+                ):
+                    found.append(url(target, file=ref, folder=directory))
+            return found
+
+        candidates = [dataset_owner or item]
+        siblings = (
+            ds
+            if item.is_publication
+            else [d for p in parents for d in linked_items(p, datasets)]
+        )
+        for scope in (
+            candidates,
+            list(dict.fromkeys(d for d in siblings if d not in candidates)),
+        ):
+            found = {href for d in scope for href in file_links(d)}
+            if found:
+                return next(iter(found)) if len(found) == 1 else None
+        return None
+
     derived_from, used_by = provenance(dataset_owner)
     default_dtab = default_dataset_tab(selected) if selected else "files"
     dtab = params.get("dtab", default_dtab)
-    if dtab not in ("files", "attributes"):
+    if dtab not in ("files", "attributes", "methods"):
         dtab = default_dtab
     doi_label = field(item, "doi", "source_url", "url", "sameAs")
     try:
@@ -777,6 +982,9 @@ def browse(items, stored, base, brand, params, collections):
         host=urlsplit(dataset_url).netloc if dataset_url else "",
         annotations=annotation_values(dataset_owner.fields) if dataset_owner else [],
         dtab=dtab,
+        method_groups=method_view(record_methods(owner), index.labels, resolve_resource)
+        if owner and (view == "methods" or view == "datasets" and dtab == "methods")
+        else [],
         dtabs=[
             ("files", "Files", file_count(selected) if selected else 0),
             (
@@ -784,6 +992,7 @@ def browse(items, stored, base, brand, params, collections):
                 "Attributes",
                 attribute_count(selected) if selected else 0,
             ),
+            ("methods", "Methods", len(record_methods(selected)) if selected else 0),
         ],
         attr={
             "groups": attribute_groups(item.fields.get("attributes"), "Paper")
@@ -824,6 +1033,9 @@ def browse(items, stored, base, brand, params, collections):
         )
         if linked:
             paper = item if item.is_publication else next(iter(parents), None)
+            declared = file_records(owner).get(linked["url"], {})
+            extra = declared.get("attributes", [])
+            file_methods = techniques([*linked.get("attributes", []), *extra])
             context["fp"] = linked_panel(
                 owner, linked, route, paper, page=params.get("page")
             )
@@ -832,11 +1044,25 @@ def browse(items, stored, base, brand, params, collections):
     elif "file" in params and owner:
         if row := files.get(params["file"]):
             paper = item if item.is_publication else next(iter(parents), None)
+            path = owner.folder / row["Relative path"]
+            declared = file_records(owner).get(local_file_id(owner, path), {})
+            extra = declared.get("attributes", [])
+            file_methods = techniques([*extra, *file_attributes(stored.get(path))])
             context["fp"] = file_panel(
                 owner, row, route, stored, base, paper, page=params.get("page")
             )
         else:
             st.warning("This file is outside the current selection.")
+    if "fp" in context:
+        if extra:
+            panel = context["fp"]
+            panel["groups"] = attribute_groups(extra, "File") + panel["groups"]
+            raw = yaml.safe_load(panel["raw"])
+            raw["catalogue_file"] = declared
+            panel["raw"] = yaml.safe_dump(raw, sort_keys=False, allow_unicode=True)
+        context["fp"]["methods"] = method_view(
+            file_methods, index.labels, resolve_resource
+        )
     st.html(template.render(context))
 
 

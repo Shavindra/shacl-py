@@ -95,7 +95,7 @@ export default function ({ parentElement, setStateValue }) {
     document.addEventListener("input", schedule, options);
     document.addEventListener("compositionend", schedule, options);
     document.addEventListener("change", (event) => {
-        if (event.target.matches(".study .graph-filter select")) event.target.form.requestSubmit();
+        if (event.target.matches(".study .graph-filter select, .study .method-filters select")) event.target.form.requestSubmit();
     }, options);
     document.addEventListener("submit", (event) => {
         const form = event.target;
@@ -105,7 +105,11 @@ export default function ({ parentElement, setStateValue }) {
             clearTimeout(live.timer);
             applyFilter(editFor(form.querySelector('input[type="search"]')));
         } else {
-            window.location.hash = new URLSearchParams(new FormData(form)).toString();
+            const values = new URLSearchParams(new FormData(form));
+            if (form.matches(".method-filters")) {
+                for (const key of ["technique", "compartment"]) if (!values.get(key)) values.delete(key);
+            }
+            window.location.hash = values.toString();
         }
     }, options);
 

@@ -1,6 +1,8 @@
 # Viewer wireframes
 
-[Dataset browser](dataset-browser.dc.html) is the version 4 design for Papers, Datasets, Compartments and record details. It uses sentence case for section and table headings, with light dividers above attribute, image and reference lists.
+[Dataset browser](dataset-browser.dc.html) is the version 5 design for Papers, Datasets, Compartments and file details.
+
+The preview opens on the **Methods** tab of **Cell images**. Select **Brightfield microscopy** and **Vacuole** in the sidebar. Open the field image from **Outputs** to inspect its own method. The **Feature tables** dataset links back to the source images under **Inputs**. Both the paper and its datasets have a Methods tab.
 
 In **Compartments**, select **Nucleus** and expand **Notes** below the GO definition. The general overview stays visible when you switch organism tabs. The selection CSV supplies these fields.
 

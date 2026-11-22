@@ -299,3 +299,132 @@ def test_graph_mouse_controls(page, viewer_url):
     expect(
         page.get_by_role("heading", name="Station readings", exact=True)
     ).to_be_visible()
+
+
+def test_methods_filters_and_file_links(page, tmp_path):
+    import yaml
+
+    def group(identifier, label, *children):
+        return {
+            "predicate": f"urn:example:{identifier}",
+            "display_label": label,
+            "attributes": list(children),
+        }
+
+    def microscopy(term, **annotation):
+        node = {
+            "predicate": "urn:example:technique",
+            "value": term,
+            "defined_by": f"urn:example:{term}",
+        }
+        if annotation:
+            node["annotations"] = annotation
+        return group(
+            "methods",
+            "Methods",
+            group(
+                "experimental",
+                "Experimental",
+                group("image-acquisition", "Image acquisition", node),
+            ),
+        )
+
+    def subject(go):
+        return {"predicate": "http://purl.org/dc/terms/subject", "object": go}
+
+    def paper(key, title, *datasets):
+        return {
+            "pid": key,
+            "title": title,
+            "dataset_links": [{"dataset": ds, "role": "describes"} for ds in datasets],
+        }
+
+    vacuole = "http://purl.obolibrary.org/obo/GO_0005773"
+    nucleus = "http://purl.obolibrary.org/obo/GO_0005634"
+    a, b, c = ("urn:example:" + k for k in ("paired", "unlabelled", "other"))
+    image = {
+        "name": "stack/field.tif",
+        "url": "https://example.org/field.tif",
+        "attributes": [
+            microscopy(
+                "DIC",
+                purpose="Record contrast",
+                inputs=["Specimen"],
+                outputs=[{"label": "Measurements", "ref": c}],
+            )
+        ],
+    }
+    catalogue = {
+        "project": {"pid": "urn:example:project", "title": "Sample"},
+        "publications": [
+            paper("urn:example:p", "Matching paper", a),
+            paper("urn:example:q", "Separate datasets", b, c),
+        ],
+        "datasets": [
+            {
+                "pid": a,
+                "title": "Paired images",
+                "characterized_by": [subject(vacuole)],
+                "linked_files": [image],
+            },
+            {
+                "pid": b,
+                "title": "DIC only",
+                "attributes": [microscopy("DIC")],
+                "characterized_by": [subject(nucleus)],
+            },
+            {
+                "pid": c,
+                "title": "Measurements",
+                "attributes": [
+                    microscopy(
+                        "Fluorescence",
+                        purpose="Image the sample",
+                        inputs=[{"label": "Source images", "ref": a}],
+                    )
+                ],
+                "characterized_by": [subject(vacuole)],
+                "linked_files": [
+                    {"name": "table.tsv", "url": "https://example.org/table.tsv"}
+                ],
+            },
+        ],
+    }
+    (tmp_path / "metadata.yaml").write_text(
+        yaml.safe_dump({"catalogue": catalogue}, sort_keys=False)
+    )
+    with serve_project(tmp_path) as url:
+        page.goto(url, wait_until="domcontentloaded")
+        side = page.locator(".layout > aside")
+        technique = side.get_by_label("Technique", exact=True)
+        compartment = side.get_by_label("Compartment", exact=True)
+        technique.select_option(label="DIC")
+        expect(side.locator("a.row")).to_have_count(2)
+        compartment.select_option(value="GO:0005773")
+        expect(side.locator("a.row")).to_have_count(1)
+        expect(side.locator("a.row")).to_contain_text("Matching paper")
+        main = page.locator(".study main")
+        main.locator(".heading nav").get_by_role("link", name="Methods 0").click()
+        expect(main).to_contain_text("No methods recorded for this paper.")
+        page.locator(".study header nav").get_by_role("link", name="Datasets 3").click()
+        expect(side.locator("a.row")).to_have_count(1)
+        expect(main.locator("h1")).to_have_text("Paired images")
+        main.get_by_role("link", name="stack/").click()
+        main.get_by_role("link", name="field.tif", exact=True).click()
+        drawer = page.locator(".drawer")
+        expect(drawer.locator(".file-methods")).to_contain_text(
+            "Experimental › Image acquisition"
+        )
+        expect(drawer.locator(".file-methods")).to_contain_text("Record contrast")
+        drawer.get_by_role("link", name="Open page").click()
+        page.locator(".filepage .file-methods").get_by_role(
+            "link", name="Measurements"
+        ).click()
+        expect(main.locator("h1")).to_have_text("Measurements")
+        main.get_by_role("link", name="table.tsv", exact=True).click()
+        expect(page.locator(".drawer")).to_be_visible()
+        expect(page.locator(".drawer .file-methods")).to_have_count(0)
+        page.locator(".drawer").get_by_role("link", name="Close", exact=True).click()
+        main.locator(".heading nav").get_by_role("link", name="Methods 1").click()
+        main.locator(".method-grid").get_by_role("link", name="Source images").click()
+        expect(main.locator("h1")).to_have_text("Paired images")

@@ -163,6 +163,13 @@ def _is_qualifier(node):
 def _term(value, href=None):
     """One displayed value: its text and, for IRIs, where it links."""
     text = _text(value)
+    target = href or text
+    if match := re.fullmatch(r"https?://purl\.obolibrary\.org/obo/GO_(\d+)", target):
+        term = "GO:" + match[1]
+        return {
+            "text": term if text == target else text,
+            "href": "https://www.ebi.ac.uk/QuickGO/term/" + term,
+        }
     if href:
         return {"text": text, "href": href}
     if is_link(text):
@@ -245,9 +252,24 @@ def _count(rows):
     return sum(row["kind"] == "property" for row in rows)
 
 
+def is_method_group(node):
+    # A group's name alone can also describe ordinary free-form attributes.
+    if (
+        re.split(r"[/#:]", predicate_of(node))[-1] != "methods"
+        and node.get("display_label") != "Methods"
+    ):
+        return False
+    return any(
+        q.get("defined_by") and q.get("value")
+        for family in _children(node)
+        for kind in _children(family)
+        for q in _children(kind)
+    )
+
+
 def attribute_groups(nodes, source="Dataset"):
     """Group attribute specifications under their top-level parents."""
-    nodes = [n for n in nodes or [] if isinstance(n, dict)]
+    nodes = [n for n in nodes or [] if isinstance(n, dict) and not is_method_group(n)]
     general, groups = [], []
     for node in nodes:
         kids = _children(node)

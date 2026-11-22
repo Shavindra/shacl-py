@@ -39,6 +39,14 @@ Set `highlighted: true` on an entry in `catalogue.publications` or
 first, including datasets listed under a paper. Choose **Starred** to see
 only those entries. Type in the left-hand filter to narrow the list.
 
+The **Methods** tab groups a record’s techniques by family and method type.
+The **Technique** and **Compartment** filters apply together in Papers and
+Datasets. A paper can match through a linked dataset. Each method can
+include its purpose, inputs and outputs.
+A dataset PID or an unambiguous file reference opens the corresponding
+record. Files show their own methods in the drawer and full-page view.
+The [interactive wireframe](docs/wireframes/README.md) includes a worked example.
+
 Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.

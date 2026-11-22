@@ -50,3 +50,40 @@ window.wireframeData = {
       ]}
   ]
 };
+
+// Illustrative methods for the version 5 browser. The older layouts use the records above.
+window.wireframeMethods = {
+  labels: {
+    'urn:example:technique:brightfield': 'Brightfield microscopy',
+    'urn:example:technique:outline': 'Outline tracing'
+  },
+  install(papers) {
+    const [paper] = papers;
+    const [images, tables] = paper.datasets;
+    function method(familyID, family, typeID, type, id, value, annotations) {
+      return {predicate: 'urn:example:methods', display_label: 'Methods', attributes: [
+        {predicate: 'urn:example:method-family:' + familyID, display_label: family, attributes: [
+          {predicate: 'urn:example:method-type:' + typeID, display_label: type, attributes: [
+            {predicate: 'urn:example:technique', value, defined_by: 'urn:example:technique:' + id, annotations}
+          ]}
+        ]}
+      ]};
+    }
+    const acquisition = method('experimental', 'Experimental', 'image-acquisition', 'Image acquisition',
+      'brightfield', 'Transmitted-light imaging of a single field.', {
+        status: 'reported', purpose: 'Record the cell outlines in this field.',
+        inputs: [{label: 'Mounted sample'}], outputs: [{label: 'Field image', ref: 'field-01.ome.tif'}]
+      });
+    const trace = method('image-analysis', 'Image analysis', 'segmentation-annotation', 'Segmentation and annotation',
+      'outline', 'Trace the boundary in the image.', {purpose: 'Measure the projected area.',
+        inputs: [{label: 'Source images', ref: images.pid}], outputs: [{label: 'Feature table', ref: 'features.tsv'}]});
+    paper.attributes = [{...acquisition, attributes: [...acquisition.attributes, ...trace.attributes]}];
+    images.attributes = [acquisition, {predicate: 'urn:example:property:specimen', display_label: 'Specimen', attributes: [
+      {predicate: 'urn:example:property:structure', display_label: 'Structure', value: 'vacuole'},
+      {predicate: 'urn:example:property:structure-identifier', display_label: 'Structure identifier',
+        value: 'http://purl.obolibrary.org/obo/GO_0005773'}
+    ]}];
+    images.files[0].attributes = [acquisition];
+    tables.attributes.push(trace);
+  }
+};

@@ -357,3 +357,27 @@
 .study .graph-heading{padding:16px}
 .study header nav a{padding:0 8px}
 }
+.study .method-filters{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;gap:6px 10px;margin:12px 0 0;font-size:12px}
+.study .method-filters label{display:contents;color:#6b6b6b}
+.study .method-filters select{display:block;width:100%;min-width:0;height:28px;padding:0 4px;border:1px solid #dcdcdc;border-radius:0;background:#fff;color:#111;font:inherit}
+.study .method-filters select.chosen{border-color:#111}
+.study .method-filters a{grid-column:1/-1;justify-self:start;text-decoration:underline}
+.study .facet-empty{padding:10px 16px;color:#6b6b6b;font-size:12.5px}
+.study .method-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start}
+.study .method-grid section,.study .file-methods{min-width:0}
+.study .method-grid h3{margin:0;font-family:inherit;font-size:13px;font-weight:600;line-height:1.5}
+.study .method-grid h4{margin:0;padding:12px 0 2px;color:#444;font:600 12px/1.45 'IBM Plex Sans',sans-serif}
+.study .method-entry{display:flex;flex-direction:column;gap:4px;padding:9px 6px;margin:0 -6px;border-bottom:1px solid #f0f0f0;overflow-wrap:anywhere}
+.study .method-entry.matched{background:#f3f3f3}
+.study .method-name{display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:500;color:#111}
+.study .method-status,.study .method-path,.study .method-id{font:11px/1.45 'IBM Plex Mono',monospace;color:#6b6b6b}
+.study .method-status{font-family:inherit;font-weight:400}
+.study .method-entry p{margin:0;font-size:12.5px;line-height:1.5;color:#444}
+.study .method-io{display:flex;flex-direction:column;gap:4px;margin:2px 0;font-size:12px;line-height:1.45}
+.study .method-io>div{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px}
+.study .method-io dt{color:#6b6b6b}
+.study .method-io dd{margin:0;display:grid;gap:2px}
+.study .method-id a,.study .method-source{color:#6b6b6b;font-size:11px}
+.study .method-parameters{font-size:12px}
+.study .method-parameters summary{cursor:pointer}
+.study .file-methods .method-path{margin-top:12px}

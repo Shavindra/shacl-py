@@ -1,0 +1,47 @@
+{% macro method_filters() %}
+<form method="get" class="method-filters" aria-label="Filter by technique and compartment">
+  {% for key,value in facet_args.items() if key not in ('technique', 'compartment') and value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+  {% for key,label,placeholder,choices in [('technique','Technique','Any imaging technique',techniques), ('compartment','Compartment','Any compartment',compartments)] %}
+  <label><span>{{ label }}</span><select name="{{ key }}" aria-label="{{ label }}"{% if params.get(key) %} class="chosen"{% endif %}>
+    <option value="">{{ placeholder }}</option>
+    {% for id,name in choices %}<option value="{{ id }}"{% if params.get(key)==id %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select></label>
+  {% endfor %}
+  {% if facet_route %}<a href="{{ url(facet_args, technique=none, compartment=none) }}" target="_self">Clear technique and compartment</a>{% endif %}
+</form>
+{% endmacro %}
+
+{% macro resource_list(links) %}
+  {% for resource in links %}{% if resource.href %}<a href="{{ resource.href }}" target="_self">{{ resource.label }}</a>{% else %}<span>{{ resource.label }}</span>{% endif %}{% endfor %}
+{% endmacro %}
+
+{% macro method_body(t, groupbody) %}
+<div class="method-entry{% if t.id == params.get('technique') %} matched{% endif %}">
+  <div class="method-name">{{ t.name }}{% if t.status %}<span class="method-status">{{ t.status }}</span>{% endif %}</div>
+  {% if t.value != t.name %}<p>{{ t.value }}</p>{% endif %}
+  {% if t.description %}<p>{{ t.description }}</p>{% endif %}
+  {% if t.purpose or t.inputs or t.outputs %}<dl class="method-io">
+    {% if t.purpose %}<div><dt>Used for</dt><dd>{{ t.purpose }}</dd></div>{% endif %}
+    {% if t.inputs %}<div><dt>Inputs</dt><dd>{{ resource_list(t.inputs) }}</dd></div>{% endif %}
+    {% if t.outputs %}<div><dt>Outputs</dt><dd>{{ resource_list(t.outputs) }}</dd></div>{% endif %}
+  </dl>{% endif %}
+  {% if t.parameters %}<details class="method-parameters"><summary>Parameters</summary>{% for g in t.parameters %}{% if g.predicate %}<b>{{ g.label }}</b>{% endif %}{{ groupbody(g) }}{% endfor %}</details>{% endif %}
+  <small class="method-id" title="defined_by">{% if t.href %}<a href="{{ t.href }}" target="_blank" rel="noreferrer">{{ t.id }}</a>{% else %}{{ t.id }}{% endif %}</small>
+  {% if t.source %}<a class="method-source" href="{{ t.source }}" target="_blank" rel="noreferrer">Source</a>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro methods(groups, role, groupbody) %}
+{% if role == 'file' %}
+  {% if groups %}<section class="file-methods"><div class="agtitle"><span>Methods</span><small>{{ groups|sum(attribute='count') }}</small></div>
+  {% for family in groups %}{% for kind in family.types %}{% for t in kind.techniques %}
+    <div class="method-path">{{ family.label }} › {{ kind.label }}</div>{{ method_body(t, groupbody) }}
+  {% endfor %}{% endfor %}{% endfor %}</section>{% endif %}
+{% else %}
+  <div class="method-grid">{% for family in groups %}<section aria-label="{{ family.label }}">
+    <div class="agtitle"><h3 title="{{ family.predicate }}">{{ family.label }}</h3><small>{{ family.count }}</small></div>
+    {% for kind in family.types %}<h4 title="{{ kind.predicate }}">{{ kind.label }}</h4>
+    {% for t in kind.techniques %}{{ method_body(t, groupbody) }}{% endfor %}{% endfor %}
+  </section>{% else %}<div class="hint">No methods recorded for this {{ role }}.</div>{% endfor %}</div>
+{% endif %}
+{% endmacro %}

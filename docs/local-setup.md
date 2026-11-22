@@ -221,3 +221,35 @@ linked_files:
 In the file inspector, **File** identifies the image width and **Dataset**
 identifies the compartment. The side panel and full file page show the
 same groups. Files with only a URL and name also inherit the dataset groups.
+
+### Show methods on a record
+
+The Methods tab reads a Concepts attribute group named **Methods**. Its children
+are method families, then method types, then techniques. Give each technique a
+text `value` and a stable `defined_by` identifier. Use the same identifier on
+each record that uses the technique. The Technique filter lists those under
+**Image acquisition**.
+
+This technique links its input images and output measurements.
+
+```yaml
+annotations:
+  purpose: Measure the projected area of each outline.
+  inputs:
+    - label: Source images
+      ref: urn:example:cell-images
+  outputs:
+    - label: Measurements
+      ref: measurements.tsv
+```
+
+A label without a reference displays as text. Use a dataset PID or a unique
+file path for a link. The viewer looks for files in the current dataset first,
+then in other datasets linked to the paper.
+
+Put a linked file’s Methods group in its own `attributes`. For a local file,
+the catalogue can describe a `hasPart` target under the dataset’s `relations`.
+Use the same file identifier in both places, in the form
+`<identifier_namespace>:file:<project-relative path>`. The project supplies
+`identifier_namespace` in its annotations. The file drawer and full page also
+read Methods groups from stored MetaLad file attributes.
