@@ -31,6 +31,9 @@ compartments:
   highlighted: false
   go_terms:
   - GO:0005634
+  overviews:
+  - overview_composition: Chromatin and nucleoplasm.
+    overview_structure: A double membrane surrounds the nucleus.
   organisms: []
 grouped_research_notes: []
 unselected_compartments: []

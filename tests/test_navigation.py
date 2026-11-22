@@ -3,6 +3,7 @@ import socket
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from importlib.resources import files
 from pathlib import Path
 from urllib.error import URLError
@@ -11,11 +12,11 @@ from urllib.request import urlopen
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
+from test_collection_detail import project as collection_project
 
 
-@pytest.fixture
-def viewer_url():
-    example = Path(__file__).resolve().parents[1] / "examples/coastal-survey"
+@contextmanager
+def serve_project(root):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -31,7 +32,7 @@ def viewer_url():
             f"--server.port={port}",
             "--server.headless=true",
         ],
-        env=os.environ | {"SHACL_PY_ROOT": str(example)},
+        env=os.environ | {"SHACL_PY_ROOT": str(root)},
     ) as server:
         try:
             for _ in range(100):
@@ -47,6 +48,14 @@ def viewer_url():
             yield url
         finally:
             server.terminate()
+
+
+@pytest.fixture
+def viewer_url():
+    with serve_project(
+        Path(__file__).resolve().parents[1] / "examples/coastal-survey"
+    ) as url:
+        yield url
 
 
 @pytest.fixture
@@ -137,6 +146,33 @@ def test_sidebar_search_as_you_type(page, viewer_url):
     expect(rows).to_have_text(["Station readings"])
     sidebar.get_by_role("link", name="All", exact=True).click()
     expect(rows).to_have_count(3)
+
+
+def test_concept_notes_across_record_tabs(page, tmp_path):
+    collection_project(tmp_path)
+    with serve_project(tmp_path) as url:
+        page.goto(url, wait_until="domcontentloaded")
+        notes = page.locator(".concept-notes")
+        summary = notes.locator("summary")
+        expect(summary).to_be_visible()
+        expect(notes.locator("dl")).to_be_hidden()
+        summary.press("Enter")
+        expect(notes.locator("dd")).to_have_text(["Sandstone", "Nature reserve"])
+        expect(notes.locator("dl")).to_be_visible()
+
+        page.get_by_role("link", name="North 2", exact=True).click()
+        expect(page.locator(".record-id code")).to_have_text("spring")
+        expect(notes.locator("dl")).to_be_visible()
+        page.get_by_role("link", name="Raw metadata", exact=True).click()
+        expect(page.locator("article > pre")).to_contain_text("sample: spring")
+        expect(notes.locator("dl")).to_be_visible()
+
+        summary.press("Enter")
+        page.get_by_role("link", name="North 1", exact=True).click()
+        expect(page.locator("article > pre")).to_contain_text("sample: winter")
+        expect(notes.locator("dl")).to_be_hidden()
+        page.get_by_text("Inlet", exact=True).click()
+        expect(notes).to_have_count(0)
 
 
 def test_graph_navigation_and_search(page, viewer_url):

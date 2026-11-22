@@ -30,10 +30,10 @@ field_labels:
   go_terms: GO terms
   go_description: GO definition
   source_labels: Source labels
-  overviews: Overviews
-  overview_structure: Structure overview
-  overview_composition: Composition overview
-  overview_shape: Shape overview
+  overviews: General overview
+  overview_structure: Structure
+  overview_composition: Composition
+  overview_shape: Shape
   source_label: Source label
   organisms: Organism records
   taxon_id: Taxon
@@ -63,11 +63,15 @@ field_labels:
   release: Release
 presentation:
   starred: highlighted
-  overview: [description, go_description, composition, shape, microscopy_notes]
+  notes:
+    field: overviews
+    fields: [overview_composition, overview_structure, overview_shape]
+  overview: [description, composition, shape, microscopy_notes]
   terms:
     field: go_terms
     label: GO term
     definition: go_description
+    attribution: GO definition
     url: https://www.ebi.ac.uk/QuickGO/term/{id}
     provider: EMBL-EBI QuickGO
     licence: CC BY 4.0
@@ -79,5 +83,4 @@ presentation:
   source: source
   sections:
   - {field: measurements, label: Measurements, scope: variant}
-  - {field: overviews, label: Source overviews}
   - {field: grouped_note_ids, label: Grouped research notes, lookup: {table: grouped_research_notes, id_field: id}}

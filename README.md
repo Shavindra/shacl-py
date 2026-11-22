@@ -143,7 +143,7 @@ schema and reports field paths for invalid values.
 
 A collection can also declare a `presentation` in its settings or template.
 For example, this configuration lists each station once and opens a tab for
-each survey campaign with observations.
+each survey record.
 
 ~~~yaml
 presentation:
@@ -158,13 +158,22 @@ presentation:
 `terms` can link catalogue identifiers to an external vocabulary and show a
 stored definition. Records with the same set of mapped terms share a sidebar
 entry. `sections` can display additional fields or look up shared notes by ID.
+When several records share a group such as a survey campaign, the viewer
+numbers their tabs in catalogue order. Each tab links to its record ID.
 **Raw metadata** shows the complete source record. [Presentation settings](src/shacl_py/schemas/collection-view.schema.json)
+
+A template can show shared text above the record tabs with
+`notes: {field: overviews, fields: [overview_composition, overview_structure, overview_shape]}`
+under `presentation`. The viewer collects these fields from the concept's
+overview entries and uses `field_labels` for their headings. **Notes** appears
+when at least one field contains text.
 
 ### Bundled collection templates
 
 shacl-py ships a **compartments** template for catalogues of cellular
-compartments: GO cellular-component terms, per-organism records with
-references, images and measurements, and shared research notes. Install it by
+compartments. Expand **Notes** beneath the GO definition to read the general
+overview of composition, structure and shape. Choose an organism tab for its
+description, references, images and measurements. Install the template by
 name and point it at existing data.
 
 ~~~sh

@@ -60,11 +60,27 @@ export default function ({ parentElement, setStateValue }) {
         }
     }
 
-    const observer = new MutationObserver(restoreInput);
+    // Keep an expanded concept's notes visible when a record tab replaces the HTML.
+    const notesSelector = ".study details[data-concept-notes]";
+    document.addEventListener("toggle", ({ target }) => {
+        if (target.isConnected && target.matches?.(notesSelector)) {
+            parentElement.openNotes = target.open ? target.dataset.conceptNotes : null;
+        }
+    }, { ...options, capture: true });
+
+    function restoreControls() {
+        restoreInput();
+        const panel = document.querySelector(notesSelector);
+        if (panel && !panel.open && panel.dataset.conceptNotes === parentElement.openNotes) {
+            panel.open = true;
+        }
+    }
+
+    const observer = new MutationObserver(restoreControls);
     observer.observe(document.querySelector(".st-key-shacl_viewer") ?? document.body,
         { childList: true, subtree: true });
     listeners.signal.addEventListener("abort", () => observer.disconnect());
-    restoreInput();
+    restoreControls();
 
     function focusMoved(event) {
         if (live.edit && event.target !== live.edit.input) live.edit.focused = false;

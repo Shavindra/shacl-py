@@ -23,6 +23,7 @@ def project(root):
             "context_fields": ["season"],
         },
         "overview": ["depth"],
+        "notes": {"field": "descriptions", "fields": ["geology", "land_use"]},
         "references": "citations",
         "images": "photos",
         "unassigned_references": "unassigned",
@@ -61,6 +62,7 @@ def project(root):
         "name": "Harbour",
         "flag": True,
         "codes": ["site:1"],
+        "descriptions": [{"geology": "Sandstone", "land_use": "   "}],
         "photos": [photo],
         "notes": ["n"],
         "surveys": [
@@ -86,6 +88,7 @@ def project(root):
         "id": "east",
         "name": "East harbour",
         "codes": ["site:1"],
+        "descriptions": [{"geology": "Sandstone"}, {"land_use": "Nature reserve"}],
         "surveys": [
             {"sample": "summer", "campaign": "south", "label": "South", "depth": 6}
         ],
@@ -116,8 +119,13 @@ def test_grouped_view_and_scope(tmp_path):
     c = collections[0]
     d = detail_view(c, {})
     assert [g.name for g in d["shown"]] == ["Harbour", "Bay", "Inlet"]
-    assert [v.name for v in d["tabs"]] == ["North", "South"]
-    assert [v.key for v in d["variant_records"]] == ["winter", "spring"]
+    assert [(label, v.key) for v, label in d["tabs"]] == [
+        ("North 1", "winter"),
+        ("North 2", "spring"),
+        ("South", "summer"),
+    ]
+    assert d["group"].variant_count == 2
+    assert d["notes"] == [("geology", ["Sandstone"]), ("land_use", ["Nature reserve"])]
     assert d["overview"] == [("depth", 0)]
     assert d["sections"][0][1][0]["text"] == "Source note"
     assert d["images"][0]["preview"].startswith("data:image/png;base64,")
@@ -126,6 +134,8 @@ def test_grouped_view_and_scope(tmp_path):
     assert d["references"][0]["href"] == "https://doi.org/10.1234/Survey"
     spring = detail_view(c, {"entry": "west", "variant": "spring", "view": "raw"})
     assert not spring["references"] and spring["overview"] == [("depth", 5)]
+    assert spring["notes"] == d["notes"]
+    assert detail_view(c, {"entry": "east", "variant": "summer"})["notes"] == d["notes"]
     assert yaml.safe_load(spring["raw"])["sample"] == "spring"
     assert len(yaml.safe_load(spring["full_record"])["surveys"]) == 2
     assert detail_view(c, {"entry": "west", "variant": "absent"})["missing_variant"]
@@ -157,15 +167,23 @@ def test_detail_navigation_keeps_the_selected_record(tmp_path, monkeypatch):
     assert "Harbour</h1>" in overview and 'alt="The harbour"' in overview
     assert 'src="https://example.org/map.png"' in overview
     assert "Source note" in overview and ">Winter<" in overview
-    follow(page, "spring")
+    assert overview.index("<summary>Notes</summary>") < overview.index(
+        'class="variant-tabs"'
+    )
+    assert "Sandstone" in overview and "Nature reserve" in overview
+    follow(page, "North 2")
     assert ">Spring<" in html(page) and "No references attached." in html(page)
     follow(page, "Raw metadata")
     assert "<pre>sample: spring" in html(page)
     follow(page, "South")
     assert "<pre>sample: summer" in html(page)
+    follow(page, "North 1")
+    assert "<pre>sample: winter" in html(page)
     follow(page, "Unassigned references")
     assert "1 distinct DOI across 2 entries" in html(page)
     assert "DOI appears 2×" in html(page) and "Also cited by" in html(page)
     follow(page, "Harbour")
     assert "variant=winter" in page.session_state["fragment"]
     assert 'href="https://doi.org/10.1234/Survey"' in html(page)
+    follow(page, "Inlet")
+    assert 'class="concept-notes"' not in html(page)

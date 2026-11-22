@@ -14,6 +14,9 @@ window.wireframeData = {
       references: [exampleCitation]},
     {id: 'nucleus', name: 'Nucleus', priority: 2,
       description: 'A compartment enclosed by the nuclear envelope.', composition: 'Chromatin and nucleoplasm.',
+      overviews: [{overview_composition: 'Chromatin and nucleoplasm.',
+        overview_structure: 'A double membrane surrounds the nucleus.',
+        overview_shape: 'The outline can be round or elongated.'}],
       shape: '', microscopy_notes: '', references: []},
     {id: 'unmapped_structure', name: 'Unmapped structure', description: 'Example entry awaiting a term.',
       composition: '', shape: '', microscopy_notes: '', references: []}

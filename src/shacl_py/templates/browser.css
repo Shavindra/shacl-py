@@ -14,7 +14,7 @@
 .study .muted{color:#6b6b6b;font-size:11.5px}
 .study .serif{font-family:'Source Serif 4',Georgia,serif}
 .study em{font:500 12px 'IBM Plex Sans',sans-serif;font-style:normal;background:#ececec;color:#444;padding:1px 6px}
-.study .cap{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b}
+.study .cap{font-size:13px;font-weight:600;color:#6b6b6b}
 .study h1,.study h2{margin:0;padding:0;color:#111;letter-spacing:normal}
 .study dl,.study dt,.study dd{margin:0;padding:0;font-weight:400;text-align:left}
 
@@ -36,6 +36,14 @@
 .study .collection-detail .heading:not(:has(.variant-tabs)){padding-bottom:18px}
 .study .term-definition{display:grid;gap:4px;max-width:720px}
 .study .term-definition small,.study .term-definition small a{font-family:inherit;font-size:12px;line-height:1.4;color:#6b6b6b}
+.study details.concept-notes{margin:4px 0 0;max-width:720px}
+.study .concept-notes summary{width:fit-content;margin:0;padding:2px 0;font-size:13px;font-weight:500;color:#111}
+.study .concept-notes summary::marker{font-size:10px;color:#6b6b6b}
+.study .concept-notes dl{margin:8px 0 0 16px;display:grid;gap:10px}
+.study .concept-notes dl>div{display:grid;gap:2px}
+.study .concept-notes dt{font-size:13px;font-weight:600}
+.study .concept-notes dd{font-size:14px;line-height:1.55;color:#3a3a3a;white-space:pre-line;overflow-wrap:anywhere}
+.study .heading nav.variant-tabs{gap:0 20px;margin-top:14px}
 .study .variant-tabs a{font-style:italic}
 .study .record-meta{display:grid;gap:14px;padding:18px 28px 0;max-width:900px}
 .study .record-id{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;font-size:12.5px}
@@ -51,7 +59,7 @@
 .study .record-overview .record-section{margin:0}
 .study .record-section summary{font-size:13px;font-weight:600}
 .study .record-section>ul{margin:0;padding-left:18px}
-.study .section-title{display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.study .section-title{font-size:13px;font-weight:600}
 .study .image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:24px 28px;margin-top:14px}
 .study .image-grid figure{display:grid;gap:10px;align-content:start;margin:0;min-width:0}
 .study .image-frame{height:200px;background:#f0f0f0;border:1px solid #e4e4e4;display:grid;place-items:center;color:#777}
@@ -87,7 +95,6 @@
 .study aside{background:#fafafa;border-right:1px solid #e4e4e4;padding-bottom:16px}
 .study .tools{padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px}
 .study .tools .cap{display:flex;align-items:baseline;justify-content:space-between}
-.study .tools .cap small{letter-spacing:0}
 .study .chips{gap:6px;flex-wrap:wrap}
 .study .chip{height:24px;display:inline-flex;align-items:center;padding:0 10px;background:#fff;border:1px solid #dcdcdc;color:#444;font-size:12px;font-weight:500;text-decoration:none}
 .study .chip:hover{border-color:#111;text-decoration:none}
@@ -182,7 +189,7 @@
 .study .frow:hover{background:#f6f6f6}
 .study .frow.sel{background:#efefef}
 .study .frow.cols{height:auto;padding:8px 14px;border-bottom-color:#ececec}
-.study .frow.cols>span{font:500 11.5px 'IBM Plex Sans',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#8c8c8c}
+.study .frow.cols>span{font:500 11.5px 'IBM Plex Sans',sans-serif;color:#8c8c8c}
 .study .frow.cols:hover{background:none}
 .study .status{display:flex;align-items:center;gap:6px;font-size:12px;color:#111}
 .study .status i{width:7px;height:7px;border-radius:50%;background:#111;border:1px solid #111;flex:none}
@@ -267,8 +274,8 @@
 .study .prov dfn{width:96px;flex:none;color:#8c8c8c}
 .study .agroups{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start}
 .study .agroups section{display:flex;flex-direction:column;min-width:0}
-.study .agtitle{display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111}
-.study .agtitle span{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111}
+.study .agtitle,.study .section-title{display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4}
+.study .agtitle span{font-size:13px;font-weight:600;color:#111}
 .study .agroups dl,.study .cgroup dl{display:flex;flex-direction:column;font-size:12.5px}
 .study .ahead{padding:10px 0 4px;font-size:12px;font-weight:600;color:#444}
 .study .arow{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid #f0f0f0}

@@ -50,15 +50,17 @@
       </div>{% endif %}
     {% endif %}
     {% if d.summary and (d.variant or layout.summary not in layout.overview) %}<p class="lede">{{ d.summary }}</p>{% endif %}
+    {% if d.notes %}<details class="concept-notes" data-concept-notes="{{ url({'section': section}, entry=g.entry) }}">
+      <summary>Notes</summary>
+      <dl>{% for label, values in d.notes %}<div><dt>{{ label }}</dt>{% for value in values %}<dd>{{ value }}</dd>{% endfor %}</div>{% endfor %}</dl>
+    </details>{% endif %}
     {% if g.variants %}<nav class="variant-tabs" aria-label="{{ layout.variants.label }}">
-      {% for v in d.tabs %}<a class="{{ 'on' if v == d.variant }}" href="{{ url(scope, entry=v.entry, variant=v.key, view=params.get('view')) }}" target="_self"{% if v==d.variant %} aria-current="page"{% endif %}>{{ v.name }}</a>{% endfor %}
+      {% for v, label in d.tabs %}<a class="{{ 'on' if v == d.variant }}" href="{{ url(scope, entry=v.entry, variant=v.key, view=params.get('view')) }}" target="_self" title="{{ v.key }}"{% if v==d.variant %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
     </nav>{% endif %}
   </section>
   {% if d.missing_variant %}<article>Record not found.</article>{% else %}
   <div class="record-meta">
-    <div class="record-id"><dfn>Record</dfn>{% if d.variant_records|length > 1 %}
-      {% for v in d.variant_records %}<a class="chip {{ 'active' if v == d.variant }}" href="{{ url(scope, entry=v.entry, variant=v.key, view=params.get('view')) }}" target="_self">{{ v.key }}</a>{% endfor %}
-      {% else %}<code>{{ d.variant.key if d.variant else d.entry }}</code>{% endif %}</div>
+    <div class="record-id"><dfn>Record</dfn><code>{{ d.variant.key if d.variant else d.entry }}</code></div>
     <dl class="facts">
       {% if d.variant %}<div><dt>{{ layout.variants.label }}</dt><dd><i>{{ d.variant.name }}</i> <code>{{ d.variant.category }}</code></dd></div>{% endif %}
       {% for label, value in d.variant_context %}<div><dt>{{ label }}</dt><dd>{{ field_value(value) }}</dd></div>{% endfor %}

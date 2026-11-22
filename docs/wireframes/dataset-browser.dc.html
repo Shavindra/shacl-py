@@ -23,7 +23,7 @@
   <div style="flex:1;display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr);min-height:0">
     <aside style="background:#fafafa;border-right:1px solid #e4e4e4;display:flex;flex-direction:column;min-height:0">
       <div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Papers</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ paperCount }}</span></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Papers</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ paperCount }}</span></div>
         <div style="height:32px;display:flex;align-items:center;padding:0 10px;border:1px solid #dcdcdc;background:#fff;border-radius:0;font-size:13px;color:#8c8c8c">Filter by title, author, PID</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <sc-for list="{{ labelFilters }}" as="lf" hint-placeholder-count="4">
@@ -90,7 +90,7 @@
             <sc-if value="{{ dIsFiles }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;flex-direction:column;border:1px solid #e4e4e4;border-radius:0;overflow:hidden">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fafafa;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600">Files <span style="font-family:'IBM Plex Mono';font-weight:400;font-size:11.5px;color:#6b6b6b;margin-left:4px">{{ ds.fileCount }}</span></span><span style="height:26px;width:200px;display:flex;align-items:center;padding:0 9px;border:1px solid #dcdcdc;background:#fff;border-radius:0;font-size:12px;color:#8c8c8c">Find file</span></div>
-              <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;padding:8px 14px;font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:#8c8c8c;border-bottom:1px solid #ececec"><span>Name</span><span>Path</span><span style="text-align:right">Size</span><span>Status</span></div>
+              <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;padding:8px 14px;font-size:11.5px;font-weight:500;color:#8c8c8c;border-bottom:1px solid #ececec"><span>Name</span><span>Path</span><span style="text-align:right">Size</span><span>Status</span></div>
               <sc-for list="{{ files }}" as="f" hint-placeholder-count="5">
                 <div onClick="{{ f.onClick }}" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;align-items:center;padding:0 14px;border-bottom:1px solid #f0f0f0;font-size:13px;min-height:{{ rowH }};padding-top:6px;padding-bottom:6px;cursor:pointer;background:{{ f.bg }}" style-hover="background:#f6f6f6">
                   <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span title="{{ f.name }}" style="display:flex;min-width:0;overflow:hidden;font-family:'IBM Plex Mono';font-size:12px"><span style="flex:0 1 auto;min-width:1ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.nameHead }}</span><span style="flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;direction:rtl;text-align:left">{{ f.nameTail }}</span></span></span>
@@ -104,11 +104,11 @@
             </sc-if>
             <sc-if value="{{ dIsAttr }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:22px">
-                <sc-if value="{{ attr.hasProv }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px;border-bottom:1px solid #e4e4e4;font-size:12.5px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Provenance</span><sc-if value="{{ attr.hasDerived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Derived from</span><sc-for list="{{ attr.derivedFrom }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if><sc-if value="{{ attr.hasUsedBy }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Used by</span><sc-for list="{{ attr.usedBy }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if></div></sc-if>
+                <sc-if value="{{ attr.hasProv }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px;border-bottom:1px solid #e4e4e4;font-size:12.5px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Provenance</span><sc-if value="{{ attr.hasDerived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Derived from</span><sc-for list="{{ attr.derivedFrom }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if><sc-if value="{{ attr.hasUsedBy }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Used by</span><sc-for list="{{ attr.usedBy }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if></div></sc-if>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start">
                   <sc-for list="{{ attr.groups }}" as="ag" hint-placeholder-count="3">
                     <section style="display:flex;flex-direction:column;min-width:0">
-                      <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111111"><span title="{{ ag.predicate }}" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111111">{{ ag.label }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ ag.count }}</span></div>
+                      <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span title="{{ ag.predicate }}" style="font-size:13px;font-weight:600;color:#111111">{{ ag.label }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ ag.count }}</span></div>
                       <dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
                         <sc-for list="{{ ag.rows }}" as="r">
                           <sc-if value="{{ r.isHeader }}"><div style="padding:10px 0 4px {{ r.pad }};font-size:12px;font-weight:600;color:#444444">{{ r.label }}</div></sc-if>
@@ -145,7 +145,7 @@
   <div style="flex:1;display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr);min-height:0">
     <aside style="background:#fafafa;border-right:1px solid #e4e4e4;display:flex;flex-direction:column;min-height:0">
       <div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">All datasets</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ gCount }}</span></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#6b6b6b">All datasets</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ gCount }}</span></div>
         <div style="height:32px;display:flex;align-items:center;padding:0 10px;border:1px solid #dcdcdc;background:#fff;border-radius:0;font-size:13px;color:#8c8c8c">Filter by name, PID, format</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <sc-for list="{{ gFilters }}" as="lf" hint-placeholder-count="4">
@@ -185,7 +185,7 @@
         <div style="padding:22px 28px">
           <div style="display:flex;flex-direction:column;border:1px solid #e4e4e4">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#fafafa;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600">Files <span style="font-family:'IBM Plex Mono';font-weight:400;font-size:11.5px;color:#6b6b6b;margin-left:4px">{{ gd.fileCount }}</span></span><span style="height:26px;flex:0 1 200px;display:flex;align-items:center;padding:0 9px;border:1px solid #dcdcdc;background:#fff;font-size:12px;color:#8c8c8c">Find file</span></div>
-            <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;padding:8px 14px;font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:#8c8c8c;border-bottom:1px solid #ececec"><span>Name</span><span>Path</span><span style="text-align:right">Size</span><span>Status</span></div>
+            <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;padding:8px 14px;font-size:11.5px;font-weight:500;color:#8c8c8c;border-bottom:1px solid #ececec"><span>Name</span><span>Path</span><span style="text-align:right">Size</span><span>Status</span></div>
               <sc-for list="{{ gFiles }}" as="f" hint-placeholder-count="5">
                 <div onClick="{{ f.onClick }}" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 80px 90px;gap:12px;align-items:center;padding:0 14px;border-bottom:1px solid #f0f0f0;font-size:13px;min-height:{{ rowH }};padding-top:6px;padding-bottom:6px;cursor:pointer;background:{{ f.bg }}" style-hover="background:#f6f6f6">
                   <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span title="{{ f.name }}" style="display:flex;min-width:0;overflow:hidden;font-family:'IBM Plex Mono';font-size:12px"><span style="flex:0 1 auto;min-width:1ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.nameHead }}</span><span style="flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;direction:rtl;text-align:left">{{ f.nameTail }}</span></span></span>
@@ -200,11 +200,11 @@
       </sc-if>
       <sc-if value="{{ gIsAttr }}" hint-placeholder-val="{{ false }}">
         <div style="padding:22px 28px;display:flex;flex-direction:column;gap:22px">
-          <sc-if value="{{ gAttr.hasProv }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px;border-bottom:1px solid #e4e4e4;font-size:12.5px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Provenance</span><sc-if value="{{ gAttr.hasDerived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Derived from</span><sc-for list="{{ gAttr.derivedFrom }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if><sc-if value="{{ gAttr.hasUsedBy }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Used by</span><sc-for list="{{ gAttr.usedBy }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if></div></sc-if>
+          <sc-if value="{{ gAttr.hasProv }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px;border-bottom:1px solid #e4e4e4;font-size:12.5px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Provenance</span><sc-if value="{{ gAttr.hasDerived }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Derived from</span><sc-for list="{{ gAttr.derivedFrom }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if><sc-if value="{{ gAttr.hasUsedBy }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline"><span style="color:#8c8c8c;width:96px;flex:none">Used by</span><sc-for list="{{ gAttr.usedBy }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></div></sc-if></div></sc-if>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start">
             <sc-for list="{{ gAttr.groups }}" as="ag" hint-placeholder-count="3">
               <section style="display:flex;flex-direction:column;min-width:0">
-                <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111111"><span title="{{ ag.predicate }}" style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111111">{{ ag.label }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ ag.count }}</span></div>
+                <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span title="{{ ag.predicate }}" style="font-size:13px;font-weight:600;color:#111111">{{ ag.label }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ ag.count }}</span></div>
                 <dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
                   <sc-for list="{{ ag.rows }}" as="r">
                     <sc-if value="{{ r.isHeader }}"><div style="padding:10px 0 4px {{ r.pad }};font-size:12px;font-weight:600;color:#444444">{{ r.label }}</div></sc-if>
@@ -236,7 +236,7 @@
   <div style="flex:1;display:grid;grid-template-columns:minmax(200px,280px) minmax(0,1fr);min-height:0">
     <aside style="background:#fafafa;border-right:1px solid #e4e4e4;display:flex;flex-direction:column;min-height:0">
       <div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Compartments</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ compCount }}</span></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Compartments</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ compCount }}</span></div>
         <div style="height:32px;display:flex;align-items:center;padding:0 10px;border:1px solid #dcdcdc;background:#fff;font-size:13px;color:#8c8c8c">Filter by name, GO term, DOI</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <sc-for list="{{ compFilters }}" as="lf" hint-placeholder-count="2"><button onClick="{{ lf.onClick }}" style="font:500 12px 'IBM Plex Sans';height:24px;padding:0 10px;cursor:pointer;border:1px solid {{ lf.border }};background:{{ lf.bg }};color:{{ lf.color }}">{{ lf.name }}</button></sc-for>
@@ -260,7 +260,16 @@
         <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h1 style="margin:0;font-weight:600;font-size:26px;line-height:1.2">{{ cmp.conceptName }}</h1><sc-if value="{{ cmp.hasPrio }}"><span title="Starred" style="font-size:18px;line-height:1;color:#111111">★</span></sc-if></div>
         <div style="display:flex;gap:10px;min-width:0;font-size:12.5px"><dt style="color:#8c8c8c;flex:none">Compartment term</dt><dd style="margin:0;min-width:0;overflow-wrap:anywhere"><sc-if value="{{ cmp.hasTerm }}"><a href="{{ cmp.termUrl }}" target="_blank" rel="noopener" style="font-family:'IBM Plex Mono';font-size:12px">{{ cmp.term.id }}</a> <span style="color:#444444">{{ cmp.term.label }}</span></sc-if><sc-if value="{{ cmp.noTerm }}"><span style="color:#8c8c8c">Not mapped</span></sc-if></dd></div>
         <sc-if value="{{ cmp.hasTerm }}"><div style="display:flex;flex-direction:column;gap:4px;max-width:720px"><p style="margin:0;font-size:14px;line-height:1.55;color:{{ cmp.defColor }};text-wrap:pretty">{{ cmp.def }}</p><span style="font-size:12px;color:#8c8c8c">GO definition · <a href="{{ cmp.termUrl }}" target="_blank" rel="noopener" style="color:#6b6b6b">QuickGO</a> · CC BY 4.0</span></div></sc-if>
-        <nav style="display:flex;flex-wrap:wrap;gap:0 26px;margin-top:6px">
+        <sc-if value="{{ cmp.hasGeneral }}"><button onClick="{{ toggleGeneral }}" style="align-self:flex-start;display:flex;align-items:center;gap:6px;margin-top:4px;padding:2px 0;background:none;border:none;cursor:pointer;font:500 13px 'IBM Plex Sans';color:#111111"><span style="display:inline-block;width:10px;font-size:10px;color:#6b6b6b">{{ generalCaret }}</span>{{ generalLabel }}</button></sc-if>
+        <sc-if value="{{ showGeneral }}"><dl style="margin:2px 0 0 16px;display:flex;flex-direction:column;gap:10px;max-width:704px">
+            <sc-for list="{{ cmp.general }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <dt style="font-size:13px;font-weight:600;line-height:1.4;color:#111111">{{ r.label }}</dt>
+                <dd style="margin:0;font-size:14px;line-height:1.55;text-wrap:pretty;color:#3a3a3a">{{ r.value }}</dd>
+              </div>
+            </sc-for>
+          </dl></sc-if>
+        <nav style="display:flex;flex-wrap:wrap;gap:0 20px;margin-top:14px">
           <sc-for list="{{ orgTabs }}" as="t" hint-placeholder-count="1"><button onClick="{{ t.onClick }}" style="font:italic 500 13.5px 'IBM Plex Sans';white-space:nowrap;flex:none;background:none;border:none;padding:10px 0 11px;cursor:pointer;display:flex;gap:6px;align-items:center;margin-bottom:-1px;color:{{ t.color }};border-bottom:2px solid {{ t.line }}">{{ t.name }}</button></sc-for>
         </nav>
       </section>
@@ -285,7 +294,7 @@
             </sc-for>
           </dl>
           <section style="display:flex;flex-direction:column;gap:14px">
-            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111111"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111111">Images</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ cmp.imgCount }}</span><sc-if value="{{ cmp.showImgSlot }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c">images</span></sc-if></div>
+            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600;color:#111111">Images</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ cmp.imgCount }}</span><sc-if value="{{ cmp.showImgSlot }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c">images</span></sc-if></div>
             <sc-if value="{{ cmp.noImages }}"><span style="font-size:12.5px;color:#8c8c8c">No images attached.</span></sc-if>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:24px 28px;align-items:start">
               <sc-for list="{{ cmp.images }}" as="im" hint-placeholder-count="1">
@@ -302,7 +311,7 @@
             </div>
           </section>
           <section style="display:flex;flex-direction:column">
-            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid #111111"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#111111">References</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ cmp.refCount }}</span><sc-if value="{{ cmp.showRefSlot }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c">references</span></sc-if></div>
+            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600;color:#111111">References</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ cmp.refCount }}</span><sc-if value="{{ cmp.showRefSlot }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c">references</span></sc-if></div>
             <sc-if value="{{ cmp.noRefs }}"><span style="font-size:12.5px;color:#8c8c8c;padding:12px 0">No references attached.</span></sc-if>
             <sc-for list="{{ cmp.refs }}" as="rf" hint-placeholder-count="1">
               <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid #f0f0f0">
@@ -362,15 +371,15 @@
         </sc-if>
       </div>
       <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
-        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">File</span><dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">File</span><dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
           <sc-for list="{{ fp.rows }}" as="r" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:7px 0;border-bottom:1px solid #f0f0f0"><dt style="color:#8c8c8c">{{ r.k }}</dt><dd style="margin:0;min-width:0;overflow-wrap:anywhere;font-family:{{ r.font }}">{{ r.v }}</dd></div></sc-for>
         </dl></div>
-        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Content</span><span style="font-size:12px;color:#8c8c8c">{{ fp.contentNote }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Content</span><span style="font-size:12px;color:#8c8c8c">{{ fp.contentNote }}</span></div>
           <sc-for list="{{ fp.groups }}" as="ag"><div style="display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0"><button onClick="{{ ag.toggle }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;background:none;border:none;cursor:pointer;font:500 12.5px 'IBM Plex Sans';color:#111111;text-align:left"><span style="width:10px;color:#6b6b6b">{{ ag.caret }}</span><span title="{{ ag.predicate }}" style="flex:1;min-width:0">{{ ag.label }}</span><span style="font-size:11px;color:#444444;border:1px solid #dcdcdc;padding:0 6px">{{ ag.sourceLabel }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c;min-width:18px;text-align:right">{{ ag.count }}</span></button><sc-if value="{{ ag.open }}"><dl style="margin:0 0 8px 18px;display:flex;flex-direction:column;font-size:12.5px"><sc-for list="{{ ag.rows }}" as="r"><sc-if value="{{ r.isHeader }}"><div style="padding:8px 0 2px {{ r.pad }};font-size:12px;font-weight:600;color:#444444">{{ r.label }}</div></sc-if><sc-if value="{{ r.notHeader }}"><div style="display:grid;grid-template-columns:minmax(0,130px) minmax(0,1fr);gap:12px;padding:5px 0 5px {{ r.pad }}"><dt title="{{ r.predicate }}" style="color:#6b6b6b;display:flex;flex-direction:column;gap:2px;min-width:0">{{ r.label }}<sc-if value="{{ r.showPred }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c;overflow-wrap:anywhere">{{ r.predTail }}</span></sc-if></dt><dd style="margin:0;min-width:0;overflow-wrap:anywhere;text-wrap:pretty"><sc-if value="{{ r.isLink }}"><a href="{{ r.value }}" target="_blank" rel="noopener">{{ r.value }}</a></sc-if><sc-if value="{{ r.notLink }}">{{ r.value }}</sc-if> <span style="color:#6b6b6b">{{ r.unit }}</span></dd></div></sc-if></sc-for></dl></sc-if></div></sc-for>
           <sc-if value="{{ fp.noContent }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#6b6b6b;padding:6px 0">No content attributes recorded.</span></sc-if>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Dataset</span><span style="font-size:13.5px;font-weight:500">{{ fp.dsName }}</span><p style="margin:0;font-size:13px;line-height:1.55;color:#444444;text-wrap:pretty">{{ fp.dsDescription }}</p></div>
-        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Raw metadata</span><pre style="margin:0;background:#111111;color:#dadada;padding:14px 16px;font:12px/1.6 'IBM Plex Mono',monospace;overflow:auto">{{ fp.raw }}</pre></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Dataset</span><span style="font-size:13.5px;font-weight:500">{{ fp.dsName }}</span><p style="margin:0;font-size:13px;line-height:1.55;color:#444444;text-wrap:pretty">{{ fp.dsDescription }}</p></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Raw metadata</span><pre style="margin:0;background:#111111;color:#dadada;padding:14px 16px;font:12px/1.6 'IBM Plex Mono',monospace;overflow:auto">{{ fp.raw }}</pre></div>
       </div>
     </div>
   </main>
@@ -395,14 +404,14 @@
         <sc-if value="{{ fp.isRemote }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid #e4e4e4;background:#fafafa"><span style="font-size:12.5px;color:#444444">Not on this machine. Fetch it with:</span><code style="font:12px 'IBM Plex Mono',monospace;color:#111111;overflow-wrap:anywhere">{{ fp.getCmd }}</code></div>
         </sc-if>
-      <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">File</span><dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
+      <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">File</span><dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
           <sc-for list="{{ fp.rows }}" as="r" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:7px 0;border-bottom:1px solid #f0f0f0"><dt style="color:#8c8c8c">{{ r.k }}</dt><dd style="margin:0;min-width:0;overflow-wrap:anywhere;font-family:{{ r.font }}">{{ r.v }}</dd></div></sc-for>
         </dl></div>
-      <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Content</span><span style="font-size:12px;color:#8c8c8c">{{ fp.contentNote }}</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Content</span><span style="font-size:12px;color:#8c8c8c">{{ fp.contentNote }}</span></div>
         <sc-for list="{{ fp.groups }}" as="ag"><div style="display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0"><button onClick="{{ ag.toggle }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;background:none;border:none;cursor:pointer;font:500 12.5px 'IBM Plex Sans';color:#111111;text-align:left"><span style="width:10px;color:#6b6b6b">{{ ag.caret }}</span><span title="{{ ag.predicate }}" style="flex:1;min-width:0">{{ ag.label }}</span><span style="font-size:11px;color:#444444;border:1px solid #dcdcdc;padding:0 6px">{{ ag.sourceLabel }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c;min-width:18px;text-align:right">{{ ag.count }}</span></button><sc-if value="{{ ag.open }}"><dl style="margin:0 0 8px 18px;display:flex;flex-direction:column;font-size:12.5px"><sc-for list="{{ ag.rows }}" as="r"><sc-if value="{{ r.isHeader }}"><div style="padding:8px 0 2px {{ r.pad }};font-size:12px;font-weight:600;color:#444444">{{ r.label }}</div></sc-if><sc-if value="{{ r.notHeader }}"><div style="display:grid;grid-template-columns:minmax(0,120px) minmax(0,1fr);gap:12px;padding:5px 0 5px {{ r.pad }}"><dt title="{{ r.predicate }}" style="color:#6b6b6b;display:flex;flex-direction:column;gap:2px;min-width:0">{{ r.label }}<sc-if value="{{ r.showPred }}"><span style="font-family:'IBM Plex Mono';font-size:10.5px;color:#8c8c8c;overflow-wrap:anywhere">{{ r.predTail }}</span></sc-if></dt><dd style="margin:0;min-width:0;overflow-wrap:anywhere;text-wrap:pretty"><sc-if value="{{ r.isLink }}"><a href="{{ r.value }}" target="_blank" rel="noopener">{{ r.value }}</a></sc-if><sc-if value="{{ r.notLink }}">{{ r.value }}</sc-if> <span style="color:#6b6b6b">{{ r.unit }}</span></dd></div></sc-if></sc-for></dl></sc-if></div></sc-for>
         <sc-if value="{{ fp.noContent }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#6b6b6b;padding:6px 0">No content attributes recorded.</span></sc-if>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b6b6b">Dataset</span><span style="font-size:13px;font-weight:500">{{ fp.dsName }}</span><span style="font-size:12.5px;color:#6b6b6b">{{ fp.paperShort }}</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600;color:#6b6b6b">Dataset</span><span style="font-size:13px;font-weight:500">{{ fp.dsName }}</span><span style="font-size:12.5px;color:#6b6b6b">{{ fp.paperShort }}</span></div>
     </div>
   </aside>
 </div>
@@ -428,6 +437,7 @@ const GO={vacuole:['GO:0000324','fungal-type vacuole'],nucleus:['GO:0005634','nu
 const CIMG={vacuole:[{kind:'Schematic',caption:'Vacuole within the mother cell.'},{kind:'Micrograph',caption:'DIC image paired with a vacuolar membrane marker.'}],nucleus:[{kind:'Schematic',caption:'Nucleus extending through the bud neck during closed mitosis.'}]};
 COMPS.forEach(c=>{c.organism='scer';if(GO[c.id])c.compartment_term={id:GO[c.id][0],label:GO[c.id][1]};c.images=CIMG[c.id]||[];});
 COMPS.push({id:'human_nucleus_example',name:'Nucleus',organism:'hsap',compartment_term:{id:'GO:0005634',label:'nucleus'},record_use:'template_only',description:"Dummy record showing a second organism's description of the same compartment term.",composition:'',shape:'',microscopy_notes:'',references:[],images:[]});
+COMPS.push({id:'second_vacuole_example',name:'Vacuole',organism:'scer',compartment_term:{id:'GO:0000324',label:'fungal-type vacuole'},record_use:'template_only',description:'A second example record for the same organism.',composition:'',shape:'',microscopy_notes:'',references:[],images:[]});
 const TABS=['Datasets','Abstract','Notes','Other files','Raw metadata'];
 class Component extends DCLogic {
   componentDidMount(){this.loadDef();}
@@ -505,12 +515,17 @@ class Component extends DCLogic {
     const cSorted=[...CONC].sort((a,b)=>a.priority-b.priority||a.name.localeCompare(b.name)).filter(g=>cfil==='All'||g.priority<99);
     const isUn=csel==='__unassigned';
     const cg=CONC.find(g=>g.key===csel)||CONC[0];
-    const cc=cg.records.find(r=>r.organism===corgSel)||cg.records[0];const oo=orgOf(cc.organism);
+    const cc=cg.records.find(r=>r.id===this.state.cid)||cg.records.find(r=>r.organism===corgSel)||cg.records[0];const oo=orgOf(cc.organism);
+    const notes=cg.records.flatMap(r=>r.overviews||[]);
+    const general=['Composition','Structure','Shape'].flatMap(label=>{
+      const values=notes.map(r=>r['overview_'+label.toLowerCase()]).filter(v=>v&&v.trim());
+      return [...new Set(values)].map(value=>({label,value}));
+    });
     const unspec=v=>!v||/^Not specified in current notes\.?$/.test(v);
     const doiUrl=d=>'https://doi.org/'+d;
     const ref=r=>({...r,url:doiUrl(r.doi),hasNotes:!!r.notes});
     const qy=v=>/[:#'&]|^\d/.test(v)?"'"+v.replace(/'/g,"''")+"'":v;
-    const goC=c=>e=>{e&&e.preventDefault&&e.preventDefault();this.setState({csel:keyOf(c),corgSel:c.organism,ctab:'Overview'});};
+    const goC=c=>e=>{e&&e.preventDefault&&e.preventDefault();this.setState({csel:keyOf(c),cid:c.id,corgSel:c.organism,ctab:'Overview'});};
     const fmtImgs=(list,key)=>({images:list.map((im,i)=>({kind:im.kind,caption:im.caption||'No caption',slotId:'cimg-'+key+'-'+i,placeholder:'Drop '+im.kind.toLowerCase(),
       rows:[['Source',im.source_reference],['Credit',im.credit],['Licence',im.licence],['Alt text',im.alt_text],['Location',im.path||im.url,1]].map(([k,v,m])=>({k,v:v||'Not specified',color:v?'#111111':'#8c8c8c',font:m&&v?"'IBM Plex Mono',monospace":'inherit'}))})),imgCount:list.length,noImages:!list.length,showImgSlot:sp});
     const yImgs=list=>list.length?['images:'].concat(list.flatMap(im=>['  - kind: '+im.kind.toLowerCase(),'    caption: '+qy(im.caption||'')])):[];
@@ -518,16 +533,28 @@ class Component extends DCLogic {
     const dupN=d=>UNASSIGNED.filter(u=>u.doi===d).length;
     const ct=cc.compartment_term;
     const tabSt=on=>({color:on?'#111111':'#6b6b6b',line:on?'#111111':'transparent'});
+    const orgTabs=cg.records.map(record=>{
+      const peers=cg.records.filter(r=>r.organism===record.organism);
+      const name=orgOf(record.organism).name+(peers.length>1?' '+(peers.indexOf(record)+1):'');
+      return {name,...tabSt(record===cc),onClick:()=>this.setState({cid:record.id,corgSel:record.organism})};
+    });
     const compVals={
       isCompView:view==='compartments',compCount:cSorted.length,
       compFilters:['All','Starred'].map(n=>({name:n,bg:n===cfil?'#111111':'#fff',color:n===cfil?'#fff':'#444444',border:n===cfil?'#111111':'#dcdcdc',onClick:()=>this.setState({cfil:n})})),
-      compRows:cSorted.map(g=>({name:g.name,key:g.key,orgCount:g.records.length>1?g.records.length+' organisms':'',hasPrio:g.priority<99,noPrio:g.priority>=99,...selStyle(!isUn&&g.key===cg.key),onClick:()=>this.setState({csel:g.key,ctab:'Overview'})})),
+      compRows:cSorted.map(g=>{
+        const n=new Set(g.records.map(r=>r.organism)).size;
+        return {name:g.name,key:g.key,orgCount:n>1?n+' organisms':'',hasPrio:g.priority<99,noPrio:g.priority>=99,...selStyle(!isUn&&g.key===cg.key),onClick:()=>this.setState({csel:g.key,cid:g.records[0].id,ctab:'Overview'})};
+      }),
       unRow:{count:UNASSIGNED.length,...selStyle(isUn),onClick:()=>this.setState({csel:'__unassigned'})},
       isCompDetail:!isUn,isUnassigned:isUn,
       csrc:{...COMP_SRC,modified:COMP_SRC.modified_at.slice(0,16).replace('T',' ')},
-      orgTabs:cg.records.map(r=>({name:orgOf(r.organism).name,...tabSt(r===cc),onClick:()=>this.setState({corgSel:r.organism})})),
+      showGeneral:general.length>0&&this.state.openNotes===cg.key,
+      generalCaret:this.state.openNotes===cg.key?'▾':'▸',generalLabel:'Notes',
+      toggleGeneral:()=>this.setState(s=>({openNotes:s.openNotes===cg.key?null:cg.key})),
+      orgTabs,
       cmp:{key:cg.key,conceptName:cg.name,id:cc.id,name:cc.name,hasPrio:cg.priority<99,annos:cc.record_use?[cc.record_use.replace(/_/g,' ')]:[],
         org:{name:oo.name,taxon:oo.taxon},
+        hasGeneral:general.length>0,general,
         hasTerm:!!ct,noTerm:!ct,term:ct||{},def:ct?((this.state.defs||{})[ct.id]||'Loading definition…'):'',defColor:ct&&(this.state.defs||{})[ct.id]&&!/^Definition unavailable/.test(this.state.defs[ct.id])?'#444444':'#8c8c8c',termUrl:ct?'https://www.ebi.ac.uk/QuickGO/term/'+ct.id:'',
         ...fmtImgs(cc.images,cc.id),
         refCount:cc.references.length,noRefs:!cc.references.length,refs:cc.references.map(ref),showRefSlot:sp,

@@ -6,6 +6,13 @@
   "$defs": {"text": {"type": "string", "minLength": 1}},
   "properties": {
     "overview": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
+    "notes": {
+      "type": "object", "required": ["field", "fields"], "additionalProperties": false,
+      "properties": {
+        "field": {"$ref": "#/$defs/text"},
+        "fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}}
+      }
+    },
     "sections": {"type": "array", "items": {
       "type": "object", "required": ["field", "label"], "additionalProperties": false,
       "properties": {

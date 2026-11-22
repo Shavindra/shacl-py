@@ -201,6 +201,37 @@ def extra_sections(collection, row, variant):
     return sections
 
 
+def concept_notes(collection, group):
+    """Collect distinct general notes from every record for the selected concept."""
+    spec = collection.presentation.get("notes")
+    if not spec:
+        return []
+    notes = [
+        note for row in group.members.values() for note in objects(row, spec["field"])
+    ]
+    fields = []
+    for key in spec["fields"]:
+        values = []
+        for note in notes:
+            text = note.get(key)
+            if isinstance(text, str) and text.strip() and text not in values:
+                values.append(text)
+        if values:
+            fields.append((collection.field_labels.get(key, key), values))
+    return fields
+
+
+def variant_tabs(variants):
+    counts = Counter(v.category for v in variants)
+    seen = Counter()
+    tabs = []
+    for v in variants:
+        seen[v.category] += 1
+        label = f"{v.name} {seen[v.category]}" if counts[v.category] > 1 else v.name
+        tabs.append((v, label))
+    return tabs
+
+
 def detail_view(collection, params):
     layout = collection.presentation
     groups = collection.groups
@@ -248,12 +279,6 @@ def detail_view(collection, params):
         entry = variant.entry
     row = group.members[entry]
     data = variant.data if variant else row
-    tabs = {}
-    for v in group.variants:
-        tabs.setdefault(v.category, v)
-    if variant:
-        tabs[variant.category] = variant
-    records = [v for v in group.variants if variant and v.category == variant.category]
     owners = [(row, "Shared" if variant else "")]
     if variant:
         owners.append((variant.data, ""))
@@ -268,8 +293,8 @@ def detail_view(collection, params):
         variant=variant,
         row=row,
         terms=term_links,
-        tabs=list(tabs.values()),
-        variant_records=records,
+        tabs=variant_tabs(group.variants),
+        notes=concept_notes(collection, group),
         missing_variant=missing_variant,
         variant_context=[
             (collection.field_labels.get(k, k), data[k])
