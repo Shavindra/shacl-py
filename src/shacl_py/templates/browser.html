@@ -119,6 +119,7 @@
 {% elif view=='terms' %}<article>{{ record_terms(record_topics) }}</article>
 {% elif view=='methods' %}<article>{{ methods(method_groups, 'dataset' if global_ds else 'paper', groupbody) }}</article>
 {% elif view=='attributes' %}<article>{{ attrpanel(attr) }}</article>
+{% elif view=='figures' %}{% include 'figures.html' %}
 {% elif view=='abstract' %}<article class="abstract serif">{{ abstract }}</article>
 {% elif view=='notes' %}<article class="narrow">{% if folder %}<div class="mono muted">{{ folder }}/README.md</div>{% endif %}<div class="notes">{{ notes }}</div></article>
 {% elif view=='source' %}<article>{% if alternate_sources %}<div class="sources">{% for other in alternate_sources %}<a href="{{ url(other.route,view='source') }}" target="_self">{{ other.ref }}</a> {% endfor %}</div>{% endif %}<pre>{{ raw }}</pre>{% if source!=raw %}<details><summary>Full source metadata</summary><pre>{{ source }}</pre></details>{% endif %}</article>

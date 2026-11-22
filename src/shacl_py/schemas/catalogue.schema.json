@@ -3405,6 +3405,16 @@
           },
           "type": "array"
         },
+        "figure_source": {
+          "description": "Source document or location for the figures.",
+          "type": "string"
+        },
+        "figures": {
+          "items": {
+            "$ref": "#/$defs/PaperFigure"
+          },
+          "type": "array"
+        },
         "file_groups": {
           "items": {
             "$ref": "#/$defs/FileGroup"
@@ -3457,6 +3467,12 @@
           "description": "A list of terms from different schemas or terminology systems that have narrower meaning.",
           "items": {
             "type": "string"
+          },
+          "type": "array"
+        },
+        "paper_images": {
+          "items": {
+            "$ref": "#/$defs/PanelImage"
           },
           "type": "array"
         },
@@ -3656,6 +3672,16 @@
           },
           "type": "array"
         },
+        "figure_source": {
+          "description": "Source document or location for the figures.",
+          "type": "string"
+        },
+        "figures": {
+          "items": {
+            "$ref": "#/$defs/PaperFigure"
+          },
+          "type": "array"
+        },
         "file_groups": {
           "items": {
             "$ref": "#/$defs/FileGroup"
@@ -3708,6 +3734,12 @@
           "description": "A list of terms from different schemas or terminology systems that have narrower meaning.",
           "items": {
             "type": "string"
+          },
+          "type": "array"
+        },
+        "paper_images": {
+          "items": {
+            "$ref": "#/$defs/PanelImage"
           },
           "type": "array"
         },
@@ -4252,6 +4284,89 @@
       },
       "required": [],
       "title": "Organization",
+      "type": "object"
+    },
+    "PanelImage": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "caption": {
+          "type": "string"
+        },
+        "from_figure": {
+          "description": "Source figure or panel label.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "path": {
+          "description": "Image path relative to the publication folder.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "related_datasets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "url": {
+          "description": "Direct image URL.",
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_figure"
+      ],
+      "title": "PanelImage",
+      "type": "object"
+    },
+    "PaperFigure": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "caption": {
+          "type": "string"
+        },
+        "highlighted": {
+          "description": "Star this record and show it first in viewer lists.",
+          "type": "boolean"
+        },
+        "label": {
+          "description": "Figure identifier as printed in the paper.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "panels": {
+          "description": "Panel labels as printed in the figure.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Image path relative to the publication folder.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "related_datasets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "description": "Direct image URL.",
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "title": "PaperFigure",
       "type": "object"
     },
     "Person": {
@@ -5722,6 +5837,34 @@
       "title": "Publication",
       "type": "object"
     },
+    "PublicationImage": {
+      "additionalProperties": false,
+      "description": "",
+      "properties": {
+        "caption": {
+          "type": "string"
+        },
+        "path": {
+          "description": "Image path relative to the publication folder.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "related_datasets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "url": {
+          "description": "Direct image URL.",
+          "format": "uri",
+          "pattern": "^https?://[^\\s/]+(?:[/?#]\\S*)?$",
+          "type": "string"
+        }
+      },
+      "title": "PublicationImage",
+      "type": "object"
+    },
     "Publication__identifier_optional": {
       "additionalProperties": false,
       "description": "A resource that is the output of a publishing process.",
@@ -7094,5 +7237,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.6.0"
+  "version": "1.7.0"
 }

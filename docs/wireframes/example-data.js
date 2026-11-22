@@ -87,3 +87,11 @@ window.wireframeMethods = {
     tables.attributes.push(trace);
   }
 };
+
+window.wireframeFigures = {
+  imaging_2023: {source: 'Example imaging study', figures: [
+    {n: '1', title: 'Image measurements', caption: 'An example field and its measurement table.',
+      panels: 'a–b', key: true, data: ['Cell images', 'Feature tables']},
+    {n: '2', title: 'Field comparison', caption: 'Measurements across example fields.', panels: 'a–c'}
+  ], samples: [{from: 'Fig. 1a', caption: 'Example image field', data: 'Cell images'}]}
+};

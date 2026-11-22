@@ -88,6 +88,13 @@ def validate_catalogue(graph, root):
         except ValueError as error:
             raise ValueError(f"{pid}: {error}") from error
     for paper in publications:
+        for field in ("figures", "paper_images"):
+            for image in paper.get(field, []):
+                for dataset in image.get("related_datasets", []):
+                    if dataset not in dataset_ids:
+                        raise ValueError(
+                            f"{paper['pid']}: {field} references unknown dataset {dataset}"
+                        )
         for link in paper.get("dataset_links", []):
             if link["dataset"] not in dataset_ids:
                 raise ValueError(f"{paper['pid']}: unknown dataset {link['dataset']}")

@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.6.0
+version: 1.7.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -32,6 +32,9 @@ classes:
     is_a: Publication
     slots: [source_url, local_folder, file_groups, author_names, highlighted, keywords, index_terms]
     attributes:
+      figure_source: {range: string, description: Source document or location for the figures.}
+      figures: {range: PaperFigure, multivalued: true, inlined_as_list: true}
+      paper_images: {range: PanelImage, multivalued: true, inlined_as_list: true}
       primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
   LocalDataset:
@@ -46,6 +49,24 @@ classes:
       notebook_path:
         range: string
         description: Project-relative path to the notebook used to produce this dataset.
+  PublicationImage:
+    abstract: true
+    attributes:
+      caption: {range: string}
+      path: {range: string, pattern: '\S', description: Image path relative to the publication folder.}
+      url: {range: uri, pattern: '^https?://[^\s/]+(?:[/?#]\S*)?$', description: Direct image URL.}
+      related_datasets: {range: LocalDataset, multivalued: true}
+  PaperFigure:
+    is_a: PublicationImage
+    slots: [highlighted]
+    attributes:
+      label: {range: string, required: true, pattern: '\S', description: Figure identifier as printed in the paper.}
+      title: {range: string}
+      panels: {range: string, description: Panel labels as printed in the figure.}
+  PanelImage:
+    is_a: PublicationImage
+    attributes:
+      from_figure: {range: string, required: true, pattern: '\S', description: Source figure or panel label.}
   IndexTerm:
     description: A subject or property in the project's searchable vocabulary.
     attributes:

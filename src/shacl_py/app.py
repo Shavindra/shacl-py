@@ -33,8 +33,9 @@ from shacl_py.browser import (
     searchable,
     source_content,
 )
+from shacl_py.catalogue import Catalogue
 from shacl_py.collection import Collection
-from shacl_py.collection_view import detail_view
+from shacl_py.collection_view import detail_view, image_data
 from shacl_py.files import IMAGE_TYPES, inline_image, scoped_path
 from shacl_py.graph import record_graph
 from shacl_py.methods import (
@@ -840,8 +841,14 @@ def browse(items, stored, base, brand, params, collections):
             ("files", "Other files", None),
         ]
     )
+    figure_records = (
+        item.fields.get("figures", []) if isinstance(item.source, Catalogue) else []
+    )
     if item.is_publication:
-        tabs.insert(2, ("methods", "Methods", len(record_methods(item))))
+        tabs[2:2] = [
+            ("figures", "Figures", len(figure_records)),
+            ("methods", "Methods", len(record_methods(item))),
+        ]
     if not global_ds and (count := attribute_count(item)):
         tabs.append(("attributes", "Attributes", count))
     if item.is_publication or item.is_dataset:
@@ -851,6 +858,39 @@ def browse(items, stored, base, brand, params, collections):
     view = params.get("view", default_view)
     if view not in {k for k, _, _ in tabs}:
         view = default_view
+    if view == "figures":
+        figure_links = {
+            d.key: (
+                d.label,
+                url(
+                    item_route,
+                    view="datasets",
+                    dataset=d.key,
+                    dataset_record=d.ref,
+                    dtab="files",
+                ),
+            )
+            for d in ds
+        }
+
+        def figure_card(record):
+            card = image_data(record, item.folder, "paper")
+            card["datasets"] = [
+                figure_links[k]
+                for k in record.get("related_datasets", [])
+                if k in figure_links
+            ]
+            return card
+
+        context.update(
+            figures=[figure_card(record) for record in figure_records],
+            paper_images=[
+                figure_card(record) for record in item.fields.get("paper_images", [])
+            ]
+            if isinstance(item.source, Catalogue)
+            else [],
+            figure_source=field(item, "figure_source"),
+        )
     dsrows = []
     dataset_words = params.get("dsfilter", "").casefold().split()
     for d in ds:

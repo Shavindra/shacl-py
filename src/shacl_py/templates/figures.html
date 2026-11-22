@@ -1,0 +1,34 @@
+{% macro image(card, label) -%}
+<div class="figure-preview{% if card.highlighted %} key-figure{% endif %}">
+  {% if card.preview %}<img src="{{ card.preview }}" alt="{{ card.caption or card.title or label }}" loading="lazy">
+  {% else %}<span>{{ label }} · No image available</span>{% endif %}
+</div>
+{%- endmacro %}
+{% macro datasets(card) -%}
+{% for name, href in card.datasets %}<a href="{{ href }}" target="_self">{{ name }}</a>{% endfor %}
+{%- endmacro %}
+<article class="paper-figures">
+  <section>
+    <h2>Figures <small>{{ figures|length }}</small>{% if figure_source %}<code>{{ figure_source }}</code>{% endif %}</h2>
+    {% if figures %}<div class="figure-grid">
+      {% for fig in figures %}<figure>
+        {{ image(fig, fig.label) }}
+        <figcaption>
+          <div class="figure-title"><b>{{ fig.label }}</b> {{ fig.title }} {% if fig.highlighted %}<span title="Key figure" aria-label="Key figure">★</span>{% endif %}</div>
+          {% if fig.caption %}<p>{{ fig.caption }}</p>{% endif %}
+          {% if fig.panels or fig.datasets %}<dl>
+            {% if fig.panels %}<div><dt>Panels</dt><dd><code>{{ fig.panels }}</code></dd></div>{% endif %}
+            {% if fig.datasets %}<div><dt>Related data</dt><dd>{{ datasets(fig) }}</dd></div>{% endif %}
+          </dl>{% endif %}
+        </figcaption>
+      </figure>{% endfor %}
+    </div>{% else %}<p class="hint">No figures recorded for this paper.</p>{% endif %}
+  </section>
+  {% if paper_images %}<section>
+    <h2>Images from the paper <small>{{ paper_images|length }}</small></h2>
+    <div class="panel-grid">{% for panel in paper_images %}<figure>
+      {{ image(panel, panel.from_figure) }}
+      <figcaption>{{ panel.caption }}<span class="muted">{{ panel.from_figure }}</span>{{ datasets(panel) }}</figcaption>
+    </figure>{% endfor %}</div>
+  </section>{% endif %}
+</article>

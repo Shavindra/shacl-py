@@ -272,6 +272,10 @@ def dataset_keys(papers, datasets):
 
 
 def dataset_roles(item):
+    for field in ("figures", "paper_images"):
+        for image in item.fields.get(field, []):
+            for dataset in image.get("related_datasets", []):
+                yield dataset, "Related data"
     for review in item.source.graph.get("reviews", []):
         if review["publication"] == item.key:
             for output in review.get("outputs", []):

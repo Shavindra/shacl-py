@@ -134,6 +134,42 @@
       <sc-if value="{{ isAbstract }}" hint-placeholder-val="{{ false }}">
         <div style="padding:26px 28px;max-width:760px;font-family:'Source Serif 4',serif;font-size:16px;line-height:1.6;color:#2d2d2d;text-wrap:pretty">{{ paper.abstract }}</div>
       </sc-if>
+      <sc-if value="{{ isFigures }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px 28px 40px;display:flex;flex-direction:column;gap:34px;max-width:1180px">
+          <section style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600;color:#111111">Figures</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ figs.count }}</span><span style="margin-left:auto;font-family:'IBM Plex Mono';font-size:11.5px;color:#6b6b6b">{{ figs.source }}</span></div>
+            <sc-if value="{{ figs.none }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6b6b6b">No figures recorded for this paper.</div></sc-if>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 32px;align-items:start">
+              <sc-for list="{{ figs.items }}" as="fg" hint-placeholder-count="3">
+                <figure style="margin:0;display:flex;flex-direction:column;gap:10px;min-width:0">
+                  <div style="position:relative;height:230px;background:#f0f0f0;border:1px solid {{ fg.border }}"><image-slot id="{{ fg.slotId }}" shape="rect" fit="contain" placeholder="{{ fg.placeholder }}"></image-slot></div>
+                  <figcaption style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="flex:none;font-size:12px;font-weight:600;color:#111111">{{ fg.label }}</span><span style="font-size:13.5px;font-weight:500;color:#111111;text-wrap:pretty">{{ fg.title }}</span><sc-if value="{{ fg.key }}"><span title="Key figure" aria-label="Key figure" style="font-size:13px;line-height:1;color:#111111">★</span></sc-if></div>
+                    <p style="margin:0;font-size:12.5px;line-height:1.5;color:#444444;text-wrap:pretty">{{ fg.caption }}</p>
+                    <dl style="margin:0;display:flex;flex-direction:column;font-size:12.5px">
+                      <div style="display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;padding:4px 0;border-bottom:1px solid #f0f0f0"><dt style="color:#8c8c8c">Panels</dt><dd style="margin:0;font-family:'IBM Plex Mono';font-size:12px">{{ fg.panels }}</dd></div>
+                      <sc-if value="{{ fg.hasData }}"><div style="display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;padding:4px 0;border-bottom:1px solid #f0f0f0"><dt style="color:#8c8c8c">Related data</dt><dd style="margin:0;min-width:0;display:flex;gap:4px 12px;flex-wrap:wrap"><sc-for list="{{ fg.data }}" as="x"><a href="#" onClick="{{ x.onClick }}">{{ x.name }}</a></sc-for></dd></div></sc-if>
+                    </dl>
+                  </figcaption>
+                </figure>
+              </sc-for>
+            </div>
+          </section>
+          <sc-if value="{{ figs.hasSamples }}" hint-placeholder-val="{{ false }}">
+          <section style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span style="font-size:13px;font-weight:600;color:#111111">Images from the paper</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ figs.sampleCount }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:18px">
+              <sc-for list="{{ figs.samples }}" as="sm" hint-placeholder-count="4">
+                <figure style="margin:0;display:flex;flex-direction:column;gap:6px;min-width:0">
+                  <div style="position:relative;aspect-ratio:1;background:#f0f0f0;border:1px solid #e4e4e4"><image-slot id="{{ sm.slotId }}" shape="rect" fit="cover" placeholder="{{ sm.placeholder }}"></image-slot></div>
+                  <figcaption style="display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12px"><span style="color:#111111;text-wrap:pretty">{{ sm.caption }}</span><span style="color:#6b6b6b">{{ sm.from }}</span><sc-if value="{{ sm.hasData }}"><a href="#" onClick="{{ sm.onClick }}">{{ sm.dataset }}</a></sc-if></figcaption>
+                </figure>
+              </sc-for>
+            </div>
+          </section>
+          </sc-if>
+        </div>
+      </sc-if>
       <sc-if value="{{ isMethods }}" hint-placeholder-val="{{ false }}">
         <div style="padding:22px 28px"><div style="display:flex;flex-direction:column;gap:14px"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:28px 40px;align-items:start"><sc-for list="{{ pM.families }}" as="mf" hint-placeholder-count="2"><section style="display:flex;flex-direction:column;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;padding-bottom:8px;border-bottom:1px solid #e4e4e4"><span title="{{ mf.predicate }}" style="font-size:13px;font-weight:600;color:#111111">{{ mf.label }}</span><span style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c">{{ mf.count }}</span></div><sc-for list="{{ mf.types }}" as="mt"><div title="{{ mt.predicate }}" style="padding:12px 0 2px;font-size:12px;font-weight:600;color:#444444">{{ mt.label }}</div><sc-for list="{{ mt.techs }}" as="tq"><div style="display:flex;flex-direction:column;gap:4px;padding:9px 6px;margin:0 -6px;border-bottom:1px solid #f0f0f0;background:{{ tq.bg }}"><div style="display:flex;gap:12px;align-items:baseline"><span style="flex:1;min-width:0;font-size:13px;font-weight:500;color:#111111">{{ tq.name }}</span></div><span style="font-size:12.5px;line-height:1.5;color:#444444;text-wrap:pretty">{{ tq.value }}</span><sc-if value="{{ tq.hasIO }}"><dl style="margin:2px 0;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.45"><sc-if value="{{ tq.hasPurpose }}"><div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px"><dt style="color:#8c8c8c">Used for</dt><dd style="margin:0;min-width:0;color:#111111;text-wrap:pretty">{{ tq.purpose }}</dd></div></sc-if><sc-if value="{{ tq.hasInputs }}"><div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px"><dt style="color:#8c8c8c">Inputs</dt><dd style="margin:0;min-width:0;display:flex;flex-direction:column;gap:2px"><sc-for list="{{ tq.inputs }}" as="io"><sc-if value="{{ io.isLink }}"><a href="#" onClick="{{ io.onClick }}" style="overflow-wrap:anywhere">{{ io.label }}</a></sc-if><sc-if value="{{ io.notLink }}"><span style="color:#111111;overflow-wrap:anywhere">{{ io.label }}</span></sc-if></sc-for></dd></div></sc-if><sc-if value="{{ tq.hasOutputs }}"><div style="display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px"><dt style="color:#8c8c8c">Outputs</dt><dd style="margin:0;min-width:0;display:flex;flex-direction:column;gap:2px"><sc-for list="{{ tq.outputs }}" as="io"><sc-if value="{{ io.isLink }}"><a href="#" onClick="{{ io.onClick }}" style="overflow-wrap:anywhere">{{ io.label }}</a></sc-if><sc-if value="{{ io.notLink }}"><span style="color:#111111;overflow-wrap:anywhere">{{ io.label }}</span></sc-if></sc-for></dd></div></sc-if></dl></sc-if><span title="defined_by" style="font-family:'IBM Plex Mono';font-size:11px;color:#8c8c8c;overflow-wrap:anywhere"><sc-if value="{{ tq.defLink }}"><a href="{{ tq.definedBy }}" target="_blank" rel="noopener" style="color:#6b6b6b">{{ tq.definedBy }}</a></sc-if><sc-if value="{{ tq.defPlain }}">{{ tq.definedBy }}</sc-if></span></div></sc-for></sc-for></section></sc-for></div><sc-if value="{{ pM.empty }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6b6b6b">No methods recorded for this paper.</div></sc-if></div></div>
       </sc-if>
@@ -476,7 +512,8 @@ const paperMatch=(pp,xt,xc)=>pp.datasets.some(d=>dsMatch(d,xt,xc))||(!xc&&!!xt&&
 const TECH_OPTS=[...new Set(IDX.flatMap(r=>[...r.acq]))].map(id=>({id,label:techName(id)})).sort((a,b)=>a.label.localeCompare(b.label));
 const COMP_OPTS=(()=>{const m=new Map();PAPERS.forEach(pp=>pp.datasets.forEach(ds=>compsOf(ds).forEach((l,id)=>m.set(id,l))));return [...m].map(([id,l])=>({id,label:l.charAt(0).toUpperCase()+l.slice(1)})).sort((a,b)=>a.label.localeCompare(b.label));})();
 const ST={performed:['solid #111111','#ffffff'],reported:['solid #e4e4e4','#efefef'],planned:['dashed #8c8c8c','#ffffff']};
-const TABS=['Datasets','Abstract','Methods','Notes','Other files','Raw metadata'];
+const FIGS = window.wireframeFigures;
+const TABS=['Datasets','Abstract','Figures','Methods','Notes','Other files','Raw metadata'];
 class Component extends DCLogic {
   componentDidMount(){this.loadDef();}
   componentDidUpdate(){this.loadDef();}
@@ -510,6 +547,10 @@ class Component extends DCLogic {
       const derived=(x.source_datasets||[]).map(id=>ALL.find(y=>y.pid===id)).filter(Boolean).map(link);
       const used=ALL.filter(y=>(y.source_datasets||[]).includes(x.pid)).map(link);
       return {groups,empty:!groups.length,derivedFrom:derived,usedBy:used,hasDerived:derived.length>0,hasUsedBy:used.length>0,hasProv:derived.length+used.length>0};};
+    const figView=pp=>{const F=FIGS[pp.pid]||{figures:[],samples:[]};const goD=nm=>{const xi=pp.datasets.findIndex(x=>x.name===nm);return e=>{e&&e.preventDefault&&e.preventDefault();if(xi>=0)this.setState({tab:'Datasets',d:xi,dtab:'Files'});};};
+      const items=F.figures.map(f=>({label:'Fig. '+f.n,title:f.title,caption:f.caption,panels:f.panels,key:!!f.key,border:f.key?'#111111':'#e4e4e4',slotId:'fig-'+pp.pid+'-'+f.n,placeholder:'Drop Fig. '+f.n+' image',data:(f.data||[]).map(nm=>({name:nm,onClick:goD(nm)})),hasData:!!(f.data||[]).length}));
+      const samples=(F.samples||[]).map((s,i)=>({caption:s.caption,from:s.from,dataset:s.data||'',hasData:!!s.data,onClick:goD(s.data),slotId:'sample-'+pp.pid+'-'+i,placeholder:'Image from '+s.from}));
+      return {items,count:items.length,none:!items.length,source:F.source||'',samples,sampleCount:samples.length,hasSamples:samples.length>0};};
     const openPaper=e=>{e&&e.preventDefault&&e.preventDefault();this.setState({view:'papers',p:gx.pi,d:gx.xi,tab:'Datasets',label:'All'});};
     const gVals={
       isPapersView:view==='papers',isDatasetsView:view==='datasets',
@@ -615,8 +656,8 @@ class Component extends DCLogic {
       labelFilters:['All','Important','Imaging','Unlabelled'].map(n=>({name:n,bg:n===label?'#111111':'#fff',color:n===label?'#fff':'#444444',border:n===label?'#111111':'#dcdcdc',onClick:()=>this.setState({label:n})})).filter(x=>x.name!=='Unlabelled'),
       paperRows:visible.map(({x,i})=>({title:x.title,byline:`${x.short} · ${x.venue} ${x.year}`,dsCount:`${x.datasets.length} dataset${x.datasets.length>1?'s':''}`,labels:x.labels,bg:i===p?'#fff':'transparent',shadow:i===p?'inset 3px 0 0 #111111, 0 1px 2px rgba(0,0,0,.06)':'none',onClick:()=>this.setState({p:i,d:0})})),
       paper,
-      tabs:TABS.map(t=>({name:t,count:t==='Datasets'?paper.datasets.length:t==='Methods'?mCount(paper):t==='Other files'?paper.other.length:'',color:t===tab?'#111111':'#6b6b6b',line:t===tab?'#111111':'transparent',onClick:()=>this.setState({tab:t})})),
-      isDatasets:tab==='Datasets',isMethods:tab==='Methods',pM:mView(paper),isAbstract:tab==='Abstract',isNotes:tab==='Notes',isOther:tab==='Other files',isRaw:tab==='Raw metadata',
+      tabs:TABS.map(t=>({name:t,count:t==='Datasets'?paper.datasets.length:t==='Methods'?mCount(paper):t==='Other files'?paper.other.length:t==='Figures'?((FIGS[paper.pid]||{}).figures||[]).length:'',color:t===tab?'#111111':'#6b6b6b',line:t===tab?'#111111':'transparent',onClick:()=>this.setState({tab:t})})),
+      isDatasets:tab==='Datasets',isMethods:tab==='Methods',pM:mView(paper),isAbstract:tab==='Abstract',isFigures:tab==='Figures',figs:figView(paper),isNotes:tab==='Notes',isOther:tab==='Other files',isRaw:tab==='Raw metadata',
       datasetRows:paper.datasets.map((x,i)=>({name:x.name,role:x.role,fileCount:x.files.length,bg:i===di?'#fff':'transparent',shadow:i===di?'inset 3px 0 0 #111111, 0 1px 2px rgba(0,0,0,.06)':'none',onClick:()=>this.setState({d:i})})),
       ds:{...ds,fileCount:ds.files.length,localSummary:ds.files.length?local+' of '+ds.files.length+' files local':'Metadata only',...loc(ds),annos:annos(ds)},
       dTabs:[['Files',ds.files.length],['Attributes',countLeaves(restOf(ds.attributes))],['Methods',mCount(ds)]].map(([n,c])=>({name:n,count:c,color:n===dtab?'#111111':'#6b6b6b',line:n===dtab?'#111111':'transparent',onClick:()=>this.setState({dtab:n})})),
