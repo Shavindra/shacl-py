@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jsonschema.validators import validator_for
 
+from shacl_py.catalogue_files import catalogue_parts, merged_catalogue
 from shacl_py.files import local_path
 
 SCHEMAS = Path(__file__).parent / "schemas"
@@ -54,6 +55,8 @@ def validate_structure(graph):
 
 
 def validate_catalogue(graph, root):
+    if isinstance(graph, dict) and "includes" in graph:
+        graph = merged_catalogue(graph, catalogue_parts(graph, root / "metadata.yaml"))
     validate_structure(graph)
     publications = graph.get("publications", [])
     datasets = graph.get("datasets", [])

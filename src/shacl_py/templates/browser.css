@@ -379,6 +379,8 @@
 .study .method-io dd{margin:0;display:grid;gap:2px}
 .study .method-id a,.study .method-source{color:#6b6b6b;font-size:11px}
 .study .method-parameters{font-size:12px}
+.study .method-parameters dl,.study .method-parameters .arow,.study .method-parameters dt,.study .method-parameters dd,.study .method-parameters .aval,.study .method-parameters a{font-size:12.5px;line-height:1.45}
+.study .method-parameters .arow{grid-template-columns:minmax(0,36%) minmax(0,1fr);gap:10px}
 .study .method-parameters summary{cursor:pointer}
 .study .file-methods .method-path{margin-top:12px}
 

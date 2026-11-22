@@ -6,7 +6,7 @@ from pathlib import Path
 
 from shacl_py.catalogue import record_validator, validate_catalogue
 from shacl_py.files import IGNORED, local_path
-from shacl_py.metadata_io import MetadataFile, save_metadata
+from shacl_py.metadata_io import CatalogueEditor, MetadataFile, save_metadata
 from shacl_py.prompts import (
     add_group,
     choose,
@@ -80,6 +80,8 @@ def add_datasets(root, selector, entries, linked_files=()):
         raise ValueError(
             "No project catalogue found. Run shacl-py setup --template paper-review first."
         )
+    editor = CatalogueEditor(document)
+    graph = editor.graph
     validate_catalogue(graph, root)
     publications = graph.get("publications", [])
     matches = [
@@ -161,8 +163,11 @@ def add_datasets(root, selector, entries, linked_files=()):
         for key, value in zip(("preview_url", "provider_url"), optional):
             existing[key] = source_url(value)
     validate_catalogue(graph, root)
-    changed = save_metadata(document)
-    print(f"{'Updated' if changed else 'Kept'} {document.path}")
+    changed = save_metadata(*editor.documents())
+    for path in sorted(changed):
+        print(f"Updated {path}")
+    if not changed:
+        print(f"Kept {document.path}")
 
 
 def import_paper(graph, root, folder, layout, stored=None):

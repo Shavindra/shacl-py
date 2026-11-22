@@ -13,6 +13,7 @@ from filelock import FileLock
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError as RoundTripError
 
+from shacl_py.catalogue_files import RECORD_LISTS, catalogue_parts, merged_catalogue
 from shacl_py.files import read_metadata
 
 
@@ -62,8 +63,70 @@ class MetadataFile:
         return text
 
 
+class CatalogueEditor:
+    """Edit linked records together and save each record back to its own file."""
+
+    def __init__(self, document):
+        self.document = document
+        self.parts = {}
+        self.index = document.data["catalogue"]
+
+        def read(path):
+            part = type(document).read(path)
+            if part.original is None:
+                raise ValueError("included file does not exist")
+            self.parts[path] = part
+            return part.data
+
+        parts = catalogue_parts(self.index, document.path, read)
+        self.graph = merged_catalogue(self.index, parts)
+        self.sections = {document.path: self.index, **parts}
+        self.owners = {
+            (slot, self.record_key(slot, row)): path
+            for path, part in self.sections.items()
+            for slot in RECORD_LISTS
+            for row in part.get(slot, [])
+            if isinstance(row, dict)
+        }
+
+    @staticmethod
+    def record_key(slot, record):
+        return record.get("publication" if slot == "reviews" else "pid")
+
+    def record_path(self, slot, key):
+        return self.owners.get((slot, key), self.document.path)
+
+    def documents(self):
+        if self.graph is not self.index:
+            # A new review or dataset belongs with its paper. A new dataset used
+            # by several papers stays at the project level until assigned a file.
+            linked = {}
+            for paper in self.graph.get("publications", []):
+                path = self.record_path("publications", paper["pid"])
+                for link in paper.get("dataset_links", []):
+                    linked.setdefault(link["dataset"], set()).add(path)
+            for slot in RECORD_LISTS:
+                rows = {path: [] for path in self.sections}
+                for record in self.graph.get(slot, []):
+                    key = self.record_key(slot, record)
+                    path = self.owners.get((slot, key))
+                    if path is None:
+                        if slot == "datasets" and len(linked.get(key, ())) == 1:
+                            path = next(iter(linked[key]))
+                        elif slot == "reviews":
+                            path = self.record_path("publications", key)
+                        else:
+                            path = self.document.path
+                    rows[path].append(record)
+                for path, records in rows.items():
+                    part = self.sections[path]
+                    if records != part.get(slot, []):
+                        part.setdefault(slot, [])[:] = records
+        return (self.document, *self.parts.values())
+
+
 def save_metadata(*documents):
-    """Stage both files, detect stale edits and undo a partial write on I/O failure."""
+    """Stage all files, detect stale edits and undo a partial write on I/O failure."""
     with ExitStack() as stack:
         pending = []
         for doc in sorted(documents, key=lambda item: item.path):

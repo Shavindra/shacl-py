@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 import yaml
 
 from shacl_py.catalogue import SCHEMAS, Catalogue, record_validator, validate_catalogue
+from shacl_py.catalogue_files import catalogue_parts, merged_catalogue
 from shacl_py.collection import CONFIG, Collection, load_collections
 from shacl_py.files import (
     FILE_PATTERN_SLOTS,
@@ -136,11 +137,20 @@ def load_records(
         if metalad and not records and not errors:
             errors.append(f"{root}: no stored MetaLad metadata found")
     validator = record_validator()
-    for path in (p for p in paths if p.name == "metadata.yaml"):
+    included = set()
+    for path in sorted(
+        (p for p in paths if p.name == "metadata.yaml"), key=lambda p: len(p.parts)
+    ):
+        if path in included:
+            continue
         try:
             data = yaml.safe_load(read_metadata(path))
             if isinstance(data, dict) and "catalogue" in data:
                 graph = data["catalogue"]
+                if isinstance(graph, dict):
+                    parts = catalogue_parts(graph, path)
+                    included.update(parts)
+                    graph = merged_catalogue(graph, parts)
                 validate_catalogue(graph, path.parent)
                 legacy = {
                     key: value for key, value in data.items() if key != "catalogue"
@@ -196,7 +206,7 @@ def load_records(
             if not folder.is_dir():
                 raise ValueError("local_folder does not exist or is not a directory")
             records.append(Paper(path, folder, data))
-        except (OSError, ValueError, yaml.YAMLError) as error:
+        except (OSError, TypeError, ValueError, yaml.YAMLError) as error:
             errors.append(f"{path}: {error}")
     for path in paths:
         if path.name != "metadata.yaml":

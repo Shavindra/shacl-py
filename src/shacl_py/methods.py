@@ -212,13 +212,17 @@ def method_view(rows, labels, resolve):
             group["types"].append(category)
         props = annotations(node)
         key = node["defined_by"]
+        summary = props.get("presentation") == "summary"
         kinds[fk][tk]["techniques"].append(
             {
-                "name": node.get("title") or labels.get(key, node["value"]),
+                "name": node.get("title")
+                or (node["value"] if summary else labels.get(key, node["value"])),
                 "value": node["value"],
                 "description": node.get("description"),
                 "id": key,
                 "href": key if is_link(key) else None,
+                "summary": summary,
+                "variant": props.get("variant"),
                 "status": props.get("status"),
                 "source": props.get("source")
                 if is_link(props.get("source") or "")

@@ -43,6 +43,8 @@ The **Methods** tab groups a record’s techniques by family and method type.
 The **Technique** and **Compartment** filters apply together in Papers and
 Datasets. A paper can match through a linked dataset. Each method can
 include its purpose, inputs and outputs.
+A technique with `annotations.presentation: summary` shows its name and
+expandable parameters. Use `annotations.variant` for a short variant label.
 A dataset PID or an unambiguous file reference opens the corresponding
 record. Files show their own methods in the drawer and full-page view.
 The [interactive wireframe](docs/wireframes/README.md) includes a worked example.
@@ -121,6 +123,23 @@ after installation.
 Run `shacl-py setup` to create or edit a linked project catalogue. This helper
 asks for project details, datasets and folders, then validates and saves
 `metadata.yaml` and `.studyminimeta.yaml`.
+
+To keep paper records in their own folders, list their YAML files under
+`catalogue.includes` in the project’s `metadata.yaml`.
+
+```yaml
+catalogue:
+  project:
+    pid: urn:example:project
+    title: Field survey
+  includes:
+  - papers/coastal-survey/catalogue.yaml
+```
+
+Each included file can hold `publications`, `datasets` and `reviews` lists.
+Use project-relative paths for files and notebooks, and link records by PID
+across files. Serve or validate the project root. Setup and dataset edits
+write existing records back to the file that contains them.
 
 ### Example: reviewing papers and their data
 

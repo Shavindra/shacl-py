@@ -680,6 +680,13 @@
           },
           "type": "array"
         },
+        "includes": {
+          "description": "Project-relative YAML files containing publication, dataset or review lists.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "project": {
           "$ref": "#/$defs/LocalProject"
         },
@@ -7056,6 +7063,13 @@
     "datasets": {
       "items": {
         "$ref": "#/$defs/LocalDataset"
+      },
+      "type": "array"
+    },
+    "includes": {
+      "description": "Project-relative YAML files containing publication, dataset or review lists.",
+      "items": {
+        "type": "string"
       },
       "type": "array"
     },
