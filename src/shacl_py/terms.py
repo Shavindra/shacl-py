@@ -1,11 +1,14 @@
-"""Look up authored terms for papers and datasets, including alternate descriptions."""
+"""Index individual terms and the subject–property relationships a record declares."""
 
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import cached_property
 
 from shacl_py.catalogue import Catalogue
-from shacl_py.graph import KEYWORD_FIELDS, metadata_labels
+from shacl_py.graph import KEYWORD_FIELDS, SUBJECT_FIELDS, metadata_labels
+
+ROLES = ("subject", "property", "keyword")
 
 
 def words(text):
@@ -19,74 +22,161 @@ class TermQuery:
 
 
 @dataclass(frozen=True)
-class Topic:
-    subject: str
-    subject_label: str
-    term: str
+class Term:
+    id: str
     label: str
-    broader: tuple
-    tokens: frozenset
+    role: str
+    category: str
+    aliases: tuple = ()
+    broader: Term | None = None
+
+    def lineage(self):
+        term = self
+        while term:
+            yield term
+            term = term.broader
+
+    @property
+    def names(self):
+        return (self.label, *self.aliases)
+
+    @property
+    def route(self):
+        key = "term" if self.role == "property" else self.role
+        return {"section": "terms", key: self.id}
+
+
+@dataclass(frozen=True)
+class Topic:
+    subject: Term | None
+    value: Term | None
     note: str = ""
 
     @property
-    def pair(self):
-        return self.subject, self.term
+    def terms(self):
+        return tuple(t for t in (self.subject, self.value) if t)
 
-    def matches(self, query, subject="", term=""):
-        return (
-            (not subject or subject == self.subject)
-            and (not term or term == self.term or term in self.broader)
-            and any(
-                tokens <= self.tokens
-                and (
-                    not subjects
-                    or self.subject in subjects
-                    or not self.subject
-                    and tokens == self.tokens
-                )
-                for subjects, tokens in query.clauses
+    @cached_property
+    def tokens(self):
+        return words(
+            " ".join(
+                name
+                for t in self.terms
+                for parent in t.lineage()
+                for name in parent.names
             )
         )
 
+    def matches(self, query, subject="", prop=""):
+        if subject and (
+            not self.subject or subject not in (t.id for t in self.subject.lineage())
+        ):
+            return False
+        if prop and (
+            not self.value
+            or self.value.role != "property"
+            or prop not in (t.id for t in self.value.lineage())
+        ):
+            return False
+        return any(
+            tokens <= self.tokens
+            and (
+                not subjects
+                or self.subject
+                and any(t.id in subjects for t in self.subject.lineage())
+                or not self.subject
+                and tokens == self.tokens
+            )
+            for subjects, tokens in query.clauses
+        )
 
-def names(definition):
-    return [definition["label"], *definition.get("aliases", [])]
+
+def resolve(vocabulary, key, default_role=None):
+    chain = []
+    while key:
+        definition = vocabulary[key]
+        chain.append(definition)
+        key = definition.get("broader")
+    role = next((d["role"] for d in chain if "role" in d), default_role)
+    if role is None:
+        return None
+    parent = None
+    for definition in reversed(chain):
+        parent = Term(
+            definition["id"],
+            definition["label"],
+            role,
+            definition.get("category", parent.category if parent else role.title()),
+            tuple(definition.get("aliases", [])),
+            parent,
+        )
+    return parent
 
 
 def record_topics(fields, vocabulary):
-    assignments = fields.get("index_terms", []) if vocabulary is not None else ()
-    for entry in assignments:
-        key = entry["term"]
-        definition = vocabulary[key]
-        subject = entry.get("subject", "")
-        subject_label = vocabulary[subject]["label"] if subject else ""
-        labels = names(vocabulary[subject]) if subject else []
-        labels.extend(names(definition))
-        parents = []
-        while parent := definition.get("broader"):
-            parents.append(parent)
-            definition = vocabulary[parent]
-            labels.extend(names(definition))
-        yield Topic(
-            subject,
-            subject_label,
-            key,
-            vocabulary[key]["label"],
-            tuple(parents),
-            words(" ".join(labels)),
-            entry.get("note", ""),
-        )
+    if vocabulary is not None:
+        subjects = set()
+        for entry in fields.get("index_terms", []):
+            subject = (
+                resolve(vocabulary, entry["subject"], "subject")
+                if "subject" in entry
+                else None
+            )
+            key = entry.get("property", entry.get("term"))
+            value = resolve(vocabulary, key, "property") if key else None
+            if value and value.role == "subject":
+                subject, value = value, None
+            if subject:
+                subjects.add(subject.id)
+            yield Topic(subject, value, entry.get("note", ""))
+
+        # A direct subject statement indexes the subject on its own. Nested
+        # statements describe other records, such as a file, and have their own scope.
+        for statement in fields.get("characterized_by", []):
+            key = statement.get("object")
+            if (
+                statement.get("predicate") in SUBJECT_FIELDS
+                and isinstance(key, str)
+                and key in vocabulary
+                and key not in subjects
+            ):
+                term = resolve(vocabulary, key)
+                if term and term.role == "subject":
+                    subjects.add(key)
+                    yield Topic(term, None)
 
     for label in metadata_labels(fields, KEYWORD_FIELDS):
-        yield Topic("", "", "keyword/" + label.casefold(), label, (), words(label))
+        yield Topic(
+            None, Term("keyword/" + label.casefold(), label, "keyword", "Keyword")
+        )
+
+
+def grouped_terms(terms):
+    groups = defaultdict(list)
+    for term in sorted(
+        terms,
+        key=lambda t: (
+            ROLES.index(t.role),
+            t.category.casefold(),
+            t.label.casefold(),
+            t.id,
+        ),
+    ):
+        groups[term.category].append(term)
+    return groups
+
+
+def topic_terms(topics):
+    return {
+        (term.role, term.id): term for topic in topics for term in topic.terms
+    }.values()
 
 
 class TermIndex:
     def __init__(self, items, key_for):
         self.by_record = defaultdict(dict)
         self.records = {}
-        self.subjects = {}
-        self.terms = {}
+        self.facets = {role: {} for role in ROLES}
         self.subject_names = defaultdict(set)
         self.term_names = set()
         vocabularies = {}
@@ -99,32 +189,37 @@ class TermIndex:
                     if isinstance(item.source, Catalogue)
                     else None
                 )
-            vocabulary = vocabularies[item.ref]
             key = key_for(item)
-            for topic in record_topics(item.fields, vocabulary):
-                self.by_record[key].setdefault(
-                    (topic.subject, topic.term, topic.note), topic
-                )
+            for topic in record_topics(item.fields, vocabularies[item.ref]):
+                identity = tuple((t.role, t.id) for t in topic.terms), topic.note
+                self.by_record[key].setdefault(identity, topic)
                 if key not in self.records or item.fields.get("index_terms"):
                     self.records[key] = item
-                if topic.subject:
-                    self.subjects[topic.subject] = topic.subject_label
-                    for name in names(vocabulary[topic.subject]):
-                        if name.strip():
-                            self.subject_names[words(name)].add(topic.subject)
-                self.terms.setdefault(topic.term, topic.label)
-                if vocabulary and topic.term in vocabulary:
-                    self.term_names.update(
-                        words(name) for name in names(vocabulary[topic.term])
-                    )
-                for parent in topic.broader:
-                    self.terms[parent] = vocabulary[parent]["label"]
-                    self.term_names.update(
-                        words(name) for name in names(vocabulary[parent])
-                    )
+                for term in topic.terms:
+                    for ancestor in term.lineage():
+                        self.facets[ancestor.role].setdefault(ancestor.id, ancestor)
+                        if ancestor.role == "subject":
+                            for name in ancestor.names:
+                                if name.strip():
+                                    self.subject_names[words(name)].add(ancestor.id)
+                        elif ancestor.role == "property":
+                            self.term_names.update(
+                                words(name) for name in ancestor.names if name.strip()
+                            )
 
     def topics(self, key):
         return self.by_record.get(key, {}).values()
+
+    def filters(self):
+        for role, choices in self.facets.items():
+            if choices:
+                groups = grouped_terms(choices.values())
+                label = (
+                    next(iter(groups))
+                    if role == "subject" and len(groups) == 1
+                    else role.title()
+                )
+                yield "term" if role == "property" else role, label, groups
 
     def query(self, text):
         clauses = []
@@ -135,23 +230,31 @@ class TermIndex:
             names = [name for name in self.subject_names if name <= tokens]
             property_words = tokens
             if names:
-                # "Nuclear envelope" is more specific than the alias "nuclear".
+                # A longer subject name takes precedence over a shorter alias.
                 length = max(map(len, names))
                 longest = [name for name in names if len(name) == length]
                 subjects = set().union(*(self.subject_names[n] for n in longest))
                 property_words = tokens.difference(*longest)
             scoped = scoped and bool(subjects and property_words in self.term_names)
-            # An unnamed alternative shares the previous subject, e.g. "nucleus size or location".
             clauses.append((subjects, tokens))
         return TermQuery(clauses, scoped)
 
-    def results(self, query, subject, term, is_starred):
+    def results(self, query, subject, term, is_starred, *, keyword=""):
         groups = {"Papers": [], "Datasets": []}
-        query_words = self.query(query)
+        parsed = self.query(query)
         for key, item in self.records.items():
-            matches = [
-                t for t in self.topics(key) if t.matches(query_words, subject, term)
-            ]
+            topics = self.topics(key)
+            if keyword:
+                keywords = [
+                    t
+                    for t in topics
+                    if t.value and t.value.role == "keyword" and t.value.id == keyword
+                ]
+                if not keywords:
+                    continue
+                if not (query or subject or term):
+                    topics = keywords
+            matches = [t for t in topics if t.matches(parsed, subject, term)]
             if matches:
                 group = groups["Papers" if item.is_publication else "Datasets"]
                 group.append((item, matches))

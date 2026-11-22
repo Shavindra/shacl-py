@@ -2228,6 +2228,11 @@
           "description": "A broader term in the same vocabulary.",
           "type": "string"
         },
+        "category": {
+          "description": "Display category such as Compartment or Sampling site. Defaults to the broader category or the term's role.",
+          "pattern": "\\S",
+          "type": "string"
+        },
         "id": {
           "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:\\S+$",
           "type": "string"
@@ -2235,6 +2240,10 @@
         "label": {
           "pattern": "\\S",
           "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/TermRole",
+          "description": "How this term participates in a subject-property relationship."
         }
       },
       "required": [
@@ -5987,24 +5996,74 @@
     },
     "TermAssignment": {
       "additionalProperties": false,
-      "description": "A term describing this record, optionally qualified by the subject it describes.",
+      "anyOf": [
+        {
+          "properties": {
+            "term": {}
+          },
+          "required": [
+            "term"
+          ]
+        },
+        {
+          "properties": {
+            "subject": {}
+          },
+          "required": [
+            "subject"
+          ]
+        },
+        {
+          "properties": {
+            "property": {}
+          },
+          "required": [
+            "property"
+          ]
+        }
+      ],
+      "description": "An independent index term or an explicit link between a subject and a property.",
+      "not": {
+        "anyOf": [
+          {
+            "properties": {
+              "property": {},
+              "term": {}
+            },
+            "required": [
+              "term",
+              "property"
+            ]
+          }
+        ]
+      },
       "properties": {
         "note": {
           "description": "What the source reports or the dataset contains.",
+          "type": "string"
+        },
+        "property": {
           "type": "string"
         },
         "subject": {
           "type": "string"
         },
         "term": {
+          "description": "A standalone term. With a subject this is the legacy spelling of property.",
           "type": "string"
         }
       },
-      "required": [
-        "term"
-      ],
       "title": "TermAssignment",
       "type": "object"
+    },
+    "TermRole": {
+      "description": "",
+      "enum": [
+        "subject",
+        "property"
+      ],
+      "title": "TermRole",
+      "type": "string"
     },
     "Thing": {
       "additionalProperties": false,
@@ -7021,5 +7080,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.5.0"
+  "version": "1.6.0"
 }

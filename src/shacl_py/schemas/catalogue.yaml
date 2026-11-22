@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.5.0
+version: 1.6.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -47,13 +47,22 @@ classes:
     attributes:
       id: {identifier: true, range: uriorcurie, pattern: '^[A-Za-z][A-Za-z0-9+.-]*:\S+$'}
       label: {range: string, required: true, pattern: '\S'}
+      role: {range: TermRole, description: How this term participates in a subject-property relationship.}
+      category: {range: string, pattern: '\S', description: Display category such as Compartment or Sampling site. Defaults to the broader category or the term's role.}
       aliases: {range: string, multivalued: true}
       broader: {range: IndexTerm, description: A broader term in the same vocabulary.}
   TermAssignment:
-    description: A term describing this record, optionally qualified by the subject it describes.
+    description: An independent index term or an explicit link between a subject and a property.
+    any_of:
+      - {slot_conditions: {term: {required: true}}}
+      - {slot_conditions: {subject: {required: true}}}
+      - {slot_conditions: {property: {required: true}}}
+    none_of:
+      - {slot_conditions: {term: {required: true}, property: {required: true}}}
     attributes:
-      term: {range: IndexTerm, required: true}
+      term: {range: IndexTerm, description: A standalone term. With a subject this is the legacy spelling of property.}
       subject: {range: IndexTerm}
+      property: {range: IndexTerm}
       note: {range: string, description: What the source reports or the dataset contains.}
   LinkedFile:
     slots: [attributes]
@@ -127,6 +136,10 @@ slots:
   file_groups: {range: FileGroup, multivalued: true, inlined_as_list: true}
   author_names: {range: string, multivalued: true}
 enums:
+  TermRole:
+    permissible_values:
+      subject:
+      property:
   DatasetRole:
     permissible_values:
       related:

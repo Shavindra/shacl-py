@@ -47,34 +47,38 @@ A dataset PID or an unambiguous file reference opens the corresponding
 record. Files show their own methods in the drawer and full-page view.
 The [interactive wireframe](docs/wireframes/README.md) includes a worked example.
 
-Open **Terms** to find papers and datasets together. Select a subject and
-a term, or type a phrase such as `station reading`. A broader term includes
-its narrower terms. Each record's **Terms** tab links to other records with
-the same subject and property.
+Open **Terms** to find papers and datasets by subject, property or keyword.
+Each term has its own link. Select a subject and a property together to
+find records that explicitly connect them. A broader property includes
+its narrower properties.
 
-Define terms once in `catalogue.project.term_vocabulary`. Reuse their IDs
-in `index_terms` on individual publications and datasets. The optional
-`note` can name the source table or explain what was measured or modelled.
+Define each term once in `catalogue.project.term_vocabulary`. Its `role`
+can be `subject` or `property`. Use `category` for a more specific display
+label such as Compartment or Sampling site. A record's `index_terms` can
+name a single term or link a property to a subject with an evidence note.
 
 ~~~yaml
 catalogue:
   project:
     pid: urn:example:survey
     term_vocabulary:
-      - {id: 'urn:example:station', label: Station, aliases: [stations]}
-      - {id: 'urn:example:reading', label: Reading}
-      - {id: 'urn:example:mean', label: Mean reading, broader: 'urn:example:reading'}
+      - {id: 'urn:example:station', label: Station, role: subject, category: Sampling site, aliases: [stations]}
+      - {id: 'urn:example:reading', label: Reading, role: property}
+      - {id: 'urn:example:mean', label: Mean reading, role: property, broader: 'urn:example:reading'}
   datasets:
     - pid: urn:example:means
       title: Mean reading per station
       index_terms:
-        - {subject: 'urn:example:station', term: 'urn:example:mean', note: Mean of the readings at each station.}
+        - {subject: 'urn:example:station', property: 'urn:example:mean', note: Mean of the readings at each station.}
 ~~~
 
-For general topics, use a plain list such as `keywords: [Coastal monitoring]`.
-Subject and term filters match a single assignment on the record. Assign
-terms to each paper or dataset that provides the evidence. Use `or` to
-search alternative terms for the same subject.
+Use `{term: 'urn:example:station'}` for a standalone term. Narrower terms
+can inherit their role and category from a broader term. The viewer also
+recognises direct Dublin Core subject statements for vocabulary terms
+with the subject role. Existing assignments
+using `subject` and `term` together remain readable. For general topics, use
+a plain list such as `keywords: [Coastal monitoring]`. Use `or` to search
+alternative properties for the same subject.
 
 Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit

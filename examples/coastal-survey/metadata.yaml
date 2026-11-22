@@ -4,16 +4,16 @@ catalogue:
     title: Coastal survey
     description: A worked example of reviewing publications and reusing their datasets.
     term_vocabulary:
-      - {id: 'urn:example:station', label: Station, aliases: [stations]}
-      - {id: 'urn:example:reading', label: Reading}
-      - {id: 'urn:example:mean', label: Mean reading, broader: 'urn:example:reading'}
+      - {id: 'urn:example:station', label: Station, role: subject, category: Sampling site, aliases: [stations]}
+      - {id: 'urn:example:reading', label: Reading, role: property}
+      - {id: 'urn:example:mean', label: Mean reading, role: property, broader: 'urn:example:reading'}
   publications:
     - pid: urn:example:field-paper
       title: Shoreline field survey
       highlighted: true
       description: Station measurements at two coastal sites.
       index_terms:
-        - {subject: 'urn:example:station', term: 'urn:example:reading'}
+        - {subject: 'urn:example:station', property: 'urn:example:reading'}
       local_folder: papers/field-survey
       dataset_links:
         - {dataset: 'urn:example:readings', role: describes}
@@ -38,14 +38,14 @@ catalogue:
       highlighted: true
       description: Synthetic readings in metres.
       index_terms:
-        - {subject: 'urn:example:station', term: 'urn:example:reading', note: Individual readings in metres.}
+        - {subject: 'urn:example:station', property: 'urn:example:reading', note: Individual readings in metres.}
       local_folder: papers/field-survey/data/raw
       file_groups:
         - {label: Data files, paths: [readings.csv]}
     - pid: urn:example:means
       title: Mean reading per station
       index_terms:
-        - {subject: 'urn:example:station', term: 'urn:example:mean', note: Mean of the readings at each station.}
+        - {subject: 'urn:example:station', property: 'urn:example:mean', note: Mean of the readings at each station.}
       source_datasets: ['urn:example:readings']
       notebook_path: papers/field-survey/notebooks/summary.ipynb
       local_folder: papers/field-survey/data/output

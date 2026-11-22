@@ -1,9 +1,25 @@
-{% macro term_link(t) -%}
-<a class="chip term-link" href="{{ url({}, section='terms', subject=t.subject or none, term=t.term) }}" target="_self">{% if t.subject %}{{ t.subject_label }} · {% endif %}{{ t.label }}</a>
+{% macro term_groups(topics) -%}
+<dl class="term-groups">{% for category, terms in grouped_terms(topic_terms(topics)).items() %}
+  <div><dt>{{ category }}</dt><dd class="chips">{% for t in terms %}
+    <a class="chip term-link" href="{{ url(t.route) }}" target="_self">{{ t.label }}</a>
+  {% endfor %}</dd></div>
+{% endfor %}</dl>
 {%- endmacro %}
 
 {% macro record_terms(topics) -%}
-<ul class="record-terms">{% for t in topics %}<li>{{ term_link(t) }}{% if t.note %}<p>{{ t.note }}</p>{% endif %}</li>{% else %}<li class="hint">No terms recorded.</li>{% endfor %}</ul>
+<div class="record-terms">
+{% if topics %}{{ term_groups(topics) }}{% else %}<p class="hint">No terms recorded.</p>{% endif %}
+{% if term_relationships %}<table class="term-evidence">
+  <caption>Recorded relationships and notes</caption>
+  <thead><tr><th scope="col">Subject</th><th scope="col">Property</th><th scope="col">Note</th></tr></thead>
+  <tbody>{% for t in term_relationships %}<tr>
+    <td>{{ t.subject.label if t.subject }}</td><td>{{ t.value.label if t.value }}</td>
+    <td>{% if t.note %}<span>{{ t.note }}</span>{% endif %}{% if t.subject and t.value %}
+      <a href="{{ url({}, section='terms', subject=t.subject.id, term=t.value.id) }}" target="_self" aria-label="Find records for {{ t.subject.label }} and {{ t.value.label }}">Find both</a>
+    {% endif %}</td>
+  </tr>{% endfor %}</tbody>
+</table>{% endif %}
+</div>
 {%- endmacro %}
 
 {% macro terms_page() -%}
@@ -12,20 +28,22 @@
 <form method="get" class="method-filters term-filters" aria-label="Filter terms">
   <input type="hidden" name="section" value="terms">
   {% if params.get('q') %}<input type="hidden" name="q" value="{{ params.q }}">{% endif %}
-  {% for key, label, options in [('subject', 'Subject', subjects), ('term', 'Term', terms)] %}
+  {% for key, label, groups in term_filters %}
   <label><span>{{ label }}</span><select name="{{ key }}" aria-label="{{ label }}">
-    <option value="">All {{ 'subjects' if key == 'subject' else 'terms' }}</option>
-    {% for id, name in options %}<option value="{{ id }}"{% if params.get(key)==id %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    <option value="">All</option>
+    {% for category, choices in groups.items() %}{% if groups|length > 1 %}<optgroup label="{{ category }}">{% endif %}
+    {% for t in choices %}<option value="{{ t.id }}"{% if term_route.get(key)==t.id %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+    {% if groups|length > 1 %}</optgroup>{% endif %}{% endfor %}
   </select></label>
   {% endfor %}
-  {% if params.get('subject') or params.get('term') or params.get('q') %}<a href="{{ url({}, section='terms') }}" target="_self">Clear filters</a>{% endif %}
+  {% if term_route.subject or term_route.term or term_route.keyword or params.get('q') %}<a href="{{ url({}, section='terms') }}" target="_self">Clear filters</a>{% endif %}
 </form></div></aside>
 <main><section class="heading"><h1>Terms</h1></section><article class="term-results">
 {% for name, rows in term_results.items() %}<section aria-label="Matching {{ name|lower }}">
 <h2>{{ name }} <small>{{ rows|length }}</small></h2>
 {% for item, topics in rows %}<div class="term-result">
 <a class="result-title" href="{{ url(item.route, section=name|lower, view='terms') }}" target="_self">{{ item.label }}</a>{% if is_starred(item) %} {{ star() }}{% endif %}
-<div class="chips">{% for t in topics|unique(attribute='pair') %}{{ term_link(t) }}{% endfor %}</div>
+{{ term_groups(topics) }}
 </div>{% else %}<p class="hint">No matching {{ name|lower }}.</p>{% endfor %}</section>{% endfor %}
 </article></main></div>
 {%- endmacro %}

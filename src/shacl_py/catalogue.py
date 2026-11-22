@@ -112,24 +112,40 @@ def validate_catalogue(graph, root):
 
 def validate_index_terms(definitions, records):
     vocabulary = {}
+    roles = {}
     for term in definitions:
         key = term["id"]
         if key in vocabulary:
             raise ValueError(f"term_vocabulary: duplicate term {key}")
         vocabulary[key] = [term["broader"]] if "broader" in term else []
+        roles[key] = term.get("role")
     for key, parents in vocabulary.items():
         if parents and parents[0] not in vocabulary:
             raise ValueError(
                 f"term_vocabulary: {key} has unknown broader term {parents[0]}"
             )
     try:
-        TopologicalSorter(vocabulary).prepare()
+        for key in TopologicalSorter(vocabulary).static_order():
+            if parents := vocabulary[key]:
+                inherited = roles[parents[0]]
+                if inherited and roles[key] and roles[key] != inherited:
+                    raise ValueError(
+                        f"term_vocabulary: {key} and its broader term have different roles"
+                    )
+                roles[key] = roles[key] or inherited
     except CycleError as error:
         raise ValueError(f"cyclic broader terms: {error.args[1]}") from error
     for record in records:
         for assignment in record.get("index_terms", []):
-            for field in ("term", "subject"):
-                if field in assignment and assignment[field] not in vocabulary:
+            fields = assignment.keys() & {"subject", "property", "term"}
+            for field in fields:
+                key = assignment[field]
+                if key not in vocabulary:
                     raise ValueError(
-                        f"{record['pid']}: unknown index_terms {field} {assignment[field]}"
+                        f"{record['pid']}: unknown index_terms {field} {key}"
+                    )
+                role = "property" if field == "term" and "subject" in fields else field
+                if role != "term" and roles[key] and roles[key] != role:
+                    raise ValueError(
+                        f"{record['pid']}: {key} is a {roles[key]}, used as {role}"
                     )

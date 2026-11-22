@@ -51,7 +51,7 @@ from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
 from shacl_py.sources import source_url
 from shacl_py.study import person_names
-from shacl_py.terms import TermIndex
+from shacl_py.terms import TermIndex, grouped_terms, topic_terms
 
 assets = Path(__file__).with_name("templates")
 template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_template(
@@ -381,23 +381,33 @@ def browse(items, stored, base, brand, params, collections):
         "section": section,
         "url": url,
         "nav": nav,
+        "grouped_terms": grouped_terms,
+        "topic_terms": topic_terms,
     }
     if section is None:
         st.html(template.render(context))
         return
     if section == "Terms":
-        subject, term = params.get("subject", ""), params.get("term", "")
+        subject, term, keyword = (
+            params.get(k, "") for k in ("subject", "term", "keyword")
+        )
+        # Older bookmarks use the term parameter for general keywords.
+        if term.startswith("keyword/"):
+            keyword, term = keyword or term, ""
+        term_route = {
+            "section": "terms",
+            "subject": subject,
+            "term": term,
+            "keyword": keyword,
+        }
         st.html(
             template.render(
                 context,
-                term_route={"section": "terms", "subject": subject, "term": term},
-                term_results=term_index.results(q, subject, term, is_starred),
-                subjects=sorted(
-                    term_index.subjects.items(), key=lambda pair: pair[1].casefold()
+                term_route=term_route,
+                term_results=term_index.results(
+                    q, subject, term, is_starred, keyword=keyword
                 ),
-                terms=sorted(
-                    term_index.terms.items(), key=lambda pair: pair[1].casefold()
-                ),
+                term_filters=term_index.filters(),
                 is_starred=is_starred,
             )
         )
@@ -419,9 +429,9 @@ def browse(items, stored, base, brand, params, collections):
                     ),
                 ]
                 subject_links = {
-                    ref: term_index.subjects[ref]
+                    ref: term_index.facets["subject"][ref].label
                     for ref in refs
-                    if ref in term_index.subjects
+                    if ref in term_index.facets["subject"]
                 }
             st.html(
                 template.render(
@@ -807,7 +817,7 @@ def browse(items, stored, base, brand, params, collections):
     if not global_ds and (count := attribute_count(item)):
         tabs.append(("attributes", "Attributes", count))
     if item.is_publication or item.is_dataset:
-        tabs.append(("terms", "Terms", len(topics(item))))
+        tabs.append(("terms", "Terms", len(topic_terms(topics(item)))))
     tabs.append(("source", "Raw metadata", None))
     default_view = default_dataset_tab(item) if global_ds else tabs[0][0]
     view = params.get("view", default_view)
@@ -1019,6 +1029,7 @@ def browse(items, stored, base, brand, params, collections):
         for r in getattr(item.source, "graph", {}).get("reviews", [])
         if r.get("publication") == item.key
     )
+    displayed_topics = topics(owner) if owner else ()
     context.update(
         item_route=item_route,
         view=view,
@@ -1056,7 +1067,10 @@ def browse(items, stored, base, brand, params, collections):
         host=urlsplit(dataset_url).netloc if dataset_url else "",
         annotations=annotation_values(dataset_owner.fields) if dataset_owner else [],
         dtab=dtab,
-        record_topics=topics(owner) if owner else [],
+        record_topics=displayed_topics,
+        term_relationships=[
+            t for t in displayed_topics if t.note or t.subject and t.value
+        ],
         method_groups=method_view(record_methods(owner), index.labels, resolve_resource)
         if owner and (view == "methods" or view == "datasets" and dtab == "methods")
         else [],
@@ -1068,7 +1082,7 @@ def browse(items, stored, base, brand, params, collections):
                 attribute_count(selected) if selected else 0,
             ),
             ("methods", "Methods", len(record_methods(selected)) if selected else 0),
-            ("terms", "Terms", len(topics(selected)) if selected else 0),
+            ("terms", "Terms", len(topic_terms(topics(selected))) if selected else 0),
         ],
         attr={
             "groups": attribute_groups(item.fields.get("attributes"), "Paper")

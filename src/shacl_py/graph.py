@@ -22,13 +22,13 @@ KEYWORD_FIELDS = {
     "https://schema.org/keywords",
     "http://www.w3.org/ns/dcat#keyword",
 }
-LABEL_FIELDS = KEYWORD_FIELDS | {
-    "labels",
+SUBJECT_FIELDS = {
     "dc:subject",
     "dcterms:subject",
     "http://purl.org/dc/terms/subject",
     "http://purl.org/dc/elements/1.1/subject",
 }
+LABEL_FIELDS = KEYWORD_FIELDS | SUBJECT_FIELDS | {"labels"}
 
 
 def global_id(identifier):

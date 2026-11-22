@@ -436,12 +436,12 @@ catalogue:
   project:
     pid: urn:example:terms
     term_vocabulary:
-      - {id: 'urn:nucleus', label: Nucleus, aliases: [nuclear]}
-      - {id: 'urn:envelope', label: Nuclear envelope}
-      - {id: 'urn:vacuole', label: Vacuole}
-      - {id: 'urn:size', label: Size}
-      - {id: 'urn:volume', label: Volume, broader: 'urn:size'}
-      - {id: 'urn:location', label: Location, aliases: [position]}
+      - {id: 'urn:nucleus', label: Nucleus, role: subject, category: Compartment, aliases: [nuclear]}
+      - {id: 'urn:envelope', label: Nuclear envelope, role: subject, category: Compartment}
+      - {id: 'urn:vacuole', label: Vacuole, role: subject, category: Compartment}
+      - {id: 'urn:size', label: Size, role: property}
+      - {id: 'urn:volume', label: Volume, role: property, broader: 'urn:size'}
+      - {id: 'urn:location', label: Location, role: property, aliases: [position]}
   publications:
     - pid: urn:paper:volume
       title: Volume paper
@@ -457,13 +457,19 @@ catalogue:
   datasets:
     - pid: urn:data:volume
       title: Volume table
-      index_terms: [{subject: 'urn:nucleus', term: 'urn:volume', note: Measured in 3D.}]
+      index_terms: [{subject: 'urn:nucleus', property: 'urn:volume', note: Measured in 3D.}]
     - pid: urn:data:envelope
       title: Envelope image
       index_terms: [{subject: 'urn:envelope', term: 'urn:location'}]
     - pid: urn:data:plain
       title: General keywords
       keywords: [Nucleus, Volume]
+    - pid: urn:data:separate
+      title: Independent terms
+      index_terms: [{term: 'urn:nucleus'}, {property: 'urn:volume'}]
+    - pid: urn:data:atlas
+      title: Nucleus atlas
+      characterized_by: [{predicate: 'http://purl.org/dc/terms/subject', object: 'urn:nucleus'}]
 """)
     (tmp_path / ".studyminimeta.yaml").write_text(
         "publication: [{title: Alternate title, doi: 10.1234/volume, keyword: [Morphometry]}]\n"
@@ -497,10 +503,13 @@ catalogue:
         expect(papers).to_contain_text("No matching papers")
 
         page.get_by_role("link", name="Clear filters").click()
-        page.get_by_role("combobox", name="Subject", exact=True).select_option(
-            "urn:nucleus"
+        compartment = page.get_by_role("combobox", name="Compartment", exact=True)
+        prop = page.get_by_role("combobox", name="Property", exact=True)
+        compartment.select_option("urn:nucleus")
+        expect(datasets.locator(".result-title")).to_have_text(
+            ["Independent terms", "Nucleus atlas", "Volume table"]
         )
-        page.get_by_role("combobox", name="Term", exact=True).select_option("urn:size")
+        prop.select_option("urn:size")
         expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
         expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
         bookmark = page.url
@@ -513,12 +522,31 @@ catalogue:
         assert page.url == bookmark
         papers.locator(".result-title").click()
         expect(page.locator(".study main .record-terms")).to_contain_text("Table 1.")
-        page.locator(".study main .record-terms").get_by_role(
-            "link", name="Nucleus · Volume"
-        ).click()
-        expect(page.get_by_role("combobox", name="Term", exact=True)).to_have_value(
-            "urn:volume"
+        record_terms = page.locator(".study main .record-terms")
+        expect(record_terms.locator("dt")).to_have_text(
+            ["Compartment", "Property", "Keyword"]
         )
+        record_terms.get_by_role("link", name="Nucleus", exact=True).click()
+        expect(compartment).to_have_value("urn:nucleus")
+        expect(prop).to_have_value("")
+        expect(datasets.locator(".result-title")).to_have_count(3)
+        page.go_back()
+        record_terms.get_by_role("link", name="Volume", exact=True).click()
+        expect(compartment).to_have_value("")
+        expect(prop).to_have_value("urn:volume")
+        expect(papers.locator(".result-title")).to_have_text(
+            ["Spatial paper", "Volume paper"]
+        )
+        expect(datasets.locator(".result-title")).to_have_text(
+            ["Independent terms", "Volume table"]
+        )
+        page.go_back()
+        record_terms.get_by_role(
+            "link", name="Find records for Nucleus and Volume"
+        ).click()
+        expect(compartment).to_have_value("urn:nucleus")
+        expect(prop).to_have_value("urn:volume")
+        expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
         expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
 
         page.locator(".study header nav").get_by_role("link", name="Papers 2").click()
@@ -531,11 +559,19 @@ catalogue:
         general.fill("nuclear volume")
         general.press("Enter")
         expect(sidebar.locator("a.row b")).to_have_text(["Volume paper"])
-        page.locator(".study header nav").get_by_role("link", name="Datasets 3").click()
+        page.locator(".study header nav").get_by_role("link", name="Datasets 5").click()
         expect(sidebar.locator("a.row b")).to_have_text(["Volume table"])
         page.goto(
             root
             + "#section=papers&record=metadata.yaml&entry=urn:paper:volume&view=datasets"
         )
-        page.locator(".study .subtabs").get_by_role("link", name="Terms 1").click()
+        page.locator(".study .subtabs").get_by_role("link", name="Terms 2").click()
         expect(page.locator(".split .record-terms")).to_contain_text("Measured in 3D.")
+        page.goto(root + "#section=terms&term=keyword%2Fmorphometry")
+        expect(page.get_by_role("combobox", name="Keyword")).to_have_value(
+            "keyword/morphometry"
+        )
+        expect(prop).to_have_value("")
+        prop.select_option("urn:volume")
+        expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
+        expect(datasets.locator(".result-title")).to_have_count(0)
