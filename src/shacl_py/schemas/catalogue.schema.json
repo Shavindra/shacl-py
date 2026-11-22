@@ -680,6 +680,13 @@
           },
           "type": "array"
         },
+        "includes": {
+          "description": "Project-relative YAML files containing publication, dataset or review lists.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "project": {
           "$ref": "#/$defs/LocalProject"
         },
@@ -7000,6 +7007,13 @@
       },
       "type": "array"
     },
+    "includes": {
+      "description": "Project-relative YAML files containing publication, dataset or review lists.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "project": {
       "$ref": "#/$defs/LocalProject"
     },
@@ -7021,5 +7035,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.5.0"
+  "version": "1.6.0"
 }

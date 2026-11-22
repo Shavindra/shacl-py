@@ -17,7 +17,9 @@
 
 {% macro method_body(t, groupbody) %}
 <div class="method-entry{% if t.id == params.get('technique') %} matched{% endif %}">
-  <div class="method-name">{{ t.name }}{% if t.status %}<span class="method-status">{{ t.status }}</span>{% endif %}</div>
+  <div class="method-name" title="{{ t.id }}">{{ t.name }}{% if t.status and not t.summary %}<span class="method-status">{{ t.status }}</span>{% endif %}</div>
+  {% if t.variant %}<p class="method-variant">{{ t.variant }}</p>{% endif %}
+  {% if not t.summary %}
   {% if t.value != t.name %}<p>{{ t.value }}</p>{% endif %}
   {% if t.description %}<p>{{ t.description }}</p>{% endif %}
   {% if t.purpose or t.inputs or t.outputs %}<dl class="method-io">
@@ -25,9 +27,12 @@
     {% if t.inputs %}<div><dt>Inputs</dt><dd>{{ resource_list(t.inputs) }}</dd></div>{% endif %}
     {% if t.outputs %}<div><dt>Outputs</dt><dd>{{ resource_list(t.outputs) }}</dd></div>{% endif %}
   </dl>{% endif %}
-  {% if t.parameters %}<details class="method-parameters"><summary>Parameters</summary>{% for g in t.parameters %}{% if g.predicate %}<b>{{ g.label }}</b>{% endif %}{{ groupbody(g) }}{% endfor %}</details>{% endif %}
+  {% endif %}
+  {% if t.parameters %}<details class="method-parameters"><summary>Parameters</summary>{% for g in t.parameters %}{% if g.predicate and (not t.summary or t.parameters|length > 1) %}<b>{{ g.label }}</b>{% endif %}{{ groupbody(g) }}{% endfor %}</details>{% endif %}
+  {% if not t.summary %}
   <small class="method-id" title="defined_by">{% if t.href %}<a href="{{ t.href }}" target="_blank" rel="noreferrer">{{ t.id }}</a>{% else %}{{ t.id }}{% endif %}</small>
   {% if t.source %}<a class="method-source" href="{{ t.source }}" target="_blank" rel="noreferrer">Source</a>{% endif %}
+  {% endif %}
 </div>
 {% endmacro %}
 

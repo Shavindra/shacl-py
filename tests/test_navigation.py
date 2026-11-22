@@ -301,6 +301,45 @@ def test_graph_mouse_controls(page, viewer_url):
     ).to_be_visible()
 
 
+def test_method_summary_shows_variant_and_compact_parameter_rows(page, tmp_path):
+    (tmp_path / "metadata.yaml").write_text(
+        "catalogue:\n  project: {pid: 'urn:test:p'}\n  includes: [paper.yaml]\n"
+    )
+    (tmp_path / "paper.yaml").write_text(
+        """publications:
+- pid: urn:test:paper
+  title: Imaging
+  attributes:
+  - predicate: urn:test:methods
+    attributes:
+    - predicate: urn:test:experimental
+      attributes:
+      - predicate: urn:test:image-acquisition
+        attributes:
+        - predicate: urn:test:technique
+          defined_by: urn:test:brightfield
+          value: Bright-field microscopy
+          description: A detailed acquisition protocol.
+          annotations: {presentation: summary, variant: Tiled overview}
+          attributes:
+          - predicate: urn:test:overlap
+            display_label: Tile overlap
+            value: 10%
+"""
+    )
+    with serve_project(tmp_path) as url:
+        page.goto(url, wait_until="domcontentloaded")
+        page.locator(".heading nav").get_by_role("link", name="Methods 1").click()
+        entry = page.locator(".method-entry")
+        expect(entry.locator(".method-name")).to_have_text("Bright-field microscopy")
+        expect(entry).to_contain_text("Tiled overview")
+        expect(entry).not_to_contain_text("A detailed acquisition protocol.")
+        entry.get_by_text("Parameters", exact=True).click()
+        expect(entry.locator("dd")).to_have_text("10%")
+        for field in ("dt", "dd", ".aval"):
+            expect(entry.locator(field)).to_have_css("font-size", "12.5px")
+
+
 def test_methods_filters_and_file_links(page, tmp_path):
     import yaml
 

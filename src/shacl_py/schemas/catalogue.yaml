@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.5.0
+version: 1.6.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -16,6 +16,10 @@ classes:
     tree_root: true
     attributes:
       project: {range: LocalProject, inlined: true, required: true}
+      includes:
+        range: string
+        multivalued: true
+        description: Project-relative YAML files containing publication, dataset or review lists.
       publications: {range: LocalPublication, multivalued: true, inlined_as_list: true}
       datasets: {range: LocalDataset, multivalued: true, inlined_as_list: true}
       reviews: {range: Review, multivalued: true, inlined_as_list: true}

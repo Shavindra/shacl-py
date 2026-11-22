@@ -6,7 +6,7 @@ from shacl_py.catalogue import (
     validate_structure,
 )
 from shacl_py.files import local_path
-from shacl_py.metadata_io import MetadataFile, save_metadata
+from shacl_py.metadata_io import CatalogueEditor, MetadataFile, save_metadata
 from shacl_py.prompts import add_group, edit_dataset, edit_groups, list_options, prompt
 from shacl_py.sources import METADATA_FILES, initial_fields, stored_metadata
 from shacl_py.study import dataset_root, validate_study
@@ -61,6 +61,8 @@ def setup_project(args, review_layout=None):
     graph = meta.data["catalogue"]
     if not isinstance(graph, dict) or not isinstance(graph.get("project"), dict):
         raise TypeError(f"{meta.path}: catalogue.project must be a mapping")
+    editor = CatalogueEditor(meta)
+    graph = editor.graph
     if not initial:
         try:
             validate_structure(graph)
@@ -141,8 +143,9 @@ def setup_project(args, review_layout=None):
     except ValueError as error:
         raise ValueError(f"{meta.path}: {error}") from error
     validate_study(study.data, study.path)
-    changed = save_metadata(meta, study)
-    for doc in (meta, study):
+    documents = (*editor.documents(), study)
+    changed = save_metadata(*documents)
+    for doc in documents:
         action = "Kept"
         if doc.path in changed:
             action = "Created" if doc.original is None else "Updated"
