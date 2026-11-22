@@ -51,6 +51,7 @@ from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
 from shacl_py.sources import source_url
 from shacl_py.study import person_names
+from shacl_py.terms import TermIndex
 
 assets = Path(__file__).with_name("templates")
 template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_template(
@@ -255,6 +256,17 @@ def browse(items, stored, base, brand, params, collections):
     def is_starred(i):
         return key_for(i) in highlighted
 
+    term_index = TermIndex([*papers, *datasets], key_for)
+    namespaces = {
+        project.source.folder: ns
+        for project in items
+        if project.is_project
+        if (ns := method_annotations(project.fields).get("identifier_namespace"))
+    }
+
+    def topics(i):
+        return term_index.topics(key_for(i))
+
     years = {}
     for paper in papers:
         if year := declared_year(paper):
@@ -291,6 +303,8 @@ def browse(items, stored, base, brand, params, collections):
     )
     requested = params.get("section")
     routes = {name.lower(): name for name in sections}
+    if papers or datasets:
+        routes["terms"] = "Terms"
     if items:
         routes["graph"] = "Graph"
     for c in collections:
@@ -343,6 +357,15 @@ def browse(items, stored, base, brand, params, collections):
     )
     if records_tab:
         nav.append(records_tab)
+    if papers or datasets:
+        nav.append(
+            (
+                "Terms",
+                url({}, section="terms", q=shared_query or None),
+                None,
+                section == "Terms",
+            )
+        )
     if items:
         nav.append(
             (
@@ -362,13 +385,50 @@ def browse(items, stored, base, brand, params, collections):
     if section is None:
         st.html(template.render(context))
         return
+    if section == "Terms":
+        subject, term = params.get("subject", ""), params.get("term", "")
+        st.html(
+            template.render(
+                context,
+                term_route={"section": "terms", "subject": subject, "term": term},
+                term_results=term_index.results(q, subject, term, is_starred),
+                subjects=sorted(
+                    term_index.subjects.items(), key=lambda pair: pair[1].casefold()
+                ),
+                terms=sorted(
+                    term_index.terms.items(), key=lambda pair: pair[1].casefold()
+                ),
+                is_starred=is_starred,
+            )
+        )
+        return
     if collection:
         if collection.presentation:
+            detail = detail_view(collection, params)
+            group = detail.get("group")
+            subject_links = {}
+            if group:
+                refs = [
+                    *group.terms,
+                    *group.members,
+                    *(
+                        f"{ns}:{collection.key}:{key}"
+                        for root, ns in namespaces.items()
+                        if root == collection.project_root
+                        for key in group.members
+                    ),
+                ]
+                subject_links = {
+                    ref: term_index.subjects[ref]
+                    for ref in refs
+                    if ref in term_index.subjects
+                }
             st.html(
                 template.render(
                     context,
                     collection=collection,
-                    detail=detail_view(collection, params),
+                    detail=detail,
+                    subject_links=subject_links,
                 )
             )
             return
@@ -483,21 +543,16 @@ def browse(items, stored, base, brand, params, collections):
             for path in listing(i)[1]
         )
 
-    def sidebar_match(i, words, extra=""):
-        if not words:
+    def sidebar_match(i, filter_words, extra=""):
+        if not filter_words:
             return True
+        parsed = parse_terms(" ".join(filter_words))
+        if parsed.scoped and (i.is_publication or i.is_dataset):
+            return topic_match(i, parsed)
         text = searchable([i.label, i.key, i.ref, i.fields, author_line(i), extra])
-        return all(word in text for word in words)
+        return all(word in text for word in filter_words) or topic_match(i, parsed)
 
-    index = MethodIndex(
-        collections,
-        {
-            ns
-            for project in items
-            if project.is_project
-            if (ns := method_annotations(project.fields).get("identifier_namespace"))
-        },
-    )
+    index = MethodIndex(collections, namespaces.values())
     technique = facet_route.get("technique", "")
     compartment = facet_route.get("compartment", "")
 
@@ -590,6 +645,28 @@ def browse(items, stored, base, brand, params, collections):
     ]
     if global_ds:
         options.append("Not all local")
+    parse_terms = cache(term_index.query)
+    parsed_query = parse_terms(q)
+
+    def topic_match(i, query):
+        return any(t.matches(query) for t in topics(i))
+
+    def search_matches(i, linked):
+        if topic_match(i, parsed_query):
+            return True
+        if parsed_query.scoped and (i.is_publication or i.is_dataset):
+            return False
+        return (
+            q in searchable([i.ref, i.fields])
+            or file_matches(i, q)
+            or any(
+                q in searchable(d.fields)
+                or file_matches(d, q)
+                or topic_match(d, parsed_query)
+                for d in linked
+            )
+        )
+
     shown = []
     for i in scope:
         if starred_only and not is_starred(i):
@@ -602,12 +679,7 @@ def browse(items, stored, base, brand, params, collections):
             and (not i.is_publication or not any(matches_facets(d) for d in ds))
         ):
             continue
-        if (
-            q
-            and q not in searchable([i.ref, i.fields])
-            and not any(q in searchable(d.fields) or file_matches(d, q) for d in ds)
-            and not file_matches(i, q)
-        ):
+        if q and not search_matches(i, ds):
             continue
         if tag == "Not all local" and global_ds:
             if (
@@ -634,8 +706,8 @@ def browse(items, stored, base, brand, params, collections):
                 "href": url(
                     sidebar_route | i.route,
                     tag=tag,
-                    view="methods"
-                    if params.get("view") == "methods"
+                    view=params.get("view")
+                    if params.get("view") in ("methods", "terms")
                     and section in ("Papers", "Datasets")
                     else None,
                 ),
@@ -734,6 +806,8 @@ def browse(items, stored, base, brand, params, collections):
         tabs.insert(2, ("methods", "Methods", len(record_methods(item))))
     if not global_ds and (count := attribute_count(item)):
         tabs.append(("attributes", "Attributes", count))
+    if item.is_publication or item.is_dataset:
+        tabs.append(("terms", "Terms", len(topics(item))))
     tabs.append(("source", "Raw metadata", None))
     default_view = default_dataset_tab(item) if global_ds else tabs[0][0]
     view = params.get("view", default_view)
@@ -932,7 +1006,7 @@ def browse(items, stored, base, brand, params, collections):
     derived_from, used_by = provenance(dataset_owner)
     default_dtab = default_dataset_tab(selected) if selected else "files"
     dtab = params.get("dtab", default_dtab)
-    if dtab not in ("files", "attributes", "methods"):
+    if dtab not in ("files", "attributes", "methods", "terms"):
         dtab = default_dtab
     doi_label = field(item, "doi", "source_url", "url", "sameAs")
     try:
@@ -982,6 +1056,7 @@ def browse(items, stored, base, brand, params, collections):
         host=urlsplit(dataset_url).netloc if dataset_url else "",
         annotations=annotation_values(dataset_owner.fields) if dataset_owner else [],
         dtab=dtab,
+        record_topics=topics(owner) if owner else [],
         method_groups=method_view(record_methods(owner), index.labels, resolve_resource)
         if owner and (view == "methods" or view == "datasets" and dtab == "methods")
         else [],
@@ -993,6 +1068,7 @@ def browse(items, stored, base, brand, params, collections):
                 attribute_count(selected) if selected else 0,
             ),
             ("methods", "Methods", len(record_methods(selected)) if selected else 0),
+            ("terms", "Terms", len(topics(selected)) if selected else 0),
         ],
         attr={
             "groups": attribute_groups(item.fields.get("attributes"), "Paper")

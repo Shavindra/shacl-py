@@ -13,8 +13,7 @@ from shacl_py.browser import (
 from shacl_py.catalogue import Catalogue
 from shacl_py.navigation import url
 
-LABEL_FIELDS = {
-    "labels",
+KEYWORD_FIELDS = {
     "keyword",
     "keywords",
     "schema:keywords",
@@ -22,6 +21,9 @@ LABEL_FIELDS = {
     "http://schema.org/keywords",
     "https://schema.org/keywords",
     "http://www.w3.org/ns/dcat#keyword",
+}
+LABEL_FIELDS = KEYWORD_FIELDS | {
+    "labels",
     "dc:subject",
     "dcterms:subject",
     "http://purl.org/dc/terms/subject",
@@ -51,9 +53,9 @@ def label_values(value):
                 break
 
 
-def metadata_labels(fields):
+def metadata_labels(fields, predicates=LABEL_FIELDS):
     for name, value in fields.items():
-        if name in LABEL_FIELDS:
+        if name in predicates:
             yield from label_values(value)
 
     def attribute_labels(attributes):
@@ -61,7 +63,7 @@ def metadata_labels(fields):
             if not isinstance(attribute, dict):
                 continue
             predicate = attribute.get("predicate")
-            if isinstance(predicate, str) and predicate in LABEL_FIELDS:
+            if isinstance(predicate, str) and predicate in predicates:
                 yield from label_values(attribute.get("value"))
             yield from attribute_labels(attribute.get("attributes"))
 

@@ -42,6 +42,7 @@
   <section class="heading">
     <div class="mono muted">{{ collection.key }}<span class="slash">/</span>{{ g.terms|join(', ') or d.entry }}</div>
     <div class="titleline"><h1>{{ g.name }}</h1>{% if g.starred %}{{ star() }}{% endif %}</div>
+    {% for ref, label in subject_links.items() %}<a class="source-line" href="{{ url({}, section='terms', subject=ref) }}" target="_self">Papers and datasets about {{ label }}</a>{% endfor %}
     {% if layout.terms %}
       <dl class="facts"><div><dt>{{ layout.terms.label }}</dt><dd>{% for term, link in d.terms %}{% if link %}<a class="mono" href="{{ link }}" target="_blank" rel="noreferrer">{{ term }}</a>{% else %}<code>{{ term }}</code>{% endif %} {% if not loop.last %} · {% endif %}{% else %}<span class="muted">Not mapped</span>{% endfor %}{% if d.terms %} {{ g.name }}{% endif %}</dd></div></dl>
       {% if d.terms and layout.terms.definition %}<div class="term-definition">

@@ -47,6 +47,35 @@ A dataset PID or an unambiguous file reference opens the corresponding
 record. Files show their own methods in the drawer and full-page view.
 The [interactive wireframe](docs/wireframes/README.md) includes a worked example.
 
+Open **Terms** to find papers and datasets together. Select a subject and
+a term, or type a phrase such as `station reading`. A broader term includes
+its narrower terms. Each record's **Terms** tab links to other records with
+the same subject and property.
+
+Define terms once in `catalogue.project.term_vocabulary`. Reuse their IDs
+in `index_terms` on individual publications and datasets. The optional
+`note` can name the source table or explain what was measured or modelled.
+
+~~~yaml
+catalogue:
+  project:
+    pid: urn:example:survey
+    term_vocabulary:
+      - {id: 'urn:example:station', label: Station, aliases: [stations]}
+      - {id: 'urn:example:reading', label: Reading}
+      - {id: 'urn:example:mean', label: Mean reading, broader: 'urn:example:reading'}
+  datasets:
+    - pid: urn:example:means
+      title: Mean reading per station
+      index_terms:
+        - {subject: 'urn:example:station', term: 'urn:example:mean', note: Mean of the readings at each station.}
+~~~
+
+For general topics, use a plain list such as `keywords: [Coastal monitoring]`.
+Subject and term filters match a single assignment on the record. Assign
+terms to each paper or dataset that provides the evidence. Use `or` to
+search alternative terms for the same subject.
+
 Datasets with files or folders open on **Files**. A dataset that holds only
 attributes opens on **Attributes**, where each value appears with its unit
 and any nested details, such as a measurement method or source.

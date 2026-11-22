@@ -428,3 +428,114 @@ def test_methods_filters_and_file_links(page, tmp_path):
         main.locator(".heading nav").get_by_role("link", name="Methods 1").click()
         main.locator(".method-grid").get_by_role("link", name="Source images").click()
         expect(main.locator("h1")).to_have_text("Paired images")
+
+
+def test_terms_search_keeps_subject_and_property_together(page, tmp_path):
+    (tmp_path / "metadata.yaml").write_text("""
+catalogue:
+  project:
+    pid: urn:example:terms
+    term_vocabulary:
+      - {id: 'urn:nucleus', label: Nucleus, aliases: [nuclear]}
+      - {id: 'urn:envelope', label: Nuclear envelope}
+      - {id: 'urn:vacuole', label: Vacuole}
+      - {id: 'urn:size', label: Size}
+      - {id: 'urn:volume', label: Volume, broader: 'urn:size'}
+      - {id: 'urn:location', label: Location, aliases: [position]}
+  publications:
+    - pid: urn:paper:volume
+      title: Volume paper
+      source_url: https://doi.org/10.1234/volume
+      index_terms: [{subject: 'urn:nucleus', term: 'urn:volume', note: Table 1.}]
+      dataset_links: [{dataset: 'urn:data:volume', role: describes}]
+    - pid: urn:paper:spatial
+      title: Spatial paper
+      index_terms:
+        - {subject: 'urn:nucleus', term: 'urn:location'}
+        - {subject: 'urn:vacuole', term: 'urn:volume'}
+      dataset_links: [{dataset: 'urn:data:volume', role: reuses}]
+  datasets:
+    - pid: urn:data:volume
+      title: Volume table
+      index_terms: [{subject: 'urn:nucleus', term: 'urn:volume', note: Measured in 3D.}]
+    - pid: urn:data:envelope
+      title: Envelope image
+      index_terms: [{subject: 'urn:envelope', term: 'urn:location'}]
+    - pid: urn:data:plain
+      title: General keywords
+      keywords: [Nucleus, Volume]
+""")
+    (tmp_path / ".studyminimeta.yaml").write_text(
+        "publication: [{title: Alternate title, doi: 10.1234/volume, keyword: [Morphometry]}]\n"
+    )
+    with serve_project(tmp_path) as root:
+        page.goto(root + "#section=terms", wait_until="domcontentloaded")
+        papers = page.get_by_role("region", name="Matching papers")
+        datasets = page.get_by_role("region", name="Matching datasets")
+        search = page.get_by_role("searchbox", name="Search terms")
+
+        def query(text):
+            search.fill(text)
+            search.press("Enter")
+
+        query("NuClEaR volume")
+        expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
+        expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
+        query("nucleus size or location")
+        expect(papers.locator(".result-title")).to_have_text(
+            ["Spatial paper", "Volume paper"]
+        )
+        expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
+        query("nuclear position")
+        expect(papers.locator(".result-title")).to_have_text(["Spatial paper"])
+        expect(datasets).to_contain_text("No matching datasets")
+        query("nuclear envelope position")
+        expect(datasets.locator(".result-title")).to_have_text(["Envelope image"])
+        query("Morphometry")
+        expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
+        query("unindexed")
+        expect(papers).to_contain_text("No matching papers")
+
+        page.get_by_role("link", name="Clear filters").click()
+        page.get_by_role("combobox", name="Subject", exact=True).select_option(
+            "urn:nucleus"
+        )
+        page.get_by_role("combobox", name="Term", exact=True).select_option("urn:size")
+        expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
+        expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
+        bookmark = page.url
+        datasets.get_by_role("link", name="Volume table").click()
+        expect(page.locator(".study main .record-terms")).to_contain_text(
+            "Measured in 3D."
+        )
+        page.go_back()
+        expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
+        assert page.url == bookmark
+        papers.locator(".result-title").click()
+        expect(page.locator(".study main .record-terms")).to_contain_text("Table 1.")
+        page.locator(".study main .record-terms").get_by_role(
+            "link", name="Nucleus · Volume"
+        ).click()
+        expect(page.get_by_role("combobox", name="Term", exact=True)).to_have_value(
+            "urn:volume"
+        )
+        expect(datasets.locator(".result-title")).to_have_text(["Volume table"])
+
+        page.locator(".study header nav").get_by_role("link", name="Papers 2").click()
+        sidebar = page.locator(".study .layout > aside")
+        sidebar.get_by_role("searchbox").fill("nucleus size")
+        expect(sidebar.locator("a.row b")).to_have_text(["Volume paper"])
+        sidebar.get_by_role("searchbox").fill("")
+        expect(sidebar.locator("a.row b")).to_have_count(2)
+        general = page.get_by_role("searchbox", name="Search papers, datasets, files")
+        general.fill("nuclear volume")
+        general.press("Enter")
+        expect(sidebar.locator("a.row b")).to_have_text(["Volume paper"])
+        page.locator(".study header nav").get_by_role("link", name="Datasets 3").click()
+        expect(sidebar.locator("a.row b")).to_have_text(["Volume table"])
+        page.goto(
+            root
+            + "#section=papers&record=metadata.yaml&entry=urn:paper:volume&view=datasets"
+        )
+        page.locator(".study .subtabs").get_by_role("link", name="Terms 1").click()
+        expect(page.locator(".split .record-terms")).to_contain_text("Measured in 3D.")

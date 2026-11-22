@@ -57,6 +57,9 @@ def validate_catalogue(graph, root):
     validate_structure(graph)
     publications = graph.get("publications", [])
     datasets = graph.get("datasets", [])
+    validate_index_terms(
+        graph["project"].get("term_vocabulary", []), [*publications, *datasets]
+    )
     paper_ids = {paper["pid"] for paper in publications}
     dataset_ids = {dataset["pid"] for dataset in datasets}
     seen = set()
@@ -105,3 +108,28 @@ def validate_catalogue(graph, root):
         for output in review.get("outputs", []):
             if output not in dataset_ids:
                 raise ValueError(f"review {paper}: unknown output dataset {output}")
+
+
+def validate_index_terms(definitions, records):
+    vocabulary = {}
+    for term in definitions:
+        key = term["id"]
+        if key in vocabulary:
+            raise ValueError(f"term_vocabulary: duplicate term {key}")
+        vocabulary[key] = [term["broader"]] if "broader" in term else []
+    for key, parents in vocabulary.items():
+        if parents and parents[0] not in vocabulary:
+            raise ValueError(
+                f"term_vocabulary: {key} has unknown broader term {parents[0]}"
+            )
+    try:
+        TopologicalSorter(vocabulary).prepare()
+    except CycleError as error:
+        raise ValueError(f"cyclic broader terms: {error.args[1]}") from error
+    for record in records:
+        for assignment in record.get("index_terms", []):
+            for field in ("term", "subject"):
+                if field in assignment and assignment[field] not in vocabulary:
+                    raise ValueError(
+                        f"{record['pid']}: unknown index_terms {field} {assignment[field]}"
+                    )

@@ -95,7 +95,16 @@ export default function ({ parentElement, setStateValue }) {
     document.addEventListener("input", schedule, options);
     document.addEventListener("compositionend", schedule, options);
     document.addEventListener("change", (event) => {
-        if (event.target.matches(".study .graph-filter select, .study .method-filters select")) event.target.form.requestSubmit();
+        const control = event.target;
+        if (control.matches(".study .term-filters select")) {
+            const values = new URLSearchParams(window.location.hash.slice(1));
+            values.set("section", "terms");
+            if (control.value) values.set(control.name, control.value);
+            else values.delete(control.name);
+            window.location.hash = values.toString();
+        } else if (control.matches(".study .graph-filter select, .study .method-filters select")) {
+            control.form.requestSubmit();
+        }
     }, options);
     document.addEventListener("submit", (event) => {
         const form = event.target;
@@ -106,6 +115,18 @@ export default function ({ parentElement, setStateValue }) {
             applyFilter(editFor(form.querySelector('input[type="search"]')));
         } else {
             const values = new URLSearchParams(new FormData(form));
+            if (values.get("section") === "terms") {
+                // A new route can arrive before Streamlit replaces the previous form.
+                // Keep the other controls from the active bookmark.
+                const current = new URLSearchParams(window.location.hash.slice(1));
+                if (current.get("section") === "terms") {
+                    for (const key of form.matches(".term-filters") ? ["q"] : ["subject", "term"]) {
+                        if (current.has(key)) values.set(key, current.get(key));
+                        else values.delete(key);
+                    }
+                }
+                for (const key of ["q", "subject", "term"]) if (!values.get(key)) values.delete(key);
+            }
             if (form.matches(".method-filters")) {
                 for (const key of ["technique", "compartment"]) if (!values.get(key)) values.delete(key);
             }

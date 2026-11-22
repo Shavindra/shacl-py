@@ -1,0 +1,31 @@
+{% macro term_link(t) -%}
+<a class="chip term-link" href="{{ url({}, section='terms', subject=t.subject or none, term=t.term) }}" target="_self">{% if t.subject %}{{ t.subject_label }} · {% endif %}{{ t.label }}</a>
+{%- endmacro %}
+
+{% macro record_terms(topics) -%}
+<ul class="record-terms">{% for t in topics %}<li>{{ term_link(t) }}{% if t.note %}<p>{{ t.note }}</p>{% endif %}</li>{% else %}<li class="hint">No terms recorded.</li>{% endfor %}</ul>
+{%- endmacro %}
+
+{% macro terms_page() -%}
+<div class="layout terms-view">
+<aside><div class="tools"><div class="cap">Filter terms</div>
+<form method="get" class="method-filters term-filters" aria-label="Filter terms">
+  <input type="hidden" name="section" value="terms">
+  {% if params.get('q') %}<input type="hidden" name="q" value="{{ params.q }}">{% endif %}
+  {% for key, label, options in [('subject', 'Subject', subjects), ('term', 'Term', terms)] %}
+  <label><span>{{ label }}</span><select name="{{ key }}" aria-label="{{ label }}">
+    <option value="">All {{ 'subjects' if key == 'subject' else 'terms' }}</option>
+    {% for id, name in options %}<option value="{{ id }}"{% if params.get(key)==id %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select></label>
+  {% endfor %}
+  {% if params.get('subject') or params.get('term') or params.get('q') %}<a href="{{ url({}, section='terms') }}" target="_self">Clear filters</a>{% endif %}
+</form></div></aside>
+<main><section class="heading"><h1>Terms</h1></section><article class="term-results">
+{% for name, rows in term_results.items() %}<section aria-label="Matching {{ name|lower }}">
+<h2>{{ name }} <small>{{ rows|length }}</small></h2>
+{% for item, topics in rows %}<div class="term-result">
+<a class="result-title" href="{{ url(item.route, section=name|lower, view='terms') }}" target="_self">{{ item.label }}</a>{% if is_starred(item) %} {{ star() }}{% endif %}
+<div class="chips">{% for t in topics|unique(attribute='pair') %}{{ term_link(t) }}{% endfor %}</div>
+</div>{% else %}<p class="hint">No matching {{ name|lower }}.</p>{% endfor %}</section>{% endfor %}
+</article></main></div>
+{%- endmacro %}

@@ -381,3 +381,14 @@
 .study .method-parameters{font-size:12px}
 .study .method-parameters summary{cursor:pointer}
 .study .file-methods .method-path{margin-top:12px}
+
+.study .term-filters{margin-top:0}
+.study .term-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));align-content:start;gap:26px}
+.study .term-results h2{margin:0 0 8px;padding-bottom:8px;border-bottom:1px solid #dcdcdc;font-size:17px}
+.study .term-results h2 small{color:#666;font-size:12px}
+.study .term-result,.study .record-terms li{padding:10px 0;border-bottom:1px solid #eee}
+.study .result-title{font-weight:500;overflow-wrap:anywhere}
+.study .term-result .chips{margin-top:6px}
+.study .term-link{height:auto;min-height:24px;overflow-wrap:anywhere}
+.study .record-terms{margin:0;padding:0;list-style:none}
+.study .record-terms p{margin:6px 0 0;font-size:13px;color:#555}

@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.4.0
+version: 1.5.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -22,15 +22,17 @@ classes:
   LocalProject:
     is_a: Project
     slots: [source_url, local_folder, file_groups]
+    attributes:
+      term_vocabulary: {range: IndexTerm, multivalued: true, inlined_as_list: true}
   LocalPublication:
     is_a: Publication
-    slots: [source_url, local_folder, file_groups, author_names, highlighted]
+    slots: [source_url, local_folder, file_groups, author_names, highlighted, keywords, index_terms]
     attributes:
       primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
   LocalDataset:
     is_a: Dataset
-    slots: [source_url, local_folder, file_groups, author_names, highlighted]
+    slots: [source_url, local_folder, file_groups, author_names, highlighted, keywords, index_terms]
     attributes:
       linked_files: {range: LinkedFile, multivalued: true, inlined_as_list: true}
       source_datasets:
@@ -40,6 +42,19 @@ classes:
       notebook_path:
         range: string
         description: Project-relative path to the notebook used to produce this dataset.
+  IndexTerm:
+    description: A subject or property in the project's searchable vocabulary.
+    attributes:
+      id: {identifier: true, range: uriorcurie, pattern: '^[A-Za-z][A-Za-z0-9+.-]*:\S+$'}
+      label: {range: string, required: true, pattern: '\S'}
+      aliases: {range: string, multivalued: true}
+      broader: {range: IndexTerm, description: A broader term in the same vocabulary.}
+  TermAssignment:
+    description: A term describing this record, optionally qualified by the subject it describes.
+    attributes:
+      term: {range: IndexTerm, required: true}
+      subject: {range: IndexTerm}
+      note: {range: string, description: What the source reports or the dataset contains.}
   LinkedFile:
     slots: [attributes]
     attributes:
@@ -100,6 +115,7 @@ classes:
         description: Literal files or directories relative to the record's local folder.
       section: {range: FileSection}
 slots:
+  index_terms: {range: TermAssignment, multivalued: true, inlined_as_list: true}
   highlighted: {range: boolean, description: Star this record and show it first in viewer lists.}
   local_folder:
     range: string

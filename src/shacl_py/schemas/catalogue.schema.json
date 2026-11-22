@@ -2214,6 +2214,36 @@
       "title": "Identifier",
       "type": "object"
     },
+    "IndexTerm": {
+      "additionalProperties": false,
+      "description": "A subject or property in the project's searchable vocabulary.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "broader": {
+          "description": "A broader term in the same vocabulary.",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:\\S+$",
+          "type": "string"
+        },
+        "label": {
+          "pattern": "\\S",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "IndexTerm",
+      "type": "object"
+    },
     "LinkedFile": {
       "additionalProperties": false,
       "description": "",
@@ -2379,6 +2409,19 @@
                 "$ref": "#/$defs/ISSN"
               }
             ]
+          },
+          "type": "array"
+        },
+        "index_terms": {
+          "items": {
+            "$ref": "#/$defs/TermAssignment"
+          },
+          "type": "array"
+        },
+        "keywords": {
+          "description": "One or more keywords or tags describing the subject.",
+          "items": {
+            "type": "string"
           },
           "type": "array"
         },
@@ -2633,6 +2676,19 @@
                 "$ref": "#/$defs/ISSN"
               }
             ]
+          },
+          "type": "array"
+        },
+        "index_terms": {
+          "items": {
+            "$ref": "#/$defs/TermAssignment"
+          },
+          "type": "array"
+        },
+        "keywords": {
+          "description": "One or more keywords or tags describing the subject.",
+          "items": {
+            "type": "string"
           },
           "type": "array"
         },
@@ -2982,6 +3038,12 @@
           "pattern": "^https?://[^\\s/]+",
           "type": "string"
         },
+        "term_vocabulary": {
+          "items": {
+            "$ref": "#/$defs/IndexTerm"
+          },
+          "type": "array"
+        },
         "title": {
           "description": "A summarily description of the subject. It is closely related to a `name`, but often less compact and more descriptive. Typically used for documents.",
           "type": "string"
@@ -3210,6 +3272,12 @@
           "pattern": "^https?://[^\\s/]+",
           "type": "string"
         },
+        "term_vocabulary": {
+          "items": {
+            "$ref": "#/$defs/IndexTerm"
+          },
+          "type": "array"
+        },
         "title": {
           "description": "A summarily description of the subject. It is closely related to a `name`, but often less compact and more descriptive. Typically used for documents.",
           "type": "string"
@@ -3345,6 +3413,19 @@
                 "$ref": "#/$defs/ISSN"
               }
             ]
+          },
+          "type": "array"
+        },
+        "index_terms": {
+          "items": {
+            "$ref": "#/$defs/TermAssignment"
+          },
+          "type": "array"
+        },
+        "keywords": {
+          "description": "One or more keywords or tags describing the subject.",
+          "items": {
+            "type": "string"
           },
           "type": "array"
         },
@@ -3583,6 +3664,19 @@
                 "$ref": "#/$defs/ISSN"
               }
             ]
+          },
+          "type": "array"
+        },
+        "index_terms": {
+          "items": {
+            "$ref": "#/$defs/TermAssignment"
+          },
+          "type": "array"
+        },
+        "keywords": {
+          "description": "One or more keywords or tags describing the subject.",
+          "items": {
+            "type": "string"
           },
           "type": "array"
         },
@@ -5891,6 +5985,27 @@
       "title": "Statement",
       "type": "object"
     },
+    "TermAssignment": {
+      "additionalProperties": false,
+      "description": "A term describing this record, optionally qualified by the subject it describes.",
+      "properties": {
+        "note": {
+          "description": "What the source reports or the dataset contains.",
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "title": "TermAssignment",
+      "type": "object"
+    },
     "Thing": {
       "additionalProperties": false,
       "description": "The most basic, identifiable item. In addition to the slots that are common between a `Thing` and an `AttributeSpecification` (see `ThingMixin`), two additional slots are provided. The `pid` slot takes the required identifier for a `Thing`. The `relation` slot allows for the inline specification of other `Thing` instances. Such a relation is unqualified (and symmetric), and should be further characterized via a `Statement` (see `characterized_by`). From a schema perspective, the `relation` slots allows for building self-contained, structured documents (e.g., a JSON object) with arbitrarily complex information on a `Thing`.",
@@ -6906,5 +7021,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.4.0"
+  "version": "1.5.0"
 }
