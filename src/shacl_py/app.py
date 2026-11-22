@@ -16,6 +16,8 @@ from shacl_py.attributes import (
     annotation_values,
     attribute_groups,
     attribute_value,
+    data_content,
+    is_data_content,
     metadata_groups,
 )
 from shacl_py.branding import branding
@@ -60,6 +62,10 @@ template = Environment(loader=FileSystemLoader(assets), autoescape=True).get_tem
 
 
 FORMATS = {
+    ".tar.gz": "TAR.GZ archive",
+    ".zip": "ZIP archive",
+    ".rar": "RAR archive",
+    ".npz": "NumPy archive",
     ".ome.tif": "OME-TIFF",
     ".ome.tiff": "OME-TIFF",
     ".tif": "TIFF",
@@ -574,6 +580,28 @@ def browse(items, stored, base, brand, params, collections):
     def file_records(i):
         return declared_file_records(i)
 
+    @cache
+    def catalogue_file_content(folder):
+        # A paper and a dataset can list the same local file.
+        content = {}
+        for member in [*papers, *datasets]:
+            if member.source.folder == folder:
+                for identifier, record in file_records(member).items():
+                    if facts := data_content(record.get("attributes")):
+                        content.setdefault(identifier, {}).update(facts)
+        return content
+
+    def local_file_content(owner, path):
+        records = catalogue_file_content(owner.source.folder)
+        declared = records.get(local_file_id(owner, path), {})
+        return declared | data_content(file_attributes(stored.get(path)))
+
+    def linked_file_content(owner, linked):
+        declared = file_records(owner).get(linked["url"], {})
+        return data_content(declared.get("attributes")) | data_content(
+            linked.get("attributes")
+        )
+
     def listed_path(i, relative):
         if relative in listing(i)[1]:
             return "."
@@ -898,6 +926,7 @@ def browse(items, stored, base, brand, params, collections):
                 "size": size,
                 "local": local,
                 "linked": False,
+                "content": local_file_content(owner, owner.folder / path),
             }
         )
     for row in linked_rows:
@@ -911,6 +940,7 @@ def browse(items, stored, base, brand, params, collections):
                 "preview": linked.get("preview_url") or linked["url"],
                 "parent": row["parent"],
                 "size": linked_size(linked.get("attributes")),
+                "content": linked_file_content(owner, linked),
                 "local": False,
             }
         )
@@ -1049,6 +1079,14 @@ def browse(items, stored, base, brand, params, collections):
         ds_pid=pid(selected),
         dataset_url=dataset_url,
         dataset_description=field(dataset_owner, "description"),
+        dataset_content_facts=[
+            (label, value, False, None)
+            for label, value in data_content(
+                dataset_owner.fields.get("attributes")
+            ).items()
+        ]
+        if dataset_owner
+        else [],
         ds_folder=local_folder(selected),
         role=", ".join(dict.fromkeys(roles(item)))
         if global_ds
@@ -1125,6 +1163,7 @@ def browse(items, stored, base, brand, params, collections):
             paper = item if item.is_publication else next(iter(parents), None)
             declared = file_records(owner).get(linked["url"], {})
             extra = declared.get("attributes", [])
+            file_content = linked_file_content(owner, linked)
             file_methods = techniques([*linked.get("attributes", []), *extra])
             context["fp"] = linked_panel(
                 owner, linked, route, paper, page=params.get("page")
@@ -1137,6 +1176,7 @@ def browse(items, stored, base, brand, params, collections):
             path = owner.folder / row["Relative path"]
             declared = file_records(owner).get(local_file_id(owner, path), {})
             extra = declared.get("attributes", [])
+            file_content = local_file_content(owner, path)
             file_methods = techniques([*extra, *file_attributes(stored.get(path))])
             context["fp"] = file_panel(
                 owner, row, route, stored, base, paper, page=params.get("page")
@@ -1144,6 +1184,9 @@ def browse(items, stored, base, brand, params, collections):
         else:
             st.warning("This file is outside the current selection.")
     if "fp" in context:
+        context["fp"]["rows"].extend(
+            (label, value, False) for label, value in file_content.items()
+        )
         if extra:
             panel = context["fp"]
             panel["groups"] = attribute_groups(extra, "File") + panel["groups"]
@@ -1230,7 +1273,10 @@ def file_panel(owner, row, route, stored, base, paper, page=None):
 def content_groups(file_groups, owner):
     """Combine a file's own attributes with those it inherits from its dataset."""
     inherited = (
-        attribute_groups(owner.fields.get("attributes"), "Dataset")
+        attribute_groups(
+            [a for a in owner.fields.get("attributes") or [] if not is_data_content(a)],
+            "Dataset",
+        )
         if owner.is_dataset
         else []
     )

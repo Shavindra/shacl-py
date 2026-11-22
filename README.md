@@ -91,6 +91,13 @@ declared in `linked_files`. Select a filename to see its own attributes and
 the groups inherited from its dataset, in the side panel or the full file
 page. Preview and download open at the provider.
 
+The dataset overview and file list show the modality and dimensions declared in
+a top-level Dublin Core `http://purl.org/dc/terms/type` attribute labelled
+**Data modality**. A catalogue may also use its own `data-modality` predicate.
+Use `archive-contents` in the catalogue namespace on a ZIP or other archive to
+list its member types in one comma-separated value. Put file attributes on a
+linked file or on the local file's `hasPart` record.
+
 Group related external files by giving their `name` a relative path, such as
 `sample_01/image.ome.tif` and `sample_01/segmentation.ome.tif`. The viewer shows
 one `sample_01/` folder and keeps each file's download URL, preview and attributes.

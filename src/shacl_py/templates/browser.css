@@ -186,6 +186,9 @@
 .study .frow>a:after{content:'';position:absolute;inset:0}
 .study .frow>span:nth-child(2){color:#6b6b6b}
 .study .frow>span:nth-child(3){color:#444;text-align:right}
+.study .frow>.file-content{grid-column:1/-1;white-space:normal;overflow-wrap:anywhere;color:#444;font-size:12px;line-height:1.4}
+.study .file-content b{font-weight:600;margin-right:4px}
+.study .frow:has(.file-content){row-gap:3px}
 .study .frow:hover{background:#f6f6f6}
 .study .frow.sel{background:#efefef}
 .study .frow.cols{height:auto;padding:8px 14px;border-bottom-color:#ececec}

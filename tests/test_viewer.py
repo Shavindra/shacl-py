@@ -958,3 +958,60 @@ def test_unusual_linked_names_stay_literal_at_root():
     assert all(row["parent"] == "" for row in rows)
     assert linked_file_selection(linked, "sample") == ([], [])
     assert linked_file_selection(linked, "../sample") == ([], [])
+
+
+def test_modalities_follow_files_across_dataset_views(tmp_path, monkeypatch):
+    folder = tmp_path / "data"
+    folder.mkdir()
+    for name in ("section.tif", "unknown.tif"):
+        (folder / name).touch()
+    (tmp_path / "metadata.yaml").write_text(
+        """catalogue:
+  project:
+    pid: urn:example:project
+    annotations: {identifier_namespace: 'urn:example'}
+  publications:
+  - pid: urn:example:paper
+    title: Example paper
+    dataset_links: [{dataset: 'urn:example:dataset', role: describes}]
+    characterized_by:
+    - {predicate: 'http://purl.org/dc/terms/hasPart', object: 'urn:example:file:data/section.tif'}
+    relations:
+      urn:example:file:data/section.tif:
+        attributes: [{predicate: 'urn:example:data-modality', value: 2D optical section}]
+  datasets:
+  - pid: urn:example:dataset
+    title: Microscopy
+    local_folder: data
+    attributes: [{predicate: 'http://purl.org/dc/terms/type', display_label: Data modality, value: '3D z-stacks, 2D sections'}]
+    linked_files:
+    - name: annotations.zip
+      url: https://example.org/annotations.zip
+      attributes:
+      - {predicate: 'urn:example:archive-contents', value: 2D masks (TIFF)}
+      - {predicate: 'urn:example:archive-contents', value: cell measurements (CSV)}
+"""
+    )
+    page = open_viewer(tmp_path, monkeypatch)
+    archive = "2D masks (TIFF), cell measurements (CSV)"
+    for location in ("paper", "datasets"):
+        if location == "datasets":
+            follow(page, "Open in Datasets")
+        body = html(page)
+        assert "<dt>Data modality</dt><dd>3D z-stacks, 2D sections</dd>" in body
+        assert "<b>Archive contents</b> " + archive in body
+        assert "<b>Data modality</b> 2D optical section" in body
+        for name, value in (
+            ("annotations.zip", archive),
+            ("section.tif", "2D optical section"),
+        ):
+            follow(page, name)
+            assert value in opened_file(page)
+            follow(page, "Open page")
+            assert value in opened_file(page)
+            follow(page, "← Back")
+        follow(page, "unknown.tif")
+        assert "Data modality" not in opened_file(
+            page
+        ) and "Archive contents" not in opened_file(page)
+        follow(page, "×")

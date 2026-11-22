@@ -324,6 +324,25 @@ def attribute_value(fields, *names):
     return ""
 
 
+def is_data_content(node):
+    """Recognise explicit content descriptions on dataset and file records."""
+    if not isinstance(node, dict):
+        return False
+    predicate = predicate_of(node)
+    if predicate == "http://purl.org/dc/terms/type":
+        return label_of(node).casefold() == "data modality"
+    return re.split(r"[/#:]", predicate)[-1] in {"data-modality", "archive-contents"}
+
+
+def data_content(attributes):
+    """Keep distinct declared types in their recorded order."""
+    values = {}
+    for node in attributes or []:
+        if is_data_content(node) and _has_value(node):
+            values.setdefault(label_of(node), []).append(_text(node["value"]))
+    return {label: ", ".join(dict.fromkeys(items)) for label, items in values.items()}
+
+
 def count_leaves(nodes):
     """Count the recorded values, not counting qualifiers of other values."""
     return sum(group["count"] for group in attribute_groups(nodes))
