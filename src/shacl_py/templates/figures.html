@@ -14,7 +14,7 @@
       {% for fig in figures %}<figure>
         {{ image(fig, fig.label) }}
         <figcaption>
-          <div class="figure-title"><b>{{ fig.label }}</b> {{ fig.title }} {% if fig.highlighted %}<span title="Key figure" aria-label="Key figure">★</span>{% endif %}</div>
+          <div class="figure-title"><b>{{ fig.label }}</b> {{ fig.title }}{% if fig.highlighted %}&nbsp;<span title="Key figure" aria-label="Key figure">★</span>{% endif %}</div>
           {% if fig.caption %}<p>{{ fig.caption }}</p>{% endif %}
           {% if fig.panels or fig.datasets %}<dl>
             {% if fig.panels %}<div><dt>Panels</dt><dd><code>{{ fig.panels }}</code></dd></div>{% endif %}

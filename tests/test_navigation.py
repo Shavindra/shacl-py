@@ -614,3 +614,29 @@ catalogue:
         prop.select_option("urn:volume")
         expect(papers.locator(".result-title")).to_have_text(["Volume paper"])
         expect(datasets.locator(".result-title")).to_have_count(0)
+
+
+def test_figure_card_typography(page, tmp_path):
+    (tmp_path / "metadata.yaml").write_text(
+        """catalogue:
+  project: {pid: 'urn:test:project'}
+  publications:
+  - pid: urn:test:paper
+    title: Imaging
+    figures:
+    - label: Extended Data Fig. 1
+      title: Image acquisition
+      caption: Cell segmentation and feature extraction.
+      panels: a–d
+      related_datasets: ['urn:test:images']
+  datasets:
+  - {pid: 'urn:test:images', title: Cell images}
+"""
+    )
+    with serve_project(tmp_path) as url:
+        page.goto(url, wait_until="domcontentloaded")
+        page.locator(".heading nav").get_by_role("link", name="Figures 1").click()
+        card = page.locator(".figure-grid figcaption")
+        for field in ("p", "dt", "dd", "a"):
+            expect(card.locator(field).first).to_have_css("font-size", "12.5px")
+        expect(card.locator(".figure-title")).to_have_css("font-size", "13px")
