@@ -3,12 +3,13 @@
 import os
 from functools import cache
 from html import escape
+from io import StringIO
 from pathlib import Path
 from urllib.parse import urlencode
 
 import streamlit as st
-import yaml
 from jinja2 import Environment, FileSystemLoader
+from ruamel.yaml import YAML
 
 from shacl_py.browser import (
     file_metadata,
@@ -111,13 +112,10 @@ def field(item, *names):
     )
 
 
-def plain(value):
-    """Builtin dicts and lists, so yaml.safe_dump accepts ruamel round-trip types."""
-    if isinstance(value, dict):
-        return {str(k): plain(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [plain(v) for v in value]
-    return value
+def as_yaml(value):
+    stream = StringIO()
+    YAML().dump(value, stream)
+    return stream.getvalue()
 
 
 def display_fields(item):
@@ -132,19 +130,13 @@ def display_fields(item):
         if not isinstance(key, str) or key == "display_fields" or key not in fields:
             continue
         value = fields[key]
-        if isinstance(value, (dict, list)):
-            text = yaml.safe_dump(
-                plain(value), allow_unicode=True, sort_keys=False
-            ).strip()
-        else:
-            text = str(value)
         href = None
         if isinstance(value, str):
             try:
                 href = source_url(value)
             except ValueError:
                 pass
-        rows.append((key, text, href))
+        rows.append((key, value, href))
     return rows
 
 
@@ -392,18 +384,12 @@ def browse(items, stored):
         up=up,
         abstract=field(item, "abstract"),
         notes="\n\n".join(filter(None, notes)),
-        raw=yaml.safe_dump(
-            plain(item.fields or source_content(item.source)),
-            allow_unicode=True,
-            sort_keys=False,
-        )
+        raw=as_yaml(item.fields or source_content(item.source))
         if view == "source"
         else "",
     )
     if view == "source":
-        context["source"] = yaml.safe_dump(
-            plain(source_content(item.source)), allow_unicode=True, sort_keys=False
-        )
+        context["source"] = as_yaml(source_content(item.source))
     render()
     if "file" in params and owner:
         if row := files.get(params["file"]):
