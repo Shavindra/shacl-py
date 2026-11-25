@@ -125,6 +125,38 @@ Use `shacl-py serve . --metalad` for the store alone, or
 `shacl-py serve .studyminimeta.yaml` for one file. You can browse directly
 after installation.
 
+## Reference list and bibliography import
+
+**Reference list** in the top bar shows the publications from your bibliography with their
+authors, year, journal and number of linked datasets. Select a row to open
+its details in a side panel. A paper with datasets links to its page in
+**Papers**. The panel also links to a paper with a review folder. For a paper without datasets it shows the `add-datasets` command.
+
+Papers can come from a reference manager. Export a collection as CSL-JSON or
+BibTeX, for example with a Better BibTeX auto-export from Zotero, and import
+it from the project root:
+
+~~~sh
+shacl-py import-bib research/references/library.json --into research/references/catalogue.yaml
+~~~
+
+- The importer matches papers by DOI. A citation key identifies a paper within the same export when its DOI is missing. Adding a DOI later preserves the paper’s catalogue ID.
+- Only the title, authors, publication year and journal are written. Year
+  and journal are top-level `datePublished` and `isPartOf` attributes.
+  Keywords are filled in only when a paper has none.
+- Curated fields, comments and dataset links are kept.
+- A reference with no matching paper is added to the `--into` file, which
+  must already be listed in `catalogue.includes`. Without `--into`, it goes
+  to `metadata.yaml`.
+- Each reference needs a title and either a DOI or a citation key. The command lists entries missing those fields.
+- Each imported paper records its export in `bibliography`, shown only in
+  Raw metadata. Running the import again with an unchanged export changes
+  nothing.
+- Use `--dry-run` to see the changes without saving them.
+
+An imported paper with no datasets and no `local_folder` appears only in the
+Reference list. Curated papers and papers with linked datasets appear in **Papers**.
+
 ## Optional metadata setup
 
 Run `shacl-py setup` to create or edit a linked project catalogue. This helper

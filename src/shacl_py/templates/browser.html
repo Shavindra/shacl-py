@@ -2,7 +2,7 @@
 {% macro star() %}<span class="star" role="img" title="Starred" aria-label="Starred">★</span>{% endmacro %}
 {% from 'terms.html' import record_terms, terms_page with context %}
 {% macro search(name, placeholder, args) -%}
-<form method="get" target="_self" role="search"{% if name in ('filter', 'dsfilter') %} data-live-filter{% endif %}>{% for key,value in args.items() if key not in (name, 'file', 'linked', 'page') %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<input type="search" name="{{ name }}" aria-label="{{ placeholder }}" placeholder="{{ placeholder }}" value="{{ params.get(name,'') }}"{% if name=='q' %} accesskey="/"{% endif %}>{% if name=='q' %}<kbd>/</kbd>{% endif %}</form>
+<form method="get" target="_self" role="search"{% if name in ('filter', 'dsfilter', 'rfind') %} data-live-filter{% endif %}>{% for key,value in args.items() if key not in (name, 'file', 'linked', 'page') %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}<input type="search" name="{{ name }}" aria-label="{{ placeholder }}" placeholder="{{ placeholder }}" value="{{ params.get(name,'') }}"{% if name=='q' %} accesskey="/"{% endif %}>{% if name=='q' %}<kbd>/</kbd>{% endif %}</form>
 {%- endmacro %}
 {% macro filters(options, route) -%}
 <div class="chips">{% for label in options %}
@@ -85,9 +85,10 @@
 <dl class="filerows">{% for label,value,mono in fp.rows %}<div><dt>{{ label }}</dt><dd class="{{ 'mono' if mono }}">{{ value }}</dd></div>{% endfor %}</dl>
 {%- endmacro %}
 <div class="study{% if section=='Graph' %} graph-view{% endif %}">
-<header><strong>{% if brand.logo %}<img src="{{ brand.logo }}" alt="">{% else %}<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"></circle></svg>{% endif %}{{ brand.app_name }}</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}"{% if current %} aria-current="page"{% endif %} href="{{ href }}" target="_self">{{ name }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav>{% if section=='Terms' %}{{ search('q','Search terms',term_route) }}{% elif section=='Graph' %}{{ search('q','Find a graph record',{'section':'graph', 'relation':relation} if relation else {'section':'graph'}) }}{% elif collection %}{{ search('q','Search ' ~ collection.title,{'section':section}) }}{% else %}{{ search('q','Search papers, datasets, files',dict(facet_route, section=section|lower) if facet_route else {}) }}{% endif %}</header>
+<header><strong>{% if brand.logo %}<img src="{{ brand.logo }}" alt="">{% else %}<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="#fff"></circle></svg>{% endif %}{{ brand.app_name }}</strong><nav>{% for name,href,count,current in nav %}<a class="{{ 'on' if current }}"{% if current %} aria-current="page"{% endif %} href="{{ href }}" target="_self">{{ name }}{% if count is not none %} <small>{{ count }}</small>{% endif %}</a>{% endfor %}</nav>{% if section=='Terms' %}{{ search('q','Search terms',term_route) }}{% elif section=='Reference list' %}{{ search('q','Search references',{'section':'references'}) }}{% elif section=='Graph' %}{{ search('q','Find a graph record',{'section':'graph', 'relation':relation} if relation else {'section':'graph'}) }}{% elif collection %}{{ search('q','Search ' ~ collection.title,{'section':section}) }}{% else %}{{ search('q','Search papers, datasets, files',dict(facet_route, section=section|lower) if facet_route else {}) }}{% endif %}</header>
 {% if section is none %}<main><article>This section is unavailable in this project.</article></main>
 {% elif section=='Terms' %}{{ terms_page() }}
+{% elif section=='Reference list' %}{% include 'references.html' %}
 {% elif section=='Graph' %}{% include 'graph.html' %}
 {% elif detail is defined %}{% include 'collection_detail.html' %}
 {% elif collection %}{% include 'collection.html' %}

@@ -1,8 +1,10 @@
 # Viewer wireframes
 
-[Dataset browser](dataset-browser.dc.html) is the version 6 design for Papers, Datasets, Compartments and file details.
+[Dataset browser](dataset-browser.dc.html) is the version 7 design for the Reference list, Papers, Datasets, Compartments and file details.
 
-The preview opens on the **Methods** tab of **Cell images**. Select **Brightfield microscopy** and **Vacuole** in the sidebar. Open the field image from **Outputs** to inspect its own method. The **Feature tables** dataset links back to the source images under **Inputs**. Both the paper and its datasets have a Methods tab. In Papers, open Figures to see the key figure and panel gallery. A related data link opens the dataset’s Files tab.
+The preview opens on **Reference list**. Select a reference to see its DOI and linked datasets. The cell morphology paper opens in **Papers**. The brightfield outline reference shows how to add its first dataset.
+
+In **Datasets**, open **Cell images** and choose **Methods**. Select **Brightfield microscopy** and **Vacuole** in the sidebar. Open the field image from **Outputs** to inspect its own method. The **Feature tables** dataset links back to the source images under **Inputs**. Both the paper and its datasets have a Methods tab. In Papers, open Figures to see the key figure and panel gallery. A related data link opens the dataset’s Files tab.
 
 In **Compartments**, select **Nucleus** and expand **Notes** below the GO definition. The general overview stays visible when you switch organism tabs. The selection CSV supplies these fields.
 

@@ -1,0 +1,15 @@
+<main class="references">
+<section class="heading">{% if reference_sources %}<div class="mono muted">{{ reference_sources|join(', ') }}</div>{% endif %}<div class="titleline"><h1>Reference list</h1></div></section>
+<article>
+<div class="filebox"><div class="filebar"><b>References <small>{{ references|length }}</small></b>{{ search('rfind','Find reference',reference_route) }}</div>
+<div class="refrow cols"><span>Title</span><span>Authors</span><span>Year</span><span>Journal</span><span>Datasets</span></div>
+{% for r in references %}<div class="refrow {{ 'sel' if r.selected }}"><a href="{{ r.href }}" target="_self" class="serif">{{ r.title }}{% if r.starred %} {{ star() }}{% endif %}</a><span>{{ r.short }}</span><span>{{ r.year }}</span><span>{{ r.journal }}</span><span class="{{ 'none' if not r.count }}">{{ r.count or '—' }}</span></div>
+{% else %}<div class="empty">No references match.</div>{% endfor %}
+</div>
+</article>
+</main>
+{% if ref_panel %}<a class="scrim" href="{{ ref_panel.back }}" target="_self" aria-label="Close reference"></a><aside class="drawer refdrawer"><div class="drawerbar"><code>{{ ref_panel.pid }}</code>{% if ref_panel.open %}<a class="button" href="{{ ref_panel.open }}" target="_self">Open in Papers</a>{% endif %}<a class="close" href="{{ ref_panel.back }}" target="_self" aria-label="Close">×</a></div>
+<div class="drawerbody"><div class="reftitle"><b class="serif">{{ ref_panel.title }}{% if ref_panel.starred %} {{ star() }}{% endif %}</b>{% if ref_panel.authors %}<span>{{ ref_panel.authors }}</span>{% endif %}</div>
+<div><div class="cap">Reference</div><dl class="filerows">{% for label,value,mono,href in ref_panel.rows if value %}<div><dt>{{ label }}</dt><dd class="{{ 'mono' if mono }}">{% if href %}<a href="{{ href }}" target="_blank" rel="noreferrer">{{ value }} ↗</a>{% else %}{{ value }}{% endif %}</dd></div>{% endfor %}</dl></div>
+<div><div class="cap">Datasets <small>{{ ref_panel.datasets|length }}</small></div>{% for d in ref_panel.datasets %}<a class="refds" href="{{ d.href }}" target="_self"><b>{{ d.label }}</b>{% if d.meta %}<span>{{ d.meta }}</span>{% endif %}</a>{% else %}<div class="fetch"><span>No datasets linked. Add one with:</span><code>{{ ref_panel.command }}</code></div>{% endfor %}</div>
+</div></aside>{% endif %}

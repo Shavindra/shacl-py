@@ -1,7 +1,6 @@
 """Navigation over authored Concepts records and native metadata sources."""
 
 import json
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import PureWindowsPath
@@ -17,6 +16,7 @@ from shacl_py.files import (
 )
 from shacl_py.native import MetadataSource, declared_title
 from shacl_py.records import Paper, project_files
+from shacl_py.sources import doi_identifier
 
 
 def searchable(value):
@@ -209,18 +209,6 @@ def items_from(records, root):
                 source.data.get("schema_type") or "Record",
                 source.data,
             )
-
-
-def doi_identifier(value):
-    if isinstance(value, str) and (
-        match := re.fullmatch(
-            r"(?:(?:https?://(?:dx\.)?doi\.org/|doi:\s*))?(10\.\d{4,9}/\S+)",
-            value.strip(),
-            re.IGNORECASE,
-        )
-    ):
-        return match[1].casefold()
-    return None
 
 
 def publication_key(item):

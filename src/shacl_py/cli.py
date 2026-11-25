@@ -182,6 +182,34 @@ def main(argv=None, *, review_layout=None):
         metavar="VALUE",
         help="DATASET_URL FILENAME DOWNLOAD_URL [PREVIEW_URL [PROVIDER_URL]] (repeatable)",
     )
+    bib = commands.add_parser(
+        "import-bib",
+        help="Update papers from a CSL-JSON or BibTeX export",
+        description=(
+            "Read a CSL-JSON (.json) or BibTeX (.bib) export, such as a Better BibTeX "
+            "auto-export of a Zotero collection. Match by DOI or by citation key in the same export. The "
+            "import updates title, authors, publication year and journal. Curated fields "
+            "and dataset links are kept. A reference with no matching paper is added "
+            "to the Reference list."
+        ),
+        epilog="Example: shacl-py import-bib research/references/library.json --into research/references/catalogue.yaml",
+    )
+    bib.add_argument("export", type=Path, help="Project-relative export file")
+    bib.add_argument(
+        "--project",
+        type=Path,
+        default=Path("."),
+        help="Project root (default: current directory)",
+    )
+    bib.add_argument(
+        "--into",
+        type=Path,
+        metavar="FILE",
+        help="Included catalogue file for new papers (default: metadata.yaml)",
+    )
+    bib.add_argument(
+        "--dry-run", action="store_true", help="Report the changes without saving"
+    )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -203,6 +231,32 @@ def main(argv=None, *, review_layout=None):
             add_datasets(
                 args.project.resolve(), args.paper, args.dataset, args.linked_file
             )
+            return 0
+        if args.command == "import-bib":
+            from shacl_py.bibliography import import_bibliography
+
+            root = args.project.resolve()
+            export = (
+                args.export.relative_to(root)
+                if args.export.is_absolute()
+                else args.export
+            )
+            report = import_bibliography(
+                root,
+                export,
+                into=args.into,
+                dry_run=args.dry_run,
+            )
+            for kind in ("added", "updated", "unchanged"):
+                print(f"{kind.capitalize()}: {len(report[kind])}")
+                for pid in report[kind] if kind != "unchanged" else ():
+                    print(f"  {pid}")
+            if report["skipped"]:
+                print(
+                    f"Skipped (missing title or both DOI and citation key): {', '.join(report['skipped'])}"
+                )
+            for path in report.get("files", []):
+                print(f"Updated {path}")
             return 0
         if args.command == "setup":
             if args.template not in ("project", "paper-review"):

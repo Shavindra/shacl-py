@@ -25,7 +25,7 @@ window.wireframeData = {
     {doi: '10.0000/example.2', citation: 'Example catalogue study.'}],
   papers: [
     {short: 'Imaging group', title: 'Cell morphology in a microscopy dataset', authors: 'Example imaging group',
-      venue: 'Example journal', year: 2023, pid: 'imaging_2023', folder: 'papers/imaging_2023',
+      venue: 'Example journal', year: 2023, pid: 'imaging_2023', bib: true, folder: 'papers/imaging_2023',
       doi: '10.0000/example.1', keywords: 'microscopy, cell shape', labels: ['Important', 'Imaging'],
       abstract: 'An example paper linking images to measurements of cell shape.', notes: 'Review the feature table.',
       other: [{name: 'README.md', path: '.', size: '2 KB'}], datasets: [
@@ -50,6 +50,13 @@ window.wireframeData = {
       ]}
   ]
 };
+
+window.wireframeReading = [
+  {short: 'Imaging group', title: 'Measuring cell outlines in brightfield images', authors: 'Example imaging group',
+      venue: 'Example journal', year: 2020, pid: 'outline_2020', folder: '', bib: true,
+      doi: '10.0000/example.3', keywords: 'brightfield, cell outlines', labels: [],
+      abstract: '', notes: '', other: [], datasets: []}
+];
 
 // Illustrative methods for the version 5 browser. The older layouts use the records above.
 window.wireframeMethods = {

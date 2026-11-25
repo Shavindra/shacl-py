@@ -52,7 +52,7 @@ from shacl_py.methods import (
 from shacl_py.native import declared_title
 from shacl_py.navigation import current_route, url
 from shacl_py.records import load_records
-from shacl_py.sources import source_url
+from shacl_py.sources import doi_identifier, source_url
 from shacl_py.study import person_names
 from shacl_py.terms import TermIndex, grouped_terms, topic_terms
 
@@ -235,6 +235,15 @@ def declared_year(item):
     return date[:4] if date[:4].isdigit() else date
 
 
+def journal(item):
+    """Name the journal from a field or a top-level isPartOf attribute."""
+    if not item:
+        return ""
+    return field(item, "journal", "venue", "isPartOf") or attribute_value(
+        item.fields, "isPartOf", "journal"
+    )
+
+
 def short_citation(item, year=None):
     """Cite a paper as 'Surname et al. Year', falling back to its title."""
     if year is None:
@@ -286,10 +295,24 @@ def browse(items, stored, base, brand, params, collections):
         return next(iter(matches)) if len(matches) == 1 else ""
 
     others = [i for i in items if not i.is_publication and not i.is_dataset]
+
+    @cache
+    def related(i):
+        return neighbours(i, items)
+
+    reference_keys = {key_for(p) for p in papers if p.fields.get("bibliography")}
+    paper_keys = {
+        key_for(p)
+        for p in papers
+        if key_for(p) not in reference_keys
+        or p.has_folder
+        or any(d.is_dataset for d in related(p))
+    }
+    listed_papers = [p for p in papers if key_for(p) in paper_keys]
     sections = {
         name: group
         for name, group in [
-            ("Papers", papers),
+            ("Papers", listed_papers),
             ("Datasets", datasets),
             ("Records", others),
         ]
@@ -306,10 +329,20 @@ def browse(items, stored, base, brand, params, collections):
     collection_sections = {collection.section: collection for collection in collections}
     default = next(
         (name for name, group in sections.items() if selected_item in group),
-        next(iter(sections), next(iter(collection_sections), None)),
+        None,
     )
+    if (
+        default is None
+        and reference_keys
+        and (selected_item is None or selected_item.is_publication)
+    ):
+        default = "Reference list"
+    if default is None:
+        default = next(iter(sections), next(iter(collection_sections), None))
     requested = params.get("section")
     routes = {name.lower(): name for name in sections}
+    if papers:
+        routes["references"] = "Reference list"
     if papers or datasets:
         routes["terms"] = "Terms"
     if items:
@@ -318,6 +351,17 @@ def browse(items, stored, base, brand, params, collections):
         routes[c.section] = c.section
         routes.setdefault(c.key, c.section)
     section = routes.get(requested) if requested else default
+    if (
+        (section in ("Papers", "Reference list") or requested == "papers")
+        and selected_item in papers
+        and key_for(selected_item) not in paper_keys
+    ):
+        # A reference-only paper opens in the Reference list.
+        section = "Reference list"
+        params = {
+            **params,
+            "ref": params.get("ref") or reference_key(key_for(selected_item)),
+        }
     collection = collection_sections.get(section)
     if (
         collection
@@ -349,6 +393,16 @@ def browse(items, stored, base, brand, params, collections):
         for name, group in sections.items()
     ]
     records_tab = nav.pop() if others else None
+    if papers:
+        nav.insert(
+            0,
+            (
+                "Reference list",
+                url({}, section="references", q=shared_query or None),
+                len(reference_keys),
+                section == "Reference list",
+            ),
+        )
     nav.extend(
         (
             c.title,
@@ -488,12 +542,8 @@ def browse(items, stored, base, brand, params, collections):
             )
             network(data=graph.network_data(), key="record_network")
         return
-    scope = sections[section]
+    scope = sections.get(section, [])
     global_ds = section == "Datasets"
-
-    @cache
-    def related(i):
-        return neighbours(i, items)
 
     @cache
     def listing(i, directory="."):
@@ -545,6 +595,27 @@ def browse(items, stored, base, brand, params, collections):
 
     def roles(i):
         return [related(p)[i] for p in papers if i in related(p) and related(p)[i]]
+
+    if section == "Reference list":
+        st.html(
+            template.render(
+                context,
+                **reference_view(
+                    [p for p in papers if key_for(p) in reference_keys],
+                    datasets,
+                    params,
+                    q,
+                    key_for,
+                    is_starred,
+                    publication_year,
+                    linked_items,
+                    related,
+                    lambda d: count_label(*dataset_summary(d)),
+                    base,
+                ),
+            )
+        )
+        return
 
     def local_folder(i):
         return field(i, "local_folder") or (
@@ -754,7 +825,7 @@ def browse(items, stored, base, brand, params, collections):
                 "authors": byline,
                 "venue": field(i, "format", "encodingFormat", "media_type")
                 if global_ds
-                else field(i, "venue", "journal"),
+                else journal(i),
                 "year": year,
                 "count": count_label(*dataset_summary(i))
                 if global_ds
@@ -1108,7 +1179,7 @@ def browse(items, stored, base, brand, params, collections):
         pid=pid(item),
         folder=local_folder(item),
         authors=author_line(item, limit=10),
-        venue=field(item, "journal", "venue", "isPartOf"),
+        venue=journal(item),
         year=publication_year(item),
         keywords=field(item, "keywords", "keyword"),
         tags=labels(item),
@@ -1237,6 +1308,138 @@ def browse(items, stored, base, brand, params, collections):
             file_methods, index.labels, resolve_resource
         )
     st.html(template.render(context))
+
+
+def reference_key(key):
+    """Spell a record key, which may be a tuple, as one URL parameter."""
+    return ":".join(map(str, key)) if isinstance(key, tuple) else str(key)
+
+
+def reference_view(
+    papers,
+    datasets,
+    params,
+    q,
+    key_for,
+    is_starred,
+    year_of,
+    linked_items,
+    related,
+    summary,
+    base,
+):
+    """Group the imported bibliographic records and their linked catalogue entries."""
+    unique = {}
+    for paper in sorted(papers, key=lambda p: not p.fields.get("bibliography")):
+        unique.setdefault(reference_key(key_for(paper)), []).append(paper)
+    find = params.get("rfind", "").strip().casefold()
+    route = {"section": "references", "q": q or None, "rfind": find or None}
+
+    def linked(records):
+        found = {}
+        for record in records:
+            for d in linked_items(record, datasets):
+                found.setdefault(key_for(d), (record, d))
+        return list(found.values())
+
+    rows = []
+    for key, records in unique.items():
+        paper = records[0]
+        text = searchable(
+            [paper.label, *(r.fields for r in records), author_line(paper)]
+        )
+        if (q and q not in text) or (find and find not in text):
+            continue
+        count = len(linked(records))
+        rows.append(
+            {
+                "key": key,
+                "title": paper.label,
+                "short": short_authors(paper),
+                "year": year_of(paper),
+                "journal": journal(paper),
+                "count": count,
+                "starred": is_starred(paper),
+                "href": url(route, ref=key),
+                "selected": params.get("ref") == key,
+            }
+        )
+    rows.sort(key=lambda row: not row["starred"])
+    sources = sorted(
+        {
+            str(source["file"])
+            for paper in papers
+            if isinstance(source := paper.fields.get("bibliography"), dict)
+            and source.get("file")
+        }
+    )
+    panel = None
+    if (records := unique.get(params.get("ref", ""))) is not None:
+        paper = records[0]
+        doi_label = field(paper, "doi", "source_url", "url", "sameAs") or (
+            doi_identifier(paper.key) or ""
+        )
+        try:
+            link = source_url(doi_label)
+        except ValueError:
+            link = None
+        doi = doi_identifier(doi_label)
+        found = linked(records)
+        folder = field(paper, "local_folder") or (
+            os.path.relpath(paper.folder, base) if paper.has_folder else ""
+        )
+        owner = (
+            found[0][0] if found else next((r for r in records if r.has_folder), None)
+        )
+        panel = {
+            "pid": field(paper, "pid", "@id", "identifier") or paper.key,
+            "title": paper.label,
+            "authors": author_line(paper),
+            "starred": is_starred(paper),
+            "rows": [
+                ("Journal", journal(paper), False, None),
+                ("Year", year_of(paper), False, None),
+                ("DOI" if doi else "Source", doi or doi_label, True, link),
+                ("Keywords", field(paper, "keywords", "keyword"), False, None),
+            ],
+            "datasets": [
+                {
+                    "label": d.label,
+                    "meta": " · ".join(
+                        filter(
+                            None,
+                            [
+                                related(owner).get(d, ""),
+                                field(d, "format", "encodingFormat", "media_type"),
+                                summary(d),
+                            ],
+                        )
+                    ),
+                    "href": url(
+                        {"section": "papers"} | owner.route,
+                        view="datasets",
+                        dataset=d.key,
+                        dataset_record=d.ref,
+                    ),
+                }
+                for owner, d in found
+            ],
+            "open": url(
+                {"section": "papers"} | owner.route, view="datasets" if found else None
+            )
+            if owner
+            else None,
+            "command": "shacl-py add-datasets --paper "
+            + shlex.quote(folder or field(paper, "pid") or paper.key)
+            + " --dataset NAME PATH_OR_URL",
+            "back": url(route),
+        }
+    return {
+        "references": rows,
+        "reference_sources": sources,
+        "reference_route": route,
+        "ref_panel": panel,
+    }
 
 
 def file_panel(owner, row, route, stored, base, paper, page=None):

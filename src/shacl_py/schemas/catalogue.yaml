@@ -37,6 +37,13 @@ classes:
       paper_images: {range: PanelImage, multivalued: true, inlined_as_list: true}
       primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
+      bibliography: {range: BibliographySource, inlined: true, description: The reference-manager export that supplied the bibliographic fields.}
+  BibliographySource:
+    description: Where shacl-py import-bib read a publication's bibliographic fields.
+    attributes:
+      file: {range: string, required: true, pattern: '\S', description: Project-relative path to the CSL-JSON or BibTeX export.}
+      key: {range: string, pattern: '\S', description: Citation key in the export.}
+      imported: {range: date, description: Date of the import that last changed this record.}
   LocalDataset:
     is_a: Dataset
     slots: [source_url, local_folder, file_groups, author_names, highlighted, keywords, index_terms]

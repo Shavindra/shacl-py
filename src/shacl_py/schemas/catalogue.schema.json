@@ -670,6 +670,32 @@
       "title": "AttributeSpecification",
       "type": "object"
     },
+    "BibliographySource": {
+      "additionalProperties": false,
+      "description": "Where shacl-py import-bib read a publication's bibliographic fields.",
+      "properties": {
+        "file": {
+          "description": "Project-relative path to the CSL-JSON or BibTeX export.",
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "imported": {
+          "description": "Date of the import that last changed this record.",
+          "format": "date",
+          "type": "string"
+        },
+        "key": {
+          "description": "Citation key in the export.",
+          "pattern": "\\S",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "BibliographySource",
+      "type": "object"
+    },
     "Catalogue": {
       "additionalProperties": false,
       "description": "",
@@ -3352,6 +3378,10 @@
           },
           "type": "array"
         },
+        "bibliography": {
+          "$ref": "#/$defs/BibliographySource",
+          "description": "The reference-manager export that supplied the bibliographic fields."
+        },
         "broad_mappings": {
           "description": "A list of terms from different schemas or terminology systems that have broader meaning.",
           "items": {
@@ -3618,6 +3648,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "bibliography": {
+          "$ref": "#/$defs/BibliographySource",
+          "description": "The reference-manager export that supplied the bibliographic fields."
         },
         "broad_mappings": {
           "description": "A list of terms from different schemas or terminology systems that have broader meaning.",

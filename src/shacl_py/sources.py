@@ -19,6 +19,18 @@ METADATA_FILES = frozenset(
 )
 
 
+def doi_identifier(value):
+    if isinstance(value, str) and (
+        match := re.fullmatch(
+            r"(?:(?:https?://(?:dx\.)?doi\.org/|doi:\s*))?(10\.\d{4,9}/\S+)",
+            value.strip(),
+            re.IGNORECASE,
+        )
+    ):
+        return match[1].casefold()
+    return None
+
+
 def source_url(value):
     if not value:
         return None
