@@ -195,11 +195,8 @@ def main(argv=None, *, review_layout=None):
         epilog="Example: shacl-py import-bib research/references/library.json --into research/references/catalogue.yaml",
     )
     bib.add_argument("export", type=Path, help="Project-relative export file")
-    zotero = commands.add_parser(
-        "import-zotero",
-        help="Read papers from a Zotero collection",
-        description="Import citation metadata from Zotero Desktop or the Web API. Reads configuration.env from the project root.",
-    )
+    zotero = argparse.ArgumentParser(add_help=False)
+    zotero.set_defaults(command="zotero")
     zotero.add_argument(
         "--collection",
         help="Exact collection name or eight-character key (also ZOTERO_COLLECTION)",
@@ -225,14 +222,34 @@ def main(argv=None, *, review_layout=None):
             help="Project root (default: current directory)",
         )
         command.add_argument(
-            "--into",
-            type=Path,
-            metavar="FILE",
-            help="Included catalogue file for new papers (default: metadata.yaml)",
-        )
-        command.add_argument(
             "--dry-run", action="store_true", help="Report the changes without saving"
         )
+    bib.add_argument(
+        "--into",
+        type=Path,
+        metavar="FILE",
+        help="Included catalogue file for new papers (default: metadata.yaml)",
+    )
+    zotero.add_argument(
+        "--into",
+        type=Path,
+        metavar="FILE",
+        help="Catalogue for new papers (default: ZOTERO_CATALOGUE, then metadata.yaml)",
+    )
+    integration = commands.add_parser("integration", help="Work with external services")
+    providers = integration.add_subparsers(required=True)
+    providers.add_parser(
+        "zotero",
+        parents=[zotero],
+        help="Read papers from a Zotero collection",
+        description="Import citation metadata from Zotero Desktop or the Web API. Reads configuration.env from the project root.",
+    )
+    commands.add_parser(
+        "import-zotero",
+        parents=[zotero],
+        help="Alias for integration zotero",
+        description="Alias for shacl-py integration zotero.",
+    )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -255,9 +272,9 @@ def main(argv=None, *, review_layout=None):
                 args.project.resolve(), args.paper, args.dataset, args.linked_file
             )
             return 0
-        if args.command in ("import-bib", "import-zotero"):
+        if args.command in ("import-bib", "zotero"):
             root = args.project.resolve()
-            if args.command == "import-zotero":
+            if args.command == "zotero":
                 from shacl_py.zotero import import_zotero
 
                 report = import_zotero(

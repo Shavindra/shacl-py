@@ -14,7 +14,12 @@ from shacl_py.cli import main
 
 @pytest.fixture(autouse=True)
 def clear_zotero_environment(monkeypatch):
-    for name in ("ZOTERO_COLLECTION", "ZOTERO_WEB_LIBRARY", "ZOTERO_API_KEY"):
+    for name in (
+        "ZOTERO_COLLECTION",
+        "ZOTERO_WEB_LIBRARY",
+        "ZOTERO_API_KEY",
+        "ZOTERO_CATALOGUE",
+    ):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -124,7 +129,7 @@ def test_web_library_scopes_keys_and_rejects_bad_pages(tmp_path, monkeypatch):
         "--into",
         "references.yaml",
     ]
-    assert main(["import-zotero", "--web-library", "groups/12", *opts]) == 0
+    assert main(["integration", "zotero", "--web-library", "groups/12", *opts]) == 0
     assert all(
         u.hostname == "api.zotero.org"
         and req.unredirected_hdrs["Zotero-api-key"] == "unit-test-only"
@@ -164,7 +169,8 @@ def test_env_file_and_overrides(tmp_path, monkeypatch, capsys):
         'ZOTERO_COLLECTION="Cell sim"\nZOTERO_WEB_LIBRARY=groups/12\nZOTERO_API_KEY=private-unit-test\n'
     )
     args = [
-        "import-zotero",
+        "integration",
+        "zotero",
         "--project",
         str(root),
         "--into",
@@ -200,6 +206,51 @@ def test_missing_configuration_fails_before_network_or_writes(
     assert main(["import-zotero", "--project", str(root)]) == 1
     assert "configuration.env" in capsys.readouterr().err
     assert not calls
+
+
+def test_integration_zotero_reads_the_project_destination(
+    tmp_path, monkeypatch, capsys
+):
+    root = project(tmp_path)
+    monkeypatch.chdir(root)
+    (root / "configuration.env").write_text(
+        "ZOTERO_COLLECTION=Cell sim\nZOTERO_CATALOGUE=references.yaml\n"
+    )
+    rows = [item("AAAAAAAA", "First reference")]
+    api(monkeypatch, rows)
+    root_file, refs = root / "metadata.yaml", root / "references.yaml"
+    original_root, original_refs = root_file.read_bytes(), refs.read_bytes()
+    command = ["integration", "zotero"]
+    assert main([*command, "--dry-run"]) == 0
+    assert refs.read_bytes() == original_refs
+    assert main(command) == 0
+    assert root_file.read_bytes() == original_root
+    assert (
+        yaml.safe_load(refs.read_text())["publications"][0]["title"]
+        == "First reference"
+    )
+    imported = refs.read_bytes()
+    capsys.readouterr()
+    assert main(["import-zotero"]) == 0
+    assert "Unchanged: 1" in capsys.readouterr().out
+    assert refs.read_bytes() == imported
+
+    monkeypatch.setenv("ZOTERO_CATALOGUE", "papers.yaml")
+    rows.append(item("BBBBBBBB", "Environment destination"))
+    assert main(command) == 0
+    papers = yaml.safe_load((root / "papers.yaml").read_text())["publications"]
+    assert papers[-1]["title"] == "Environment destination"
+    assert refs.read_bytes() == imported
+    monkeypatch.setenv("ZOTERO_CATALOGUE", "unlisted.yaml")
+    rows.append(item("CCCCCCCC", "Explicit destination"))
+    assert main(command) == 1
+    assert "not listed in catalogue.includes" in capsys.readouterr().err
+    assert not (root / "unlisted.yaml").exists()
+    assert main([*command, "--into", "references.yaml"]) == 0
+    assert (
+        yaml.safe_load(refs.read_text())["publications"][-1]["title"]
+        == "Explicit destination"
+    )
 
 
 def test_existing_csl_identifier_links_without_a_doi(tmp_path, monkeypatch):

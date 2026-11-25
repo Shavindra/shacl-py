@@ -134,17 +134,27 @@ its details in a side panel. A paper with datasets links to its page in
 
 ### Import a Zotero collection
 
-Open Zotero Desktop, go to **Settings → Advanced**, and enable **Allow other applications on this computer to communicate with Zotero**. From the project root, preview the papers filed directly in a collection, then rerun the command without `--dry-run` to save them.
+Open Zotero Desktop, go to **Settings → Advanced**, and enable **Allow other applications on this computer to communicate with Zotero**. Set the collection and destination in the project's `configuration.env`. For example:
+
+~~~dotenv
+ZOTERO_COLLECTION="Cell sim"
+ZOTERO_CATALOGUE=research/references/catalogue.yaml
+~~~
+
+From the project root, preview the import, then save it.
 
 ~~~sh
-shacl-py import-zotero --collection "Cell sim" --into research/references/catalogue.yaml --dry-run
+shacl-py integration zotero --dry-run
+shacl-py integration zotero
 ~~~
 
 The command accepts an exact collection name or its eight-character Zotero key. It reads citation metadata. Papers can have zero datasets. It records the Zotero library and item key in the paper’s YAML. Reimporting preserves the catalogue ID, review notes and dataset links. Items removed from the collection stay in the catalogue.
 
 For a synced library, add `--web-library users/ID` or `--web-library groups/ID` using the numeric Zotero library ID. Public libraries allow anonymous reads. For a private library, set `ZOTERO_API_KEY` in your environment to a key with read access. Desktop imports work offline and require no key.
 
-The command automatically reads `configuration.env` at the project root selected by `--project` (the current directory by default). This file accepts `ZOTERO_COLLECTION`, `ZOTERO_WEB_LIBRARY` and `ZOTERO_API_KEY`. Command-line options take precedence over environment variables, then file values. Use `--desktop` to override a configured web library. Keep files containing a read key out of Git.
+The command reads `configuration.env` at the project root selected by `--project` (the current directory by default). Command-line options take precedence over environment variables, then file values. Use `--collection`, `--into` or `--desktop` for one run. New references go in the configured catalogue, which must be listed under `catalogue.includes`, or in the root `metadata.yaml` by default. Existing papers keep their catalogue locations. Keep files containing a read key out of Git.
+
+`shacl-py import-zotero` remains available as an alias.
 
 ### Import a bibliography file
 

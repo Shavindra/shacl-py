@@ -147,6 +147,11 @@ def import_zotero(root, collection=None, *, into=None, web_library=None, dry_run
         web_library = os.environ.get(
             "ZOTERO_WEB_LIBRARY", settings.get("ZOTERO_WEB_LIBRARY")
         )
+    if into is None:
+        destination = os.environ.get(
+            "ZOTERO_CATALOGUE", settings.get("ZOTERO_CATALOGUE")
+        )
+        into = (destination or "").strip() or None
     collection = (collection or "").strip()
     web_library = (web_library or "").strip() or None
     if not collection:
