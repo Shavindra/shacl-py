@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "shacl-py"
+abstract: "Minimal Python viewer for DataLad Concepts metadata."
+authors:
+  - family-names: "Ghonaduwage"
+    given-names: "Shavi"
+version: 0.4.1b13
+license: MIT
+repository-code: "https://github.com/Shavindra/shacl-py"
+keywords:
+  - DataLad
+  - SHACL
+  - metadata
+  - research data management
+  - Python
