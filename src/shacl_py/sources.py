@@ -31,6 +31,19 @@ def doi_identifier(value):
     return None
 
 
+def zotero_item_id(value):
+    """Read the library and item key from a Zotero item URI or API path."""
+    if isinstance(value, str) and (
+        match := re.fullmatch(
+            r"(?:(?:https?://(?:www\.)?zotero\.org)/)?"
+            r"((?:users/(?:[0-9]+|local/[A-Za-z0-9]+)|groups/[1-9][0-9]*)/items/[A-Z0-9]{8})",
+            value,
+        )
+    ):
+        return match[1]
+    return None
+
+
 def source_url(value):
     if not value:
         return None

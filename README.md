@@ -132,9 +132,23 @@ authors, year, journal and number of linked datasets. Select a row to open
 its details in a side panel. A paper with datasets links to its page in
 **Papers**. The panel also links to a paper with a review folder. For a paper without datasets it shows the `add-datasets` command.
 
-Papers can come from a reference manager. Export a collection as CSL-JSON or
-BibTeX, for example with a Better BibTeX auto-export from Zotero, and import
-it from the project root:
+### Import a Zotero collection
+
+Open Zotero Desktop, go to **Settings → Advanced**, and enable **Allow other applications on this computer to communicate with Zotero**. From the project root, preview the papers filed directly in a collection, then rerun the command without `--dry-run` to save them.
+
+~~~sh
+shacl-py import-zotero --collection "Cell sim" --into research/references/catalogue.yaml --dry-run
+~~~
+
+The command accepts an exact collection name or its eight-character Zotero key. It reads citation metadata. Papers can have zero datasets. It records the Zotero library and item key in the paper’s YAML. Reimporting preserves the catalogue ID, review notes and dataset links. Items removed from the collection stay in the catalogue.
+
+For a synced library, add `--web-library users/ID` or `--web-library groups/ID` using the numeric Zotero library ID. Public libraries allow anonymous reads. For a private library, set `ZOTERO_API_KEY` in your environment to a key with read access. Desktop imports work offline and require no key.
+
+The command automatically reads `configuration.env` at the project root selected by `--project` (the current directory by default). This file accepts `ZOTERO_COLLECTION`, `ZOTERO_WEB_LIBRARY` and `ZOTERO_API_KEY`. Command-line options take precedence over environment variables, then file values. Use `--desktop` to override a configured web library. Keep files containing a read key out of Git.
+
+### Import a bibliography file
+
+Export a collection as CSL-JSON or BibTeX, for example with a Better BibTeX auto-export from Zotero, and import it from the project root:
 
 ~~~sh
 shacl-py import-bib research/references/library.json --into research/references/catalogue.yaml

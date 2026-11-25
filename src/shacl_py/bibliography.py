@@ -4,6 +4,7 @@ import datetime
 import json
 import re
 from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -15,7 +16,7 @@ from shacl_py.catalogue import validate_catalogue
 from shacl_py.files import scoped_path
 from shacl_py.metadata_io import CatalogueEditor, MetadataFile, save_metadata
 from shacl_py.prompts import new_entity
-from shacl_py.sources import doi_identifier
+from shacl_py.sources import doi_identifier, zotero_item_id
 
 YEAR = "https://schema.org/datePublished"
 JOURNAL = "https://schema.org/isPartOf"
@@ -56,7 +57,7 @@ def _keywords(value):
 
 
 def from_csl(entry):
-    return {
+    result = {
         "key": _text(entry.get("citation-key") or entry.get("id")),
         "title": _text(entry.get("title")),
         "authors": [n for n in map(_csl_name, entry.get("author") or []) if n],
@@ -65,6 +66,9 @@ def from_csl(entry):
         "doi": doi_identifier(entry.get("DOI")) or doi_identifier(entry.get("URL")),
         "keywords": _keywords(entry.get("keyword")),
     }
+    if item := zotero_item_id(entry.get("id")):
+        result["zotero_item"] = item
+    return result
 
 
 def _bib_text(value):
@@ -176,7 +180,33 @@ def import_bibliography(root, export, into=None, today=None, dry_run=False):
     root = Path(root).resolve()
     export_path = scoped_path(root, str(export))
     relative = export_path.relative_to(root).as_posix()
-    entries = read_export(export_path)
+    return merge_bibliography(
+        root,
+        read_export(export_path),
+        export_file=relative,
+        into=into,
+        today=today,
+        dry_run=dry_run,
+    )
+
+
+def _identifiers(doi, source):
+    if doi:
+        yield ("doi", doi)
+    if source.get("file") and source.get("key"):
+        yield ("export", source["file"], source["key"])
+        # Older CSL imports can already contain the Zotero URI as the citation key.
+        if item := zotero_item_id(source["key"]):
+            yield ("zotero", item)
+    for item in source.get("zotero_items", []):
+        yield ("zotero", item)
+
+
+def merge_bibliography(
+    root, entries, *, export_file=None, into=None, today=None, dry_run=False
+):
+    """Apply a complete bibliography in one validated catalogue transaction."""
+    root = Path(root).resolve()
     document = MetadataFile.read(root / "metadata.yaml")
     if not document.data.get("catalogue"):
         raise ValueError(
@@ -192,65 +222,82 @@ def import_bibliography(root, export, into=None, today=None, dry_run=False):
             raise ValueError(
                 f"{into}: not listed in catalogue.includes. Add it there first."
             )
-    publications = graph.setdefault("publications", [])
-    by_doi = defaultdict(dict)
-    by_key = defaultdict(dict)
+    publications = graph.get("publications", [])
+    by_id = defaultdict(dict)
     for record in publications:
-        if doi := record_doi(record):
-            by_doi[doi][record["pid"]] = record
-        previous = record.get("bibliography", {})
-        if previous.get("file") == relative and previous.get("key"):
-            by_key[previous["key"]][record["pid"]] = record
+        for ident in _identifiers(record_doi(record), record.get("bibliography", {})):
+            by_id[ident][record["pid"]] = record
 
     stamp = (today or datetime.date.today()).isoformat()
     report = {"updated": [], "added": [], "unchanged": [], "skipped": []}
+    touched = {}
     for entry in entries:
         doi, key = entry["doi"], entry["key"]
-        if not entry["title"] or not (doi or key):
+        item = entry.get("zotero_item")
+        if not entry["title"] or not (doi or key or item):
             report["skipped"].append(key or entry["title"] or "(untitled)")
             continue
-        matches = by_doi.get(doi, {}) | by_key.get(key, {})
+        source = {"file": export_file} if export_file else {}
+        if export_file and key:
+            source["key"] = key
+        if item:
+            source["zotero_items"] = [item]
+        identifiers = list(_identifiers(doi, source))
+        matches = {
+            pid: rec for ident in identifiers for pid, rec in by_id[ident].items()
+        }
         if len(matches) > 1:
             raise ValueError(
-                f"Ambiguous bibliography match for {key or doi}: {', '.join(matches)}"
+                f"Ambiguous bibliography match for {item or key or doi}: {', '.join(matches)}"
             )
         record = next(iter(matches.values()), None)
         url = f"https://doi.org/{doi}" if doi else None
         if record is None:
-            identity = json.dumps([graph["project"]["pid"], relative, key])
+            identity = json.dumps(
+                [graph["project"]["pid"], export_file, key]
+                if not item
+                else [graph["project"]["pid"], "zotero", item]
+            )
             pid = url or f"urn:uuid:{uuid5(NAMESPACE_URL, identity)}"
             record = new_entity(entry["title"], url, pid=pid)
             publications.append(record)
             if target is not None:
                 editor.owners[("publications", pid)] = target
-            kind = "added"
+            touched[pid] = (record, None)
         else:
             if doi and (previous_doi := record_doi(record)) and previous_doi != doi:
                 raise ValueError(
-                    f"Citation key {key!r} matches two DOIs: {previous_doi} and {doi}"
+                    f"Bibliography identifier {item or key!r} matches two DOIs: {previous_doi} and {doi}"
                 )
-            kind = "unchanged"
-        changed = apply_entry(record, entry)
+            pid = record["pid"]
+            if pid not in touched:
+                touched[pid] = (record, deepcopy(record))
+        apply_entry(record, entry)
         if url and not record.get("source_url"):
             record["source_url"] = url
-            changed = True
-        if changed and kind == "unchanged":
-            kind = "updated"
-        if doi:
-            by_doi[doi][record["pid"]] = record
-        if key:
-            by_key[key][record["pid"]] = record
-        source = {"file": relative}
-        if entry["key"]:
-            source["key"] = entry["key"]
+        for ident in identifiers:
+            by_id[ident][record["pid"]] = record
         previous = record.get("bibliography") or {}
-        if kind != "unchanged" or source != {
-            k: v for k, v in previous.items() if k != "imported"
-        }:
-            record["bibliography"] = {**source, "imported": stamp}
-            if kind == "unchanged":
-                kind = "updated"
-        report[kind].append(record["pid"])
+        if not export_file:
+            source.update({k: previous[k] for k in ("file", "key") if k in previous})
+        items = list(previous.get("zotero_items", []))
+        if item and item not in items:
+            items.append(item)
+        if items:
+            source["zotero_items"] = items
+        if "imported" in previous:
+            source["imported"] = previous["imported"]
+        if source != previous:
+            record["bibliography"] = source
+
+    if publications:
+        graph["publications"] = publications
+    for pid, (record, original) in touched.items():
+        if original == record:
+            report["unchanged"].append(pid)
+        else:
+            record["bibliography"]["imported"] = stamp
+            report["added" if original is None else "updated"].append(pid)
     validate_catalogue(graph, root)
     if not dry_run:
         report["files"] = sorted(save_metadata(*editor.documents()))

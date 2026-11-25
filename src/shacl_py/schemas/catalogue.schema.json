@@ -672,7 +672,28 @@
     },
     "BibliographySource": {
       "additionalProperties": false,
-      "description": "Where shacl-py import-bib read a publication's bibliographic fields.",
+      "anyOf": [
+        {
+          "properties": {
+            "file": {}
+          },
+          "required": [
+            "file"
+          ]
+        },
+        {
+          "properties": {
+            "zotero_items": {
+              "items": {},
+              "type": "array"
+            }
+          },
+          "required": [
+            "zotero_items"
+          ]
+        }
+      ],
+      "description": "The source export or Zotero items used for this publication.",
       "properties": {
         "file": {
           "description": "Project-relative path to the CSL-JSON or BibTeX export.",
@@ -688,11 +709,16 @@
           "description": "Citation key in the export.",
           "pattern": "\\S",
           "type": "string"
+        },
+        "zotero_items": {
+          "description": "Library-scoped Zotero item identifiers.",
+          "items": {
+            "pattern": "^(users/([0-9]+|local/[A-Za-z0-9]+)|groups/[1-9][0-9]*)/items/[A-Z0-9]{8}$",
+            "type": "string"
+          },
+          "type": "array"
         }
       },
-      "required": [
-        "file"
-      ],
       "title": "BibliographySource",
       "type": "object"
     },
@@ -3380,7 +3406,7 @@
         },
         "bibliography": {
           "$ref": "#/$defs/BibliographySource",
-          "description": "The reference-manager export that supplied the bibliographic fields."
+          "description": "Bibliographic sources for this publication."
         },
         "broad_mappings": {
           "description": "A list of terms from different schemas or terminology systems that have broader meaning.",
@@ -3651,7 +3677,7 @@
         },
         "bibliography": {
           "$ref": "#/$defs/BibliographySource",
-          "description": "The reference-manager export that supplied the bibliographic fields."
+          "description": "Bibliographic sources for this publication."
         },
         "broad_mappings": {
           "description": "A list of terms from different schemas or terminology systems that have broader meaning.",
@@ -7271,5 +7297,5 @@
   ],
   "title": "shacl-py-catalogue",
   "type": "object",
-  "version": "1.7.0"
+  "version": "1.8.0"
 }

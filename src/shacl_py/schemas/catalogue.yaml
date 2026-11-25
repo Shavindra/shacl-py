@@ -1,6 +1,6 @@
 id: https://github.com/Shavindra/shacl-py/schema/catalogue/v1
 name: shacl-py-catalogue
-version: 1.7.0
+version: 1.8.0
 prefixes:
   linkml: https://w3id.org/linkml/
   local: https://github.com/Shavindra/shacl-py/schema/catalogue/v1/
@@ -37,12 +37,16 @@ classes:
       paper_images: {range: PanelImage, multivalued: true, inlined_as_list: true}
       primary_author: {range: string, pattern: '\S', description: Explicit primary author display name.}
       dataset_links: {range: DatasetLink, multivalued: true, inlined_as_list: true}
-      bibliography: {range: BibliographySource, inlined: true, description: The reference-manager export that supplied the bibliographic fields.}
+      bibliography: {range: BibliographySource, inlined: true, description: Bibliographic sources for this publication.}
   BibliographySource:
-    description: Where shacl-py import-bib read a publication's bibliographic fields.
+    description: The source export or Zotero items used for this publication.
+    any_of:
+      - {slot_conditions: {file: {required: true}}}
+      - {slot_conditions: {zotero_items: {required: true, minimum_cardinality: 1}}}
     attributes:
-      file: {range: string, required: true, pattern: '\S', description: Project-relative path to the CSL-JSON or BibTeX export.}
+      file: {range: string, pattern: '\S', description: Project-relative path to the CSL-JSON or BibTeX export.}
       key: {range: string, pattern: '\S', description: Citation key in the export.}
+      zotero_items: {range: string, multivalued: true, pattern: '^(users/([0-9]+|local/[A-Za-z0-9]+)|groups/[1-9][0-9]*)/items/[A-Z0-9]{8}$', description: Library-scoped Zotero item identifiers.}
       imported: {range: date, description: Date of the import that last changed this record.}
   LocalDataset:
     is_a: Dataset

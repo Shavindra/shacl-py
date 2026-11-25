@@ -195,21 +195,44 @@ def main(argv=None, *, review_layout=None):
         epilog="Example: shacl-py import-bib research/references/library.json --into research/references/catalogue.yaml",
     )
     bib.add_argument("export", type=Path, help="Project-relative export file")
-    bib.add_argument(
-        "--project",
-        type=Path,
-        default=Path("."),
-        help="Project root (default: current directory)",
+    zotero = commands.add_parser(
+        "import-zotero",
+        help="Read papers from a Zotero collection",
+        description="Import citation metadata from Zotero Desktop or the Web API. Reads configuration.env from the project root.",
     )
-    bib.add_argument(
-        "--into",
-        type=Path,
-        metavar="FILE",
-        help="Included catalogue file for new papers (default: metadata.yaml)",
+    zotero.add_argument(
+        "--collection",
+        help="Exact collection name or eight-character key (also ZOTERO_COLLECTION)",
     )
-    bib.add_argument(
-        "--dry-run", action="store_true", help="Report the changes without saving"
+    library = zotero.add_mutually_exclusive_group()
+    library.add_argument(
+        "--web-library",
+        metavar="users/ID|groups/ID",
+        help="Use a synced library (also ZOTERO_WEB_LIBRARY). Private libraries require ZOTERO_API_KEY.",
     )
+    library.add_argument(
+        "--desktop",
+        dest="web_library",
+        action="store_const",
+        const="",
+        help="Read Zotero Desktop, overriding the configured web library",
+    )
+    for command in (bib, zotero):
+        command.add_argument(
+            "--project",
+            type=Path,
+            default=Path("."),
+            help="Project root (default: current directory)",
+        )
+        command.add_argument(
+            "--into",
+            type=Path,
+            metavar="FILE",
+            help="Included catalogue file for new papers (default: metadata.yaml)",
+        )
+        command.add_argument(
+            "--dry-run", action="store_true", help="Report the changes without saving"
+        )
     validate = commands.add_parser(
         "validate", help="Validate all metadata beneath a root"
     )
@@ -232,21 +255,29 @@ def main(argv=None, *, review_layout=None):
                 args.project.resolve(), args.paper, args.dataset, args.linked_file
             )
             return 0
-        if args.command == "import-bib":
-            from shacl_py.bibliography import import_bibliography
-
+        if args.command in ("import-bib", "import-zotero"):
             root = args.project.resolve()
-            export = (
-                args.export.relative_to(root)
-                if args.export.is_absolute()
-                else args.export
-            )
-            report = import_bibliography(
-                root,
-                export,
-                into=args.into,
-                dry_run=args.dry_run,
-            )
+            if args.command == "import-zotero":
+                from shacl_py.zotero import import_zotero
+
+                report = import_zotero(
+                    root,
+                    args.collection,
+                    web_library=args.web_library,
+                    into=args.into,
+                    dry_run=args.dry_run,
+                )
+            else:
+                from shacl_py.bibliography import import_bibliography
+
+                export = (
+                    args.export.relative_to(root)
+                    if args.export.is_absolute()
+                    else args.export
+                )
+                report = import_bibliography(
+                    root, export, into=args.into, dry_run=args.dry_run
+                )
             for kind in ("added", "updated", "unchanged"):
                 print(f"{kind.capitalize()}: {len(report[kind])}")
                 for pid in report[kind] if kind != "unchanged" else ():
