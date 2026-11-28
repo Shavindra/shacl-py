@@ -6,6 +6,22 @@ example: example.yaml
 records: compartments
 id_field: id
 label_field: name
+# Source records use DataLad Concepts subject statements. An optional selector names a
+# channel, worksheet, figure or archive member. The local file identifier is relative to
+# the project root. Linked file names and provider URLs belong to their dataset record.
+catalogue_links:
+  namespace_field: catalogue.project.annotations.identifier_namespace
+  subject_predicate: http://purl.org/dc/terms/subject
+  record_identifier: '{namespace}:{collection}:{id}'
+  record_subjects: {field: characterized_by, target: object}
+  local_files:
+    field: characterized_by
+    predicate: http://purl.org/dc/terms/hasPart
+    identifier: '{namespace}:file:{path}'
+    subjects: characterized_by
+    target: object
+  linked_files: {field: linked_files, subjects: attributes, target: value}
+  annotations: [variant, evidence, selector, taxon_id, record_use]
 field_labels:
   id: ID
   name: Name
